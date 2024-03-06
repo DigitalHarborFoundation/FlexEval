@@ -1,4 +1,4 @@
-# LEVI LLM Evals
+# FlexEval LLM Evals
 
 Author: Thomas Christie
 
