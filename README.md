@@ -101,7 +101,7 @@ This tool is intended to be somewhat "batteries included". It supports the follo
     * any OpenAI LLM
 * a set of included rubrics
 * a set of included metrics calculated as Python files
-* Kibana for visualizing test outputs (described below)
+* Metabase for visualizing test outputs (described below)
 
 This list will grow as we add functionality to meet LEVI team needs.
 
