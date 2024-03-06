@@ -1,0 +1,43 @@
+# Notes:
+#  Volume paths are relative to the associated Dockerfile
+#  llm-evals is NOT a service - it'll just build and not run
+#      you have to run it with "docker-compose run --rm llm-evals main.py SUITE_NAME"
+
+version: "3.8"
+services:
+  llm-evals:
+    #sets OpenAI key
+    env_file: .env
+    build: src/llm-evals/
+    volumes:
+      - ./configuration:/usr/src/app/configuration
+      - ./data:/usr/src/app/data
+      - ./src/llm-evals:/usr/src/app
+      - ./logs:/usr/logs
+      - ./data/results/evals-outputs:/tmp/evallogs
+      - ./.env:/usr/src/app/.env
+    ports:
+      - "1234:1234"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  local-llm-api:
+    build: src/local-llm-api/
+    volumes:
+      - ./src/local-llm-api:/usr/src/app
+
+  metabase:
+    image: metabase/metabase
+    #image: new-image-name
+    #container_name: new-container-name
+    #hostname: metabase
+    #platform: linux/arm64/v8
+    #entrypoint: /app/run_metabase.sh
+    volumes:
+      - ./data/metabase/configuration.db:/metabase.db
+      - ./data/results/:/var/results/
+    ports:
+      - 3000:3000
+    environment:
+      - MUID=${UID}
+      - MGID=${GID}
+      - MB_DB_FILE=/metabase.db

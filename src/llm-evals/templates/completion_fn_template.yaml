@@ -1,0 +1,4 @@
+{completion_fn_name}:
+  class: CustomChatCompletion:CustomChatCompletionFn
+  args:
+    {completion_fn_kwargs}

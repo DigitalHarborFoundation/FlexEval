@@ -1,0 +1,14 @@
+jan_completion__completion:
+  class: CustomChatCompletion:CustomChatCompletionFn
+  args:
+    function_name: 'jan_completion'
+    endpoint: 'http://host.docker.internal:1337/v1/'
+    model_name: 'mistral-ins-7b-q4'
+
+
+open_ai_completion__grader:
+  class: CustomChatCompletion:CustomChatCompletionFn
+  args:
+    function_name: 'open_ai_completion'
+    model_name: 'gpt-4'
+    api_key_name: 'OPENAI_API_KEY'

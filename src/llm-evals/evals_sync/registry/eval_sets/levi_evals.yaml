@@ -1,0 +1,5 @@
+example:
+  evals:
+    - string_length.MetricNoCompletionByRole
+    - string_length.MetricCompletionOnly
+    - yeasayer-completion

@@ -1,0 +1,11 @@
+
+# Define a base eval
+{rubric_metric}:
+  id: {rubric_metric}.dev.rubric-v1
+
+{rubric_metric}.dev.rubric-v1:
+  class: evals.elsuite.modelgraded.classify:ModelBasedClassify
+  args:
+    samples_jsonl: {data_path}
+    eval_type: cot_classify
+    modelgraded_spec: {rubric_metric}

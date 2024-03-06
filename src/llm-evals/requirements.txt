@@ -1,0 +1,10 @@
+git+https://github.com/openai/evals.git
+pyyaml
+python-dotenv
+requests
+
+openai>=1.0.0
+textstat
+
+# for database building and management
+flatten_json

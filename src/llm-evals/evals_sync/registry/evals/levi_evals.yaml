@@ -1,0 +1,50 @@
+
+# Define a base eval
+string_length.MetricNoCompletionByRole:
+  id: string_length.MetricNoCompletionByRole.metric-v1
+  #description: hello
+  #metrics: [accuracy]
+
+string_length.MetricNoCompletionByRole.metric-v1:
+  class: CustomEvals:MetricNoCompletionByRole
+  args:
+    samples_jsonl: /usr/src/app/data/test-cases/example.jsonl
+    function_metric_name: string_length           #must be defined in levi/metric_functions.py
+    completion_fn_name: jan_completion
+    function_name: 'jan_completion'
+    endpoint: 'http://host.docker.internal:1337/v1/'
+    model_name: 'mistral-ins-7b-q4'
+    function_name: 'open_ai_completion'
+    model_name: 'gpt-4'
+    api_key_name: 'OPENAI_API_KEY'
+
+# Define a base eval
+string_length.MetricCompletionOnly:
+  id: string_length.MetricCompletionOnly.metric-v1
+  #description: hello
+  #metrics: [accuracy]
+
+string_length.MetricCompletionOnly.metric-v1:
+  class: CustomEvals:MetricCompletionOnly
+  args:
+    samples_jsonl: /usr/src/app/data/test-cases/example.jsonl
+    function_metric_name: string_length           #must be defined in levi/metric_functions.py
+    completion_fn_name: jan_completion
+    function_name: 'jan_completion'
+    endpoint: 'http://host.docker.internal:1337/v1/'
+    model_name: 'mistral-ins-7b-q4'
+    function_name: 'open_ai_completion'
+    model_name: 'gpt-4'
+    api_key_name: 'OPENAI_API_KEY'
+
+# Define a base eval
+yeasayer-completion:
+  id: yeasayer-completion.dev.rubric-v1
+
+yeasayer-completion.dev.rubric-v1:
+  class: evals.elsuite.modelgraded.classify:ModelBasedClassify
+  args:
+    samples_jsonl: /usr/src/app/data/test-cases/example.jsonl
+    eval_type: cot_classify
+    modelgraded_spec: yeasayer-completion
+

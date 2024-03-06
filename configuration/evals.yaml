@@ -1,0 +1,27 @@
+#Instructions for running: 
+#docker-compose run llm-evals python main.py EVAL_SUITE_NAME
+#docker-compose up metabase
+
+example:
+  data:
+    path: data/test-cases/example.jsonl
+  function_metrics:
+    - name: string_length
+      score: all_by_role #aggregates across roles
+    - name: string_length
+      score: completion #string length of just completions
+
+  rubric_metrics:
+    - name: yeasayer-completion
+
+  grader_llm:
+    function_name: open_ai_completion # can be empty if not used, but don't delete the key
+    model_name: gpt-4
+    api_key_name: OPENAI_API_KEY #set in .env
+
+  completion:
+    #this example uses a local instance of Jan (jan.ai) 
+    #hosting the mistral 7B model
+    function_name: jan_completion # defined in completion_functions.py
+    endpoint: http://host.docker.internal:1337/v1/ #equivalent to localhost:1234/v1/
+    model_name: mistral-ins-7b-q4
