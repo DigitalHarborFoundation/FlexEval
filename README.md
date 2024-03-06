@@ -54,21 +54,21 @@ Step 2: Data
 
 
 Step 3a (optional):
-* Edit `levi/function_metrics.py` to include any additional metrics you want to evaluate. These functions should accept a string as input, and produce a numeric value as output.
+* Edit `configuration/function_metrics.py` to include any additional metrics you want to evaluate. These functions should accept a string as input, and produce a numeric value as output.
 
 Step 3b (optional):
-* Edit `levi/rubric_metrics.yaml` as desired. Rubrics in this file will be used to evaluate conversations and completions using COT prompting and will output a numeric score.
+* Edit `configuration/rubric_metrics.yaml` as desired. Rubrics in this file will be used to evaluate conversations and completions using COT prompting and will output a numeric score.
 
 Step 3c (optional):
-* Edit `levi/completion_functions.py` as desired. These functions accept a `conversation_history` and `model_name` (at minimum) and return a `completion`, that is, the next turn in the conversation.
+* Edit `configuration/completion_functions.py` as desired. These functions accept a `conversation_history` and `model_name` (at minimum) and return a `completion`, that is, the next turn in the conversation.
 
 Step 4:
 * Define a test suite in `evals.yaml`. A test suite includes:
     * an input dataset in `data/test-cases`
-    * a list of function metrics to use for scoring (can be blank). These functions must all be defined in `levi/function_metrics.py`. These have an additional key called `score`, which can have values `completion` or `all_by_role`. The value `completion` will elicit a completion from the LLM specified in the `completions` section of the suite and calculate a metric for that only. The `all_by_role` will calculate a metric value for every existing turn in the conversation, and then the aggregation will be done by role.
-    * a list of rubric metrics to use for scoring (can be blank). These must all be defined in `levi/rubric_metrics.yaml`.
+    * a list of function metrics to use for scoring (can be blank). These functions must all be defined in `configuration/function_metrics.py`. These have an additional key called `score`, which can have values `completion` or `all_by_role`. The value `completion` will elicit a completion from the LLM specified in the `completions` section of the suite and calculate a metric for that only. The `all_by_role` will calculate a metric value for every existing turn in the conversation, and then the aggregation will be done by role.
+    * a list of rubric metrics to use for scoring (can be blank). These must all be defined in `configuration/rubric_metrics.yaml`.
     * an LLM to use for rubric-based grading. Currently only OpenAI models are supported.
-    * an LLM to use for `completions`, and associated required parameters. This is the connetion with the LLM system you would like to test. The configuration options specified here will be passed as arguments to the associated function in `levi/completion_functions.py`.
+    * an LLM to use for `completions`, and associated required parameters. This is the connetion with the LLM system you would like to test. The configuration options specified here will be passed as arguments to the associated function in `configuration/completion_functions.py`.
 
 ### Running tests
 
@@ -107,7 +107,11 @@ This list will grow as we add functionality to meet LEVI team needs.
 
 ### Running an example
 
+To run the included example evaluation suite, run the following from the terminal:
 
+    docker-compose run llm-evals python main.py example
+
+Raw results will be saved in `data/results/evals-outputs/`, and tabular results will be saved in `data/results/results.db` for querying. 
 
 ### Plotting results
 
@@ -116,8 +120,3 @@ TODO
 ### Structure
 
 TODO
-
-`class MetricBase(evals.Eval)` is our generic metrics class. It's loosely based on:
-https://github.com/openai/evals/blob/main/evals/elsuite/basic/match.py
-
-Arguments to `__init__` must be specified in `evals_sync/registry/evals/levi_evals.yaml`, specifically in the metric "args". These are pulled dynamically from `levi/evals.yaml`.
