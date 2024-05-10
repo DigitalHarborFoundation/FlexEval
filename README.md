@@ -2,6 +2,10 @@
 
 Author: Thomas Christie
 
+## Paper
+
+FlexEval is described in detail in the pdf file in the root directory of the repository.
+
 ## Development
 
 Python version 3.11.
