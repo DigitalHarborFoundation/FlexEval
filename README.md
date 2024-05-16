@@ -1,6 +1,6 @@
-# FlexEval LLM Evals
+### FlexEval: An Open-Source Tool for Evaluating Chatbot Performance and Dialogue Analysis
 
-Author: Thomas Christie
+Welcome to FlexEval, a powerful and customizable tool designed to help developers evaluate the performance of chatbot systems in educational settings. This README provides an overview of FlexEval, its features, installation instructions, usage guidelines, and examples to get you started.
 
 ## Paper
 
@@ -20,7 +20,9 @@ pre-commit install
 
 ## Overview
 
-The OpenAI Evals package is used to test the outputs of LLMs. Evals is intended to be used to evaluate the behavior of LLMs or LLM systems. A typical evaluation consists of:
+FlexEval is designed to extend the capabilities of OpenAI Evals by offering a flexible and user-friendly platform for evaluating both pre-production and live chatbot systems. It allows developers to create custom, automated evaluations tailored to their specific needs, making it easier to ensure that educational chatbots meet desired performance and safety standards.
+
+A typical evaluation consists of:
 
 - text input, which usually consists of a system prompt and a "user" prompt
 - an "ideal" output
@@ -28,16 +30,7 @@ The OpenAI Evals package is used to test the outputs of LLMs. Evals is intended 
 
 The LLM is fed the text input, produces a response (called a `completion`), and the output is compared to the "ideal" output (usually: do they match?). This is fine for testing the reasoning and retrieval capabilities of new LLMs. However, when creating a conversational LLM _systems_, we will not have a specific ideal string in mind for every conversational turn.
 
-There are two basic paradigms for use.
-
-Completion:
-
-- _matching_: an LLM is treated as a function. It is given an input prompt or past conversation and produce output text. The output is compared to an "ideal" string. This is useful in contexts where the LLM output has a "right answer", such as with information retrieval or math. The output here is usually pass/match or fail/no-match per example.
-- _machine graded_: an LLM output is graded by another LLM according to a rubric. This is useful when the LLM is expected to adhere to (or avoid) general behaviors, such as being polite or avoiding the `yeasayer effect'. The output is a score
-
-"Matching" is probably not as useful for LEVI applications as it is for evaluation of generic LLMs, since we want LLM agents to be conversational, and since most tutors should not immediately give a student the correct answer. However, machine-graded rubrics may well be very useful. This package makes it easy (editing one file) to add your own rubric and evaluate LLM responses against that rubric.
-
-This package also extends the OpenAI Evals library to add generic function-evaluated metrics. Anything you can write as a Python function (calculating string length, Flesch reading ease, or anything you can think of) can be added as an evaluation metric.
+This package extends the OpenAI Evals library to add generic function-evaluated metrics. Anything you can write as a Python function (calculating string length, Flesch reading ease, the number of emojis in the LLM response, or anything you can think of) can be added as an evaluation metric.
 
 ## Running
 
@@ -49,7 +42,7 @@ Step 0: Installation
 * Make sure you have Docker Desktop installed and running.
 
 Step 1: Environment file
-* Copy `.env-example` to make a new file called `.env`.
+* Copy `.env-example` to make a new file called `.env` in the root directory.
 
 Step 2: Data
 * Write your data to the `data/test-cases` directory as a file in `jsonl` format. Each exchange between assistant and user should be one line of the file. The format of each line is JSON, with an `input` key, and a corresponding value that consists of a list of turns like the following:
@@ -119,8 +112,4 @@ Raw results will be saved in `data/results/evals-outputs/`, and tabular results 
 
 ### Plotting results
 
-TODO
-
-### Structure
-
-TODO
+Results are stored in a SQLite database and can be queried and plotted. Examples will be added to the repo shortly...if you would like us to prioritize this work more highly, please submit an issue!
