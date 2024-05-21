@@ -167,3 +167,7 @@ data/results/evals-outputs/*
 !data/results/evals-outputs/.gitkeep
 
 .DS_Store
+temp/
+results.db
+test-cases/
+evals_sync/

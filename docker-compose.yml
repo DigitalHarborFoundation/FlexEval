@@ -25,19 +25,19 @@ services:
     volumes:
       - ./src/local-llm-api:/usr/src/app
 
-  metabase:
-    image: metabase/metabase
-    #image: new-image-name
-    #container_name: new-container-name
-    #hostname: metabase
-    #platform: linux/arm64/v8
-    #entrypoint: /app/run_metabase.sh
-    volumes:
-      - ./data/metabase/configuration.db:/metabase.db
-      - ./data/results/:/var/results/
-    ports:
-      - 3000:3000
-    environment:
-      - MUID=${UID}
-      - MGID=${GID}
-      - MB_DB_FILE=/metabase.db
+  # metabase:
+  #   image: metabase/metabase
+  #   #image: new-image-name
+  #   #container_name: new-container-name
+  #   #hostname: metabase
+  #   #platform: linux/arm64/v8
+  #   #entrypoint: /app/run_metabase.sh
+  #   volumes:
+  #     - ./data/metabase/configuration.db:/metabase.db
+  #     - ./data/results/:/var/results/
+  #   ports:
+  #     - 3000:3000
+  #   environment:
+  #     - MUID=${UID}
+  #     - MGID=${GID}
+  #     - MB_DB_FILE=/metabase.db

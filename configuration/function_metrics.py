@@ -4,10 +4,30 @@ import openai
 import os
 
 
+# Desired thing - want to be able to pass in function name as parameter
+#
+
+
+def number_of_turns(conversation):
+    """Input is a list of conversational turns.
+    Output is a dictionary of metrics -- by role.
+    """
+    roles = set([i["role"] for i in conversation])
+    results = {}
+    for role in roles:
+        # get just the turns for the role
+        turns = [i for i in conversation if i["role"] == role]
+        # get the number of turns
+        results[role] = len(turns)
+    return results
+
+
 def string_length(sample):
     """Input is a text string.
     Output is a metric defined on that string.
     """
+    if sample is None:
+        return 0
     return len(sample)
 
 

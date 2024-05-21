@@ -52,7 +52,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load configs
-    with open("config.yaml") as file:
+    with open("config-dev.yaml") as file:
         config = yaml.safe_load(file)
     (
         function_metric_template,
@@ -87,7 +87,7 @@ if __name__ == "__main__":
 
     # helps avoid bugs later on
     for entry in ["grader_llm", "function_metrics", "completion", "rubric_metrics"]:
-        if eval_suite_to_run[entry] is None:
+        if eval_suite_to_run.get(entry, None) is None:
             eval_suite_to_run[entry] = {}
 
     ################################################################################
@@ -98,12 +98,15 @@ if __name__ == "__main__":
     all_evals = ""
 
     def get_eval_class_name(score_type, eval_suite):
-        if score_type == "all_by_role":
-            eval_class_name = "MetricNoCompletionByRole"
+        if score_type == "per_turn_by_role":
+            eval_class_name = "MetricTurnByRole"
             completion_fn_kwargs = None
         elif score_type == "completion":
             eval_class_name = "MetricCompletionOnly"
             completion_fn_kwargs = eval_suite["completion"]
+        elif score_type == "per_conversation_by_role":
+            eval_class_name = "MetricConversationByRole"
+            completion_fn_kwargs = None
         else:
             raise Exception(
                 f'Error: function eval score must be either "all_by_role" or "completion". You listed {score_type}.',
