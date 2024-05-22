@@ -46,7 +46,8 @@ FlexEval is an interface for OpenAI Evals to make it simpler to use. It does thi
 4. FlexEval makes it easy to write test suites, that is, sets of multiple metrics to be evaluated against the same dataset of conversations.
 5. FlexEval allows metrics to be computed over entire conversations (i.e. how many turns are in this conversation), conversations faceted by role (how many turns per role are in this conversation), or individual turns faceted by role (what is the length of each string), and then aggregated (what is the average length of text output produced by the user vs the assistant). 
 
-**WARNING: FlexEval is under active development. The following README will change frequently. Expect breaking changes. We will establish a versioning system soon.**
+<span style="color: red;">**WARNING: FlexEval is under early and active development. The following README will change frequently. Expect breaking changes. We will establish a versioning system soon.**</span>
+
 
 
 ## Running
