@@ -1,36 +1,53 @@
-### FlexEval: An Open-Source Tool for Evaluating Chatbot Performance and Dialogue Analysis
+# FlexEval LLM Evals
 
-Welcome to FlexEval, a powerful and customizable tool designed to help developers evaluate the performance of chatbot systems in educational settings. This README provides an overview of FlexEval, its features, installation instructions, usage guidelines, and examples to get you started.
+Author: Thomas Christie
 
-## Paper
+FlexEval is a wrapper for OpenAI Evals that makes it easier to design custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems. 
 
-FlexEval is described in detail in the pdf file in the root directory of the repository.
+## Why?
+*To make evaluations easier for LLM-powered systems.*
 
-## Development
+Thoroughly evaluating LLMs is difficult and best-practices are rapidly developing.  While it is not yet clear how to *guarantee* the behavior of LLM-powered systems, we can absolutely increase visibility into their behavior.  Which features are important depends on the application, but might include:
+ - safety
+ - verbosity
+ - use of emojis
+ - text complexity and reading ease
+ - appropriateness of function calling
+ - other things we haven't thought of
 
-Python version 3.11.
+The most common method of evaluating LLMs is to prompt them and compare their responses to "ideal" responses. This is necessary for many applications, but is not sufficient to cover the cases above. Moreover, we're confident that as users continue to develop LLM-powered applications, they will desire to collect metrics of their own devising to quantify and track the behavior of these applications during development and in production.
 
-To use the pre-commit configs, install them:
+With this in mind, we've created a tool that makes it easier to write custom metrics on conversations and completions. 
 
-```bash
-pip install pre-commit # if needed
-pre-commit autoupdate
-pre-commit install
-```
+## What?
+*FlexEval is a tool for writing metrics that produce quantitative metrics on conversational data.*
 
-## Overview
+Inputs:
+ - historical conversations
+ - Python functions that convert conversations and conversational turns into numbers
+ - configurations for LLMs you would like to test
 
-FlexEval is designed to extend the capabilities of OpenAI Evals by offering a flexible and user-friendly platform for evaluating both pre-production and live chatbot systems. It allows developers to create custom, automated evaluations tailored to their specific needs, making it easier to ensure that educational chatbots meet desired performance and safety standards.
+Process:
+ - (optional) generate conversational completions using an LLM or LLM-powered system
+ - apply each Python function to each conversation/turn/completion
 
-A typical evaluation consists of:
+Outputs:
+ - json files
+ - entries in a SQLite database that can be queried
 
-- text input, which usually consists of a system prompt and a "user" prompt
-- an "ideal" output
-- an LLM to be tested
+## How
+*FlexEval converts settings into OpenAI Evals configurations*
 
-The LLM is fed the text input, produces a response (called a `completion`), and the output is compared to the "ideal" output (usually: do they match?). This is fine for testing the reasoning and retrieval capabilities of new LLMs. However, when creating a conversational LLM _systems_, we will not have a specific ideal string in mind for every conversational turn.
+FlexEval is a wrapper around OpenAI Evals to make it simpler to use. It does this in several ways.  The common thread here is that users can extend OpenAI Evals to meet their needs without needing to understand the directory structure, class structure, or internal logic of OpenAI Evals.
 
-This package extends the OpenAI Evals library to add generic function-evaluated metrics. Anything you can write as a Python function (calculating string length, Flesch reading ease, the number of emojis in the LLM response, or anything you can think of) can be added as an evaluation metric.
+1. Whereas OpenAI Evals requires users to write a new class with inheritance to define new completion functions (a generic term to a function that accepts a conversation or prompt and produces a response), FlexEval allows users to define this using a function in `configuration/completion_functions.py`.
+2. Whereas OpenAI Evals requires users to create a new class with inheritance to define a new metric type, FlexEval allows users to do this by writing a function in `configuration/function_metrics.py`. 
+3. FlexEval makes it easy to use any LLM as a rubric-based grader.
+4. FlexEval makes it easy to write test suites, that is, sets of multiple metrics to be evaluated against the same dataset of conversations.
+5. FlexEval allows metrics to be computed over entire conversations (i.e. how many turns are in this conversation), conversations faceted by role (how many turns per role are in this conversation), or individual turns faceted by role (what is the length of each string), and then aggregated (what is the average length of text output produced by the user vs the assistant). 
+
+**WARNING: FlexEval is under active development. The following README will change frequently. Expect breaking changes. We will establish a versioning system soon.**
+
 
 ## Running
 
@@ -42,7 +59,7 @@ Step 0: Installation
 * Make sure you have Docker Desktop installed and running.
 
 Step 1: Environment file
-* Copy `.env-example` to make a new file called `.env` in the root directory.
+* Copy `.env-example` to make a new file called `.env`.
 
 Step 2: Data
 * Write your data to the `data/test-cases` directory as a file in `jsonl` format. Each exchange between assistant and user should be one line of the file. The format of each line is JSON, with an `input` key, and a corresponding value that consists of a list of turns like the following:
@@ -110,6 +127,3 @@ To run the included example evaluation suite, run the following from the termina
 
 Raw results will be saved in `data/results/evals-outputs/`, and tabular results will be saved in `data/results/results.db` for querying. 
 
-### Plotting results
-
-Results are stored in a SQLite database and can be queried and plotted. Examples will be added to the repo shortly...if you would like us to prioritize this work more highly, please submit an issue!
