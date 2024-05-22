@@ -38,7 +38,7 @@ Outputs:
 ## How
 *FlexEval converts settings into OpenAI Evals configurations*
 
-FlexEval is a wrapper around OpenAI Evals to make it simpler to use. It does this in several ways.  The common thread here is that users can extend OpenAI Evals to meet their needs without needing to understand the directory structure, class structure, or internal logic of OpenAI Evals.
+FlexEval is an interface for OpenAI Evals to make it simpler to use. It does this in several ways.  The common thread is that users can extend OpenAI Evals to meet their needs without needing to understand the directory structure, class structure, or internal logic of OpenAI Evals.
 
 1. Whereas OpenAI Evals requires users to write a new class with inheritance to define new completion functions (a generic term to a function that accepts a conversation or prompt and produces a response), FlexEval allows users to define this using a function in `configuration/completion_functions.py`.
 2. Whereas OpenAI Evals requires users to create a new class with inheritance to define a new metric type, FlexEval allows users to do this by writing a function in `configuration/function_metrics.py`. 
