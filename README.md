@@ -2,38 +2,52 @@
 
 Author: Thomas Christie
 
-## Development
+FlexEval is a wrapper for OpenAI Evals that makes it easier to design custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems. 
 
-Python version 3.11.
+## Why?
+*To make evaluations easier for LLM-powered systems.*
 
-To use the pre-commit configs, install them:
+Thoroughly evaluating LLMs is difficult and best-practices are rapidly developing.  While it is not yet clear how to *guarantee* the behavior of LLM-powered systems, we can absolutely increase visibility into their behavior.  Which features are important depends on the application, but might include:
+ - safety
+ - verbosity
+ - use of emojis
+ - text complexity and reading ease
+ - appropriateness of function calling
+ - other things we haven't thought of
 
-```bash
-pip install pre-commit # if needed
-pre-commit autoupdate
-pre-commit install
-```
+The most common method of evaluating LLMs is to prompt them and compare their responses to "ideal" responses. This is necessary for many applications, but is not sufficient to cover the cases above. Moreover, we're confident that as users continue to develop LLM-powered applications, they will desire to collect metrics of their own devising to quantify and track the behavior of these applications during development and in production.
 
-## Overview
+With this in mind, we've created a tool that makes it easier to write custom metrics on conversations and completions. 
 
-The OpenAI Evals package is used to test the outputs of LLMs. Evals is intended to be used to evaluate the behavior of LLMs or LLM systems. A typical evaluation consists of:
+## What?
+*FlexEval is a tool for writing metrics that produce quantitative metrics on conversational data.*
 
-- text input, which usually consists of a system prompt and a "user" prompt
-- an "ideal" output
-- an LLM to be tested
+Inputs:
+ - historical conversations
+ - Python functions that convert conversations and conversational turns into numbers
+ - configurations for LLMs you would like to test
 
-The LLM is fed the text input, produces a response (called a `completion`), and the output is compared to the "ideal" output (usually: do they match?). This is fine for testing the reasoning and retrieval capabilities of new LLMs. However, when creating a conversational LLM _systems_, we will not have a specific ideal string in mind for every conversational turn.
+Process:
+ - (optional) generate conversational completions using an LLM or LLM-powered system
+ - apply each Python function to each conversation/turn/completion
 
-There are two basic paradigms for use.
+Outputs:
+ - json files
+ - entries in a SQLite database that can be queried
 
-Completion:
+## How
+*FlexEval converts settings into OpenAI Evals configurations*
 
-- _matching_: an LLM is treated as a function. It is given an input prompt or past conversation and produce output text. The output is compared to an "ideal" string. This is useful in contexts where the LLM output has a "right answer", such as with information retrieval or math. The output here is usually pass/match or fail/no-match per example.
-- _machine graded_: an LLM output is graded by another LLM according to a rubric. This is useful when the LLM is expected to adhere to (or avoid) general behaviors, such as being polite or avoiding the `yeasayer effect'. The output is a score
+FlexEval is a wrapper around OpenAI Evals to make it simpler to use. It does this in several ways.  The common thread here is that users can extend OpenAI Evals to meet their needs without needing to understand the directory structure, class structure, or internal logic of OpenAI Evals.
 
-"Matching" is probably not as useful for LEVI applications as it is for evaluation of generic LLMs, since we want LLM agents to be conversational, and since most tutors should not immediately give a student the correct answer. However, machine-graded rubrics may well be very useful. This package makes it easy (editing one file) to add your own rubric and evaluate LLM responses against that rubric.
+1. Whereas OpenAI Evals requires users to write a new class with inheritance to define new completion functions (a generic term to a function that accepts a conversation or prompt and produces a response), FlexEval allows users to define this using a function in `configuration/completion_functions.py`.
+2. Whereas OpenAI Evals requires users to create a new class with inheritance to define a new metric type, FlexEval allows users to do this by writing a function in `configuration/function_metrics.py`. 
+3. FlexEval makes it easy to use any LLM as a rubric-based grader.
+4. FlexEval makes it easy to write test suites, that is, sets of multiple metrics to be evaluated against the same dataset of conversations.
+5. FlexEval allows metrics to be computed over entire conversations (i.e. how many turns are in this conversation), conversations faceted by role (how many turns per role are in this conversation), or individual turns faceted by role (what is the length of each string), and then aggregated (what is the average length of text output produced by the user vs the assistant). 
 
-This package also extends the OpenAI Evals library to add generic function-evaluated metrics. Anything you can write as a Python function (calculating string length, Flesch reading ease, or anything you can think of) can be added as an evaluation metric.
+**WARNING: FlexEval is under active development. The following README will change frequently. Expect breaking changes. We will establish a versioning system soon.**
+
 
 ## Running
 
@@ -113,10 +127,3 @@ To run the included example evaluation suite, run the following from the termina
 
 Raw results will be saved in `data/results/evals-outputs/`, and tabular results will be saved in `data/results/results.db` for querying. 
 
-### Plotting results
-
-TODO
-
-### Structure
-
-TODO

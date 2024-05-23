@@ -7,6 +7,13 @@ import yaml
 import sqlite3
 import unittest
 import sys
+import helpers
+
+import dotenv
+
+dotenv.load_dotenv(".env")
+
+from configuration.function_metrics import *
 
 from helpers import (
     MyDumper,
@@ -97,19 +104,40 @@ if __name__ == "__main__":
     # Construct the evals yaml file
     all_evals = ""
 
-    def get_eval_class_name(score_type, eval_suite):
-        if score_type == "per_turn_by_role":
-            eval_class_name = "MetricTurnByRole"
+    def get_eval_class_name(metric, eval_suite):
+
+        # make sure we can call the function
+        assert (
+            metric.get("name") in globals()
+        ), f"{metric.get('name')} is not found in the namespace"
+        # TODO - why does this fail?
+        assert callable(
+            globals()[metric.get("name")]
+        ), f"{metric.get('name')} is not a callable function"
+
+        fn = globals()[metric.get("name")]
+        input_types = helpers.detect_input_type(fn)
+        # If it's a turn-based function and we are doing NO completions
+        if "turn" in input_types.keys() and metric.get("completion", False) is False:
+            eval_class_name = "TurnMetric"
             completion_fn_kwargs = None
-        elif score_type == "completion":
-            eval_class_name = "MetricCompletionOnly"
-            completion_fn_kwargs = eval_suite["completion"]
-        elif score_type == "per_conversation_by_role":
-            eval_class_name = "MetricConversationByRole"
+        # if it's a turn-based function and we ARE doing completions
+        elif "turn" in input_types.keys() and metric.get("completion", False) is True:
+            eval_class_name = "CompletionMetric"
+            completion_fn_kwargs = eval_suite["completion_llm"]
+        # if it's a conversation-based metric, we are (by default) not doing completions
+        elif (
+            "conversation" in input_types.keys()
+            and metric.get("completion", False) is False
+        ):
+            eval_class_name = "ConversationMetric"
             completion_fn_kwargs = None
-        else:
+        elif (
+            "conversation" in input_types.keys()
+            and metric.get("completion", False) is True
+        ):
             raise Exception(
-                f'Error: function eval score must be either "all_by_role" or "completion". You listed {score_type}.',
+                f"""Error: You chose the function {metric.get("name")} and 'completion: true', but that function operates on entire conversations, not individual turns (including completion turns). Try setting 'completion: false'.""",
             )
         return eval_class_name, completion_fn_kwargs
 
@@ -120,16 +148,16 @@ if __name__ == "__main__":
         eval_suite_to_run["rubric_metrics"] = []
 
     run_kwargs_dict = {}
-    run_kwargs_dict["grader"] = {}
-    run_kwargs_dict["completion"] = {}
+    run_kwargs_dict["grader_llm"] = {}
+    run_kwargs_dict["completion_llm"] = {}
 
-    for i, j in eval_suite_to_run["grader_llm"].items():
-        run_kwargs_dict["grader"][i] = j
-    for i, j in eval_suite_to_run["completion"].items():
-        run_kwargs_dict["completion"][i] = j
+    for i, j in eval_suite_to_run.get("grader_llm", {}).items():
+        run_kwargs_dict["grader_llm"][i] = j
+    for i, j in eval_suite_to_run.get("completion_llm", {}).items():
+        run_kwargs_dict["completion_llm"][i] = j
     run_kwargs_list = [
-        f"{i}: '{j}'" for i, j in run_kwargs_dict["completion"].items()
-    ] + [f"{i}: '{j}'" for i, j in run_kwargs_dict["grader"].items()]
+        f"{i}: '{j}'" for i, j in run_kwargs_dict["completion_llm"].items()
+    ] + [f"{i}: '{j}'" for i, j in run_kwargs_dict["grader_llm"].items()]
     # print(run_kwargs_list)
     # sys.exit()
 
@@ -137,21 +165,21 @@ if __name__ == "__main__":
         # Fill out template definition and write to file
         # Determine which metric class to use
         eval_class_name, completion_fn_kwargs = get_eval_class_name(
-            function_metric["score"], eval_suite_to_run
+            function_metric, eval_suite_to_run
         )
 
         function_metric_template_filled = function_metric_template.format(
             function_metric_name=function_metric["name"],
             eval_class_name=eval_class_name,
             data_path=os.path.abspath(eval_suite_to_run["data"]["path"]),
-            completion_fn_name=eval_suite_to_run["completion"].get(
-                "function_name", "no_completion_fn"
-            ),
+            completion_fn_name=eval_suite_to_run.get(
+                "completion_llm", {"function_name": "no_completion_fn"}
+            ).get("function_name", "no_completion_fn"),
             run_kwargs="\n    ".join(run_kwargs_list),
         )
         all_evals += function_metric_template_filled
 
-    for rubric_metric in eval_suite_to_run["rubric_metrics"]:
+    for rubric_metric in eval_suite_to_run.get("rubric_metrics", []):
         # Fill out template definition and write to file
         # Determine which metric class to use
         # eval_class_name, completion_fn, completion_api_key = get_eval_class_name(rubric["score"], eval_suite_to_run)
@@ -172,22 +200,25 @@ if __name__ == "__main__":
     # specified in the evals.yaml file
     # TODO We could do this for the grader LLM too
     completion_fn_templated_filled = completion_fn_template.format(
-        completion_fn_name=eval_suite_to_run["completion"].get(
-            "function_name", "no_completion_fn"
-        )
+        completion_fn_name=eval_suite_to_run.get(
+            "completion_llm", {"function_name": "no_completion_fn"}
+        ).get("function_name", "no_completion_fn")
         + "__completion",
         completion_fn_kwargs="\n    ".join(
-            [f"{i}: '{j}'" for i, j in eval_suite_to_run["completion"].items()]
+            [
+                f"{i}: '{j}'"
+                for i, j in eval_suite_to_run.get("completion_llm", {}).items()
+            ]
         ),
     )
 
     grader_completion_fn_templated_filled = completion_fn_template.format(
-        completion_fn_name=eval_suite_to_run["grader_llm"].get(
-            "function_name", "no_completion_fn"
-        )
+        completion_fn_name=eval_suite_to_run.get(
+            "grader_llm", {"function_name": "no_completion_fn"}
+        ).get("function_name", "no_completion_fn")
         + "__grader",
         completion_fn_kwargs="\n    ".join(
-            [f"{i}: '{j}'" for i, j in eval_suite_to_run["grader_llm"].items()]
+            [f"{i}: '{j}'" for i, j in eval_suite_to_run.get("grader_llm", {}).items()]
         ),
     )
     completion_fn_templated_filled = (
@@ -207,6 +238,21 @@ if __name__ == "__main__":
         outfile.write(completion_fn_templated_filled)
 
     # Create an eval suite with the specified evals in it
+    function_evaluation_yaml = yaml.dump(
+        {
+            args.eval_suite: {
+                "evals": [
+                    f'{i["name"]}.{get_eval_class_name(i, eval_suite_to_run)[0]}'
+                    for i in eval_suite_to_run["function_metrics"]
+                ]
+                + [f'{i["name"]}' for i in eval_suite_to_run["rubric_metrics"]],
+            },
+        },
+        Dumper=MyDumper,
+        default_flow_style=False,
+    )
+    print("Running function evaluations:\n")
+    print(function_evaluation_yaml)
     with open(
         os.path.join(
             config["output_path"],
@@ -216,21 +262,7 @@ if __name__ == "__main__":
         ),
         "w",
     ) as file:
-        file.write(
-            yaml.dump(
-                {
-                    args.eval_suite: {
-                        "evals": [
-                            f'{i["name"]}.{get_eval_class_name(i["score"], eval_suite_to_run)[0]}'
-                            for i in eval_suite_to_run["function_metrics"]
-                        ]
-                        + [f'{i["name"]}' for i in eval_suite_to_run["rubric_metrics"]],
-                    },
-                },
-                Dumper=MyDumper,
-                default_flow_style=False,
-            ),
-        )
+        file.write(function_evaluation_yaml)
 
     # Copy the rubrics
     shutil.copy2(
@@ -268,7 +300,7 @@ if __name__ == "__main__":
         # to evaluate completions.
         # If there is only one listed, it's used for both.
         # command = f'PYTHONPATH=$PYTHONPATH:.; oaievalset {eval_suite_to_run["completion"].get("function_name", "no_completion_fn")},{eval_suite_to_run["grader_llm"].get("model", "gpt-3.5-turbo")} {args.eval_suite} --log_to_file {logfile}'
-        command = f'oaievalset {eval_suite_to_run["completion"].get("function_name", "no_completion_fn")}__completion,{eval_suite_to_run["grader_llm"].get("function_name", "no_completion_fn")}__grader {args.eval_suite} --log_to_file "{logfile}"'
+        command = f'oaievalset {eval_suite_to_run.get("completion_llm", {}).get("function_name", "no_completion_fn")}__completion,{eval_suite_to_run["grader_llm"].get("function_name", "no_completion_fn")}__grader {args.eval_suite} --log_to_file "{logfile}"'
         # record_path is overwritten, so can't use it for oaievalset
         # command = f'oaieval {eval_suite_to_run["grader_llm"]} {eval_suite_to_run["function_metrics"][0]} --log_to_file {logfile} --record_path {record_path}'
         print(f"running {command}")
@@ -318,33 +350,33 @@ if __name__ == "__main__":
     for result_path in results_paths:
         read_save_data(result_path, config["database_path"], run_kwargs_dict)
 
-    # create views
-    with sqlite3.connect(config["database_path"]) as conn:
-        cursor = conn.cursor()
-        # Check if the view exists
-        cursor.execute(
-            """
-            CREATE VIEW IF NOT EXISTS v_summary
-                AS
-                    SELECT
-                        run_metadata.run_id,
-                        base_eval as eval_base_name,
-                        run_config__completion_fns__0 as endpoint,
-                        json_extract(run_config__eval_spec__args,'$.samples_jsonl') as data,
-                        run_config__completion_fns__1 as rubric_grader_llm,
-                        run_aggregate_score.metric_name as metric_name,
-                        run_aggregate_score.metric_aggregate_value as metric_value,
-                        run_aggregate_score.aggregation as aggregation,
-                        run_aggregate_score.metric_aggregate_value as metric_value,
-                        created_at
-                        from run_metadata
-                        left join run_aggregate_score on run_metadata.run_id = run_aggregate_score.run_id
-                        where metric_aggregate_value is not null
-            """
-        )
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS run_metadata_run_id_index on run_metadata (run_id);"
-        )
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS run_aggregate_score_run_id_index on run_aggregate_score (run_id);"
-        )
+    # # create views
+    # with sqlite3.connect(config["database_path"]) as conn:
+    #     cursor = conn.cursor()
+    #     # Check if the view exists
+    #     cursor.execute(
+    #         """
+    #         CREATE VIEW IF NOT EXISTS v_summary
+    #             AS
+    #                 SELECT
+    #                     run_metadata.run_id,
+    #                     base_eval as eval_base_name,
+    #                     run_config__completion_fns__0 as endpoint,
+    #                     json_extract(run_config__eval_spec__args,'$.samples_jsonl') as data,
+    #                     run_config__completion_fns__1 as rubric_grader_llm,
+    #                     run_aggregate_score.metric_name as metric_name,
+    #                     run_aggregate_score.metric_aggregate_value as metric_value,
+    #                     run_aggregate_score.aggregation as aggregation,
+    #                     run_aggregate_score.metric_aggregate_value as metric_value,
+    #                     created_at
+    #                     from run_metadata
+    #                     left join run_aggregate_score on run_metadata.run_id = run_aggregate_score.run_id
+    #                     where metric_aggregate_value is not null
+    #         """
+    #     )
+    #     cursor.execute(
+    #         "CREATE INDEX IF NOT EXISTS run_metadata_run_id_index on run_metadata (run_id);"
+    #     )
+    #     cursor.execute(
+    #         "CREATE INDEX IF NOT EXISTS run_aggregate_score_run_id_index on run_aggregate_score (run_id);"
+    #     )

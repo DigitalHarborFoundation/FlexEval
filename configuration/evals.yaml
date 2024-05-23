@@ -33,9 +33,34 @@
 
 cl:
   data:
-    path: ../../data/test-cases/cl-test.jsonl
+    path: ../../data/test-cases/bot-adversarial-dataset-test-cases-first-5.jsonl
   function_metrics:
     - name: string_length
-      score: per_turn_by_role
     - name: number_of_turns
-      score: per_conversation_by_role
+
+bad:
+  data:
+    path: ../../data/test-cases/bot-adversarial-dataset-test-cases-first-5.jsonl
+
+  function_metrics:
+    - name: string_length
+      completion: false
+    - name: number_of_turns
+    - name: openai_moderation_api
+      completion: true
+
+  rubric_metrics:
+    - name: yeasayer-completion
+      completion: true
+  
+  completion_llm:
+    function_name: open_ai_completion
+    model_name: gpt-3.5-turbo
+    api_key_name: OPENAI_API_KEY
+  
+  grader_llm:
+    function_name: open_ai_completion
+    model_name: gpt-4o
+    api_key_name: OPENAI_API_KEY
+  
+

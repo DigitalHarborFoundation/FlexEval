@@ -1,8 +1,6 @@
 import os
 import re
 import shutil
-
-# https://ca.slack-edge.com/T039FMARE-U05NWEF5ALC-7a92c5f6fea7-72import yaml
 import json
 from flatten_json import flatten
 import pandas as pd
@@ -10,9 +8,35 @@ import sqlite3
 import yaml
 import traceback
 from datetime import datetime
+from typing import Callable, Dict, Any, Type, Tuple, List, get_type_hints
 
 
-def load_templates(config):
+def detect_input_type(func: Callable) -> Dict[str, Type[Any]]:
+    """
+    Detect and return the input types of a function based on its type annotations.
+
+    Args:
+        func (Callable): The function whose input types are to be detected.
+
+    Returns:
+        Dict[str, Type[Any]]: A dictionary where the keys are parameter names and the values are their annotated types.
+    """
+    annotations = get_type_hints(func)
+    input_types = {k: v for k, v in annotations.items() if k != "return"}
+    return input_types
+
+
+def load_templates(config: Dict[str, Any]) -> Tuple[str, str, str]:
+    """
+    Load template files based on the provided configuration paths.
+
+    Args:
+        config (Dict[str, Any]): A dictionary containing the paths to the template files.
+
+    Returns:
+        Tuple[str, str, str]: A tuple containing the content of the function metric template,
+                              the rubric metric template, and the completion function template.
+    """
     with open(config["rubric_metric_template_path"], "r") as file:
         rubric_metric_template = file.read()
 
@@ -25,7 +49,17 @@ def load_templates(config):
     return function_metric_template, rubric_metric_template, completion_fn_template
 
 
-def sync_directories(source, destination):
+def sync_directories(source: str, destination: str) -> List[str]:
+    """
+    Synchronize the contents of the source directory with the destination directory.
+
+    Args:
+        source (str): The path of the source directory.
+        destination (str): The path of the destination directory.
+
+    Returns:
+        List[str]: A list of files that were created or updated in the destination directory.
+    """
     created_files = []
     for dirpath, dirnames, filenames in os.walk(source):
         # Construct the corresponding path in the destination directory
@@ -55,11 +89,34 @@ def sync_directories(source, destination):
 
 
 class MyDumper(yaml.Dumper):
-    def increase_indent(self, flow=False, indentless=False):
+    """
+    A custom YAML Dumper class that increases indentation for better readability.
+
+    Methods:
+        increase_indent: Increase the indentation level in the YAML output.
+    """
+
+    def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
+        """
+        Increase the indentation level in the YAML output.
+
+        Args:
+            flow (bool): Whether to flow style indentation is used. Default is False.
+            indentless (bool): Whether to use indentless indentation. Default is False.
+        """
         return super(MyDumper, self).increase_indent(flow, False)
 
 
-def extract_results_paths(log_entries):
+def extract_results_paths(log_entries: List[str]) -> List[str]:
+    """
+    Extract unique file paths ending with .jsonl from a list of log entries.
+
+    Args:
+        log_entries (List[str]): A list of log entries as strings.
+
+    Returns:
+        List[str]: A list of unique file paths ending with .jsonl extracted from the log entries.
+    """
     # Regular expression to match file paths ending with .jsonl
     file_path_regex = r"/tmp/evallogs/[^ ]+\.jsonl"
 
@@ -73,22 +130,23 @@ def extract_results_paths(log_entries):
     )
 
 
-def read_save_data(file_path, db_path, run_kwargs_dict={}):
+def read_save_data(
+    file_path: str, db_path: str, run_kwargs_dict: Dict[str, Any] = {}
+) -> None:
     """
-    This function is used to process the log files, extract information from them,
-    and store the info in the SQLite database.
+    Process log files, extract information, and store the info in an SQLite database.
 
     Args:
-        file_path (str): the path of the log file
-        db_path (str): the path of the SQLite database
-        run_kwargs_dict: extra metadata about the completion and grader LLMs
+        file_path (str): The path of the log file.
+        db_path (str): The path of the SQLite database.
+        run_kwargs_dict (Dict[str, Any]): Extra metadata about the completion and grader LLMs.
     """
     try:
-        # print('Opening', file_path)
+        print("Opening", file_path)
         with open(file_path, "r") as read_file:
             data = [json.loads(line) for line in read_file]
             spec_line = None
-            final_report_line = None
+            # final_report_line = None
 
             for ix, line in enumerate(data):
                 if "spec" in line:
@@ -109,35 +167,35 @@ def read_save_data(file_path, db_path, run_kwargs_dict={}):
             run_metadata_df = pd.DataFrame([data_flattened])
             # process the final report data
 
-            # condition for rubric-graded evals
-            if "score" in data[final_report_line].get("final_report", {}):
-                run_aggregate_score = pd.DataFrame(
-                    {
-                        "run_id": run_metadata_df["run_id"][0],
-                        # "test_name": 'rubric_of_some_kind',
-                        "role": "rubric",
-                        "metric_aggregate_value": data[final_report_line][
-                            "final_report"
-                        ]["score"],
-                        "metric_name": run_metadata_df["base_eval"][0],
-                        "aggregation": "average",
-                    },
-                    index=[0],
-                )
-            else:
-                test_names = list(
-                    data[final_report_line].get("final_report", {}).keys()
-                )
-                run_aggregate_score = pd.DataFrame()
-                for test_name in test_names:
-                    new_run_score_pd = pd.DataFrame(
-                        data[final_report_line]["final_report"][test_name]
-                    )  # might be more than one metric
-                    new_run_score_pd["run_id"] = run_metadata_df["run_id"][0]
-                    new_run_score_pd["role"] = "assistant"
-                    run_aggregate_score = pd.concat(
-                        [run_aggregate_score, new_run_score_pd], ignore_index=True
-                    )
+            # # condition for rubric-graded evals
+            # TODO Ignore final report for now?????
+            # Rubrics will need them!
+            # if "score" in data[final_report_line].get("final_report", {}):
+            #     run_aggregate_score = pd.DataFrame(
+            #         {
+            #             "run_id": run_metadata_df["run_id"][0],
+            #             # "test_name": 'rubric_of_some_kind',
+            #             "role": "rubric",
+            #             "metric_aggregate_value": data[final_report_line][
+            #                 "final_report"
+            #             ]["score"],
+            #             "metric_name": run_metadata_df["base_eval"][0],
+            #             "aggregation": "average",
+            #         },
+            #         index=[0],
+            #     )
+            # else:
+            # test_names = list(data[final_report_line].get("final_report", {}).keys())
+            # run_aggregate_score = pd.DataFrame()
+            # for test_name in test_names:
+            #     new_run_score_pd = pd.DataFrame(
+            #         data[final_report_line]["final_report"][test_name]
+            #     )  # might be more than one metric
+            #     new_run_score_pd["run_id"] = run_metadata_df["run_id"][0]
+            #     new_run_score_pd["role"] = "assistant"
+            #     run_aggregate_score = pd.concat(
+            #         [run_aggregate_score, new_run_score_pd], ignore_index=True
+            #     )
             # process separate runs
             Num = len(data)
             run_single_score = pd.DataFrame()
@@ -175,16 +233,16 @@ def read_save_data(file_path, db_path, run_kwargs_dict={}):
         )
         print(traceback.print_exc())
 
-    try:
-        with sqlite3.connect(db_path) as conn:
-            run_aggregate_score.to_sql(
-                "run_aggregate_score", conn, index=False, if_exists="append"
-            )
-    except Exception as err:
-        print(
-            f"An error occurred when connecting to the database or saving data to the database: {err}"
-        )
-        print(traceback.print_exc())
+    # try:
+    #     with sqlite3.connect(db_path) as conn:
+    #         run_aggregate_score.to_sql(
+    #             "run_aggregate_score", conn, index=False, if_exists="append"
+    #         )
+    # except Exception as err:
+    #     print(
+    #         f"An error occurred when connecting to the database or saving data to the database: {err}"
+    #     )
+    #     print(traceback.print_exc())
 
     try:
         with sqlite3.connect(db_path) as conn:

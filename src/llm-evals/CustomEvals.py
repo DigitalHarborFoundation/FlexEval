@@ -43,7 +43,7 @@ class MetricBase(evals.Eval):
         self.function_metric_name = function_metric_name
 
 
-class MetricTurnByRole(MetricBase):
+class TurnMetric(MetricBase):
     def run(self, recorder):
         """
         Called by the `oaieval` CLI to run the eval. The `eval_all_samples` method calls `eval_sample`.
@@ -55,50 +55,51 @@ class MetricTurnByRole(MetricBase):
         self.eval_all_samples(recorder, self.samples)
         all_metrics = recorder.get_metrics()
 
-        # Aggregates by role
-        # First extract all roles and metric names
-        metrics_by_turn = {}
-        roles = set([i["role"] for i in all_metrics])
-        function_metric_names = set([i["function_metric_name"] for i in all_metrics])
+        # # Aggregates by role
+        # # First extract all roles and metric names
+        # metrics_by_turn = {}
+        # roles = set([i["role"] for i in all_metrics])
+        # function_metric_names = set([i["function_metric_name"] for i in all_metrics])
 
-        # Second extract metric values
-        for function_metric_name in function_metric_names:
-            metrics_by_turn_lists = {}
-            for role in roles:
-                if role not in metrics_by_turn_lists:
-                    metrics_by_turn_lists[role] = []
-                for i in all_metrics:
-                    if i["role"] == role and i["turn"] >= 0:
-                        metrics_by_turn_lists[role].append(i["metric_value"])
+        # # Second extract metric values
+        # for function_metric_name in function_metric_names:
+        #     metrics_by_turn_lists = {}
+        #     for role in roles:
+        #         if role not in metrics_by_turn_lists:
+        #             metrics_by_turn_lists[role] = []
+        #         for i in all_metrics:
+        #             if i["role"] == role and i["turn"] >= 0:
+        #                 metrics_by_turn_lists[role].append(i["metric_value"])
 
-        # Third compute average
-        outputs = []
-        for function_metric_name in function_metric_names:
-            metrics_by_turn[function_metric_name] = {}
-            for role in roles:
-                outputs += [
-                    {
-                        "metric_name": function_metric_name,
-                        "metric_aggregate_value": max(metrics_by_turn_lists[role]),
-                        "aggregation": "max",
-                        "role": role,
-                    },
-                    {
-                        "metric_name": function_metric_name,
-                        "metric_aggregate_value": sum(metrics_by_turn_lists[role])
-                        / len(metrics_by_turn_lists[role]),
-                        "aggregation": "mean",
-                        "role": role,
-                    },
-                    {
-                        "metric_name": function_metric_name,
-                        "metric_aggregate_value": min(metrics_by_turn_lists[role]),
-                        "aggregation": "min",
-                        "role": role,
-                    },
-                ]
+        # # Third compute average
+        # outputs = []
+        # for function_metric_name in function_metric_names:
+        #     metrics_by_turn[function_metric_name] = {}
+        #     for role in roles:
+        #         outputs += [
+        #             {
+        #                 "metric_name": function_metric_name,
+        #                 "metric_aggregate_value": max(metrics_by_turn_lists[role]),
+        #                 "aggregation": "max",
+        #                 "role": role,
+        #             },
+        #             {
+        #                 "metric_name": function_metric_name,
+        #                 "metric_aggregate_value": sum(metrics_by_turn_lists[role])
+        #                 / len(metrics_by_turn_lists[role]),
+        #                 "aggregation": "mean",
+        #                 "role": role,
+        #             },
+        #             {
+        #                 "metric_name": function_metric_name,
+        #                 "metric_aggregate_value": min(metrics_by_turn_lists[role]),
+        #                 "aggregation": "min",
+        #                 "role": role,
+        #             },
+        #         ]
 
-        return {"results": outputs}
+        # return {"results": outputs}
+        return {}
 
     def eval_sample(self, test_sample, rng: random.Random):
         """
@@ -115,39 +116,36 @@ class MetricTurnByRole(MetricBase):
         For this, it codes the 'turn' as -1.
 
         """
-        concatenated_text = {}
         for turn_ix, turn in enumerate(test_sample["input"]):
-            if turn["role"] not in concatenated_text:
-                concatenated_text[turn["role"]] = ""
-            concatenated_text[turn["role"]] += f'\n{turn["content"]}'
+            if turn["role"] not in ["system"]:
+                # Check if the function name exists in the global namespace and call it
+                if self.function_metric_name in globals() and callable(
+                    globals()[self.function_metric_name]
+                ):
+                    if turn.get("content", None) is None:
+                        print(turn)
+                    metric_value = globals()[self.function_metric_name](turn["content"])
+                else:
+                    print(
+                        "No callable function named "
+                        + self.function_metric_name
+                        + " found."
+                    )
+                    metric_value = None
+                    # return self.function_metric_name, None
 
-            # Check if the function name exists in the global namespace and call it
-            if self.function_metric_name in globals() and callable(
-                globals()[self.function_metric_name]
-            ):
-                if turn.get("content", None) is None:
-                    print(turn)
-                metric_value = globals()[self.function_metric_name](turn["content"])
-            else:
-                print(
-                    "No callable function named "
-                    + self.function_metric_name
-                    + " found."
+                evals.record.record_metrics(
+                    **{
+                        "role": turn["role"],
+                        "turn": turn_ix,
+                        "function_metric_name": self.function_metric_name,
+                        "metric_value": metric_value,
+                        "content": turn["content"],
+                    }
                 )
-                metric_value = None
-                # return self.function_metric_name, None
-
-            evals.record.record_metrics(
-                **{
-                    "role": turn["role"],
-                    "turn": turn_ix + 1,
-                    "function_metric_name": self.function_metric_name,
-                    "metric_value": metric_value,
-                }
-            )
 
 
-class MetricCompletionOnly(MetricBase):
+class CompletionMetric(MetricBase):
     def run(self, recorder):
         """
         Called by the `oaieval` CLI to run the eval. The `eval_all_samples` method calls `eval_sample`.
@@ -158,43 +156,44 @@ class MetricCompletionOnly(MetricBase):
         self.eval_all_samples(recorder, self.samples)
         all_metrics = recorder.get_metrics()
 
-        # set of evaluated metrics - there should be just one here
-        function_metric_names = set([i["function_metric_name"] for i in all_metrics])
+        # # set of evaluated metrics - there should be just one here
+        # function_metric_names = set([i["function_metric_name"] for i in all_metrics])
 
-        metric_values_by_name = {}
-        for function_metric_name in function_metric_names:
-            metric_values_by_name[function_metric_name] = []
-        for record in all_metrics:
-            metric_values_by_name[record["function_metric_name"]].append(
-                record["metric_value"]
-            )
+        # metric_values_by_name = {}
+        # for function_metric_name in function_metric_names:
+        #     metric_values_by_name[function_metric_name] = []
+        # for record in all_metrics:
+        #     metric_values_by_name[record["function_metric_name"]].append(
+        #         record["metric_value"]
+        #     )
 
-        outputs = []
-        for metric_name, metric_value in metric_values_by_name.items():
-            outputs += [
-                {
-                    "metric_name": metric_name,
-                    "metric_aggregate_value": round(
-                        sum(metric_value) / len(metric_value), 3
-                    ),
-                    "aggregation": "mean",
-                    "role": "assistant",
-                },
-                {
-                    "metric_name": metric_name,
-                    "metric_aggregate_value": max(metric_value),
-                    "aggregation": "max",
-                    "role": "assistant",
-                },
-                {
-                    "metric_name": metric_name,
-                    "metric_aggregate_value": min(metric_value),
-                    "aggregation": "min",
-                    "role": "assistant",
-                },
-            ]
+        # outputs = []
+        # for metric_name, metric_value in metric_values_by_name.items():
+        #     outputs += [
+        #         {
+        #             "metric_name": metric_name,
+        #             "metric_aggregate_value": round(
+        #                 sum(metric_value) / len(metric_value), 3
+        #             ),
+        #             "aggregation": "mean",
+        #             "role": "assistant",
+        #         },
+        #         {
+        #             "metric_name": metric_name,
+        #             "metric_aggregate_value": max(metric_value),
+        #             "aggregation": "max",
+        #             "role": "assistant",
+        #         },
+        #         {
+        #             "metric_name": metric_name,
+        #             "metric_aggregate_value": min(metric_value),
+        #             "aggregation": "min",
+        #             "role": "assistant",
+        #         },
+        #     ]
 
-        return {"results": outputs}
+        # return {"results": outputs}
+        return {}
 
     def eval_sample(self, test_sample, rng: random.Random):
         """
@@ -241,6 +240,7 @@ class MetricCompletionOnly(MetricBase):
                         "turn": -1,
                         "function_metric_name": self.function_metric_name,
                         "metric_value": metric_value,
+                        "content": result,
                     }
                 )
             # dictionaries get recorded separately for each key
@@ -253,6 +253,7 @@ class MetricCompletionOnly(MetricBase):
                             "turn": -1,
                             "function_metric_name": f"{self.function_metric_name}_{k}",
                             "metric_value": v,
+                            "content": result,
                         }
                     )
             else:
@@ -261,7 +262,7 @@ class MetricCompletionOnly(MetricBase):
                 )
 
 
-class MetricConversationByRole(MetricBase):
+class ConversationMetric(MetricBase):
     """This computes metrics over entire conversations, aggregated by role
     For example, this can be used to answer "how many assistant completions are in this conversation"
     """
@@ -277,54 +278,55 @@ class MetricConversationByRole(MetricBase):
         self.eval_all_samples(recorder, self.samples)
         all_metrics = recorder.get_metrics()
 
-        # The metrics are ALREADY by role in the format
-        # {
-        #  "role": role,
-        #  "metric_value": value...
-        # }
-        # So we just take aggregates over these across all conversations
+        # # The metrics are ALREADY by role in the format
+        # # {
+        # #  "role": role,
+        # #  "metric_value": value...
+        # # }
+        # # So we just take aggregates over these across all conversations
 
-        # First extract all roles and metric names
-        roles = set([i["role"] for i in all_metrics])
-        # function_metric_names = set(
-        #     [i["function_metric_name"] for i in all_metrics]
-        # )  # there will only be ONE of these
+        # # First extract all roles and metric names
+        # roles = set([i["role"] for i in all_metrics])
+        # # function_metric_names = set(
+        # #     [i["function_metric_name"] for i in all_metrics]
+        # # )  # there will only be ONE of these
 
-        # Second extract values for each role/metric combo
-        metrics_by_conversation_list = {}
-        for role in roles:
-            if role not in metrics_by_conversation_list:
-                metrics_by_conversation_list[role] = []
-            for i in all_metrics:
-                if i["role"] == role:
-                    metrics_by_conversation_list[role].append(i["metric_value"])
+        # # Second extract values for each role/metric combo
+        # metrics_by_conversation_list = {}
+        # for role in roles:
+        #     if role not in metrics_by_conversation_list:
+        #         metrics_by_conversation_list[role] = []
+        #     for i in all_metrics:
+        #         if i["role"] == role:
+        #             metrics_by_conversation_list[role].append(i["metric_value"])
 
-        # Third compute average
-        outputs = []
-        for role in roles:
-            outputs += [
-                {
-                    "metric_name": self.function_metric_name,
-                    "metric_aggregate_value": max(metrics_by_conversation_list[role]),
-                    "aggregation": "max",
-                    "role": role,
-                },
-                {
-                    "metric_name": self.function_metric_name,
-                    "metric_aggregate_value": sum(metrics_by_conversation_list[role])
-                    / len(metrics_by_conversation_list[role]),
-                    "aggregation": "mean",
-                    "role": role,
-                },
-                {
-                    "metric_name": self.function_metric_name,
-                    "metric_aggregate_value": min(metrics_by_conversation_list[role]),
-                    "aggregation": "min",
-                    "role": role,
-                },
-            ]
+        # # Third compute average
+        # outputs = []
+        # for role in roles:
+        #     outputs += [
+        #         {
+        #             "metric_name": self.function_metric_name,
+        #             "metric_aggregate_value": max(metrics_by_conversation_list[role]),
+        #             "aggregation": "max",
+        #             "role": role,
+        #         },
+        #         {
+        #             "metric_name": self.function_metric_name,
+        #             "metric_aggregate_value": sum(metrics_by_conversation_list[role])
+        #             / len(metrics_by_conversation_list[role]),
+        #             "aggregation": "mean",
+        #             "role": role,
+        #         },
+        #         {
+        #             "metric_name": self.function_metric_name,
+        #             "metric_aggregate_value": min(metrics_by_conversation_list[role]),
+        #             "aggregation": "min",
+        #             "role": role,
+        #         },
+        #     ]
 
-        return {"results": outputs}
+        # return {"results": outputs}
+        return {}
 
     def eval_sample(self, test_sample, rng: random.Random):
         """
@@ -357,11 +359,20 @@ class MetricConversationByRole(MetricBase):
             print("No callable function named " + self.function_metric_name + " found.")
             metric_values = None
 
-        for role, metric_value in metric_values.items():
+        # if metric_values is an int or float
+        if isinstance(metric_values, int) or isinstance(metric_values, float):
             evals.record.record_metrics(
                 **{
-                    "role": role,
                     "function_metric_name": self.function_metric_name,
-                    "metric_value": metric_value,
+                    "metric_value": metric_values,
                 }
             )
+        elif isinstance(metric_values, dict):
+            for role, metric_value in metric_values.items():
+                evals.record.record_metrics(
+                    **{
+                        "role": role,
+                        "function_metric_name": self.function_metric_name,
+                        "metric_value": metric_value,
+                    }
+                )
