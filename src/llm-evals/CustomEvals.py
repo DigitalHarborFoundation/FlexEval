@@ -18,6 +18,7 @@ def filter_kwargs_for_callable(kwargs, callable_object):
 
 
 def print_kwargs(kw):
+    """Returns a printable version of a kwargs dict"""
     results = {}
     for key, value in kw.items():
         try:
@@ -27,9 +28,16 @@ def print_kwargs(kw):
     return str(results)
 
 
-# Based loosely on:
-# https://github.com/openai/evals/blob/main/evals/elsuite/basic/match.py
-class MetricBase(evals.Eval):
+class BaseMetric(evals.Eval):
+    """Base class for metric evaluations
+
+    Sub-classes are called to run functions on all or parts of conversations.
+
+    Based loosely on:
+    https://github.com/openai/evals/blob/main/evals/elsuite/basic/match.py
+
+    """
+
     def __init__(
         self,
         samples_jsonl: str,
@@ -42,64 +50,23 @@ class MetricBase(evals.Eval):
         self.samples_jsonl = samples_jsonl
         self.function_metric_name = function_metric_name
 
-
-class TurnMetric(MetricBase):
     def run(self, recorder):
         """
         Called by the `oaieval` CLI to run the eval. The `eval_all_samples` method calls `eval_sample`.
+
+        This overloads the run() method and skips aggregations, since those can be done post-hoc in SQL.
         """
         # Loads data from file
         self.samples = evals.get_jsonl(self.samples_jsonl)
 
         # Calls 'eval_sample'
         self.eval_all_samples(recorder, self.samples)
-        all_metrics = recorder.get_metrics()
 
-        # # Aggregates by role
-        # # First extract all roles and metric names
-        # metrics_by_turn = {}
-        # roles = set([i["role"] for i in all_metrics])
-        # function_metric_names = set([i["function_metric_name"] for i in all_metrics])
-
-        # # Second extract metric values
-        # for function_metric_name in function_metric_names:
-        #     metrics_by_turn_lists = {}
-        #     for role in roles:
-        #         if role not in metrics_by_turn_lists:
-        #             metrics_by_turn_lists[role] = []
-        #         for i in all_metrics:
-        #             if i["role"] == role and i["turn"] >= 0:
-        #                 metrics_by_turn_lists[role].append(i["metric_value"])
-
-        # # Third compute average
-        # outputs = []
-        # for function_metric_name in function_metric_names:
-        #     metrics_by_turn[function_metric_name] = {}
-        #     for role in roles:
-        #         outputs += [
-        #             {
-        #                 "metric_name": function_metric_name,
-        #                 "metric_aggregate_value": max(metrics_by_turn_lists[role]),
-        #                 "aggregation": "max",
-        #                 "role": role,
-        #             },
-        #             {
-        #                 "metric_name": function_metric_name,
-        #                 "metric_aggregate_value": sum(metrics_by_turn_lists[role])
-        #                 / len(metrics_by_turn_lists[role]),
-        #                 "aggregation": "mean",
-        #                 "role": role,
-        #             },
-        #             {
-        #                 "metric_name": function_metric_name,
-        #                 "metric_aggregate_value": min(metrics_by_turn_lists[role]),
-        #                 "aggregation": "min",
-        #                 "role": role,
-        #             },
-        #         ]
-
-        # return {"results": outputs}
+        # Evals expects a dict to iterate over
         return {}
+
+
+class TurnMetric(BaseMetric):
 
     def eval_sample(self, test_sample, rng: random.Random):
         """
@@ -145,55 +112,7 @@ class TurnMetric(MetricBase):
                 )
 
 
-class CompletionMetric(MetricBase):
-    def run(self, recorder):
-        """
-        Called by the `oaieval` CLI to run the eval. The `eval_all_samples` method calls `eval_sample`.
-        """
-        self.samples = evals.get_jsonl(self.samples_jsonl)
-
-        # evaluates metrics on data
-        self.eval_all_samples(recorder, self.samples)
-        all_metrics = recorder.get_metrics()
-
-        # # set of evaluated metrics - there should be just one here
-        # function_metric_names = set([i["function_metric_name"] for i in all_metrics])
-
-        # metric_values_by_name = {}
-        # for function_metric_name in function_metric_names:
-        #     metric_values_by_name[function_metric_name] = []
-        # for record in all_metrics:
-        #     metric_values_by_name[record["function_metric_name"]].append(
-        #         record["metric_value"]
-        #     )
-
-        # outputs = []
-        # for metric_name, metric_value in metric_values_by_name.items():
-        #     outputs += [
-        #         {
-        #             "metric_name": metric_name,
-        #             "metric_aggregate_value": round(
-        #                 sum(metric_value) / len(metric_value), 3
-        #             ),
-        #             "aggregation": "mean",
-        #             "role": "assistant",
-        #         },
-        #         {
-        #             "metric_name": metric_name,
-        #             "metric_aggregate_value": max(metric_value),
-        #             "aggregation": "max",
-        #             "role": "assistant",
-        #         },
-        #         {
-        #             "metric_name": metric_name,
-        #             "metric_aggregate_value": min(metric_value),
-        #             "aggregation": "min",
-        #             "role": "assistant",
-        #         },
-        #     ]
-
-        # return {"results": outputs}
-        return {}
+class CompletionMetric(BaseMetric):
 
     def eval_sample(self, test_sample, rng: random.Random):
         """
@@ -262,71 +181,10 @@ class CompletionMetric(MetricBase):
                 )
 
 
-class ConversationMetric(MetricBase):
+class ConversationMetric(BaseMetric):
     """This computes metrics over entire conversations, aggregated by role
     For example, this can be used to answer "how many assistant completions are in this conversation"
     """
-
-    def run(self, recorder):
-        """
-        Called by the `oaieval` CLI to run the eval. The `eval_all_samples` method calls `eval_sample`.
-        """
-        # Loads data from file
-        self.samples = evals.get_jsonl(self.samples_jsonl)
-
-        # Calls 'eval_sample' - where sample is a full conversation
-        self.eval_all_samples(recorder, self.samples)
-        all_metrics = recorder.get_metrics()
-
-        # # The metrics are ALREADY by role in the format
-        # # {
-        # #  "role": role,
-        # #  "metric_value": value...
-        # # }
-        # # So we just take aggregates over these across all conversations
-
-        # # First extract all roles and metric names
-        # roles = set([i["role"] for i in all_metrics])
-        # # function_metric_names = set(
-        # #     [i["function_metric_name"] for i in all_metrics]
-        # # )  # there will only be ONE of these
-
-        # # Second extract values for each role/metric combo
-        # metrics_by_conversation_list = {}
-        # for role in roles:
-        #     if role not in metrics_by_conversation_list:
-        #         metrics_by_conversation_list[role] = []
-        #     for i in all_metrics:
-        #         if i["role"] == role:
-        #             metrics_by_conversation_list[role].append(i["metric_value"])
-
-        # # Third compute average
-        # outputs = []
-        # for role in roles:
-        #     outputs += [
-        #         {
-        #             "metric_name": self.function_metric_name,
-        #             "metric_aggregate_value": max(metrics_by_conversation_list[role]),
-        #             "aggregation": "max",
-        #             "role": role,
-        #         },
-        #         {
-        #             "metric_name": self.function_metric_name,
-        #             "metric_aggregate_value": sum(metrics_by_conversation_list[role])
-        #             / len(metrics_by_conversation_list[role]),
-        #             "aggregation": "mean",
-        #             "role": role,
-        #         },
-        #         {
-        #             "metric_name": self.function_metric_name,
-        #             "metric_aggregate_value": min(metrics_by_conversation_list[role]),
-        #             "aggregation": "min",
-        #             "role": role,
-        #         },
-        #     ]
-
-        # return {"results": outputs}
-        return {}
 
     def eval_sample(self, test_sample, rng: random.Random):
         """
@@ -374,5 +232,14 @@ class ConversationMetric(MetricBase):
                         "role": role,
                         "function_metric_name": self.function_metric_name,
                         "metric_value": metric_value,
+                    }
+                )
+        elif isinstance(metric_values, list):
+            for entry in metric_values:
+                evals.record.record_metrics(
+                    **{
+                        "role": entry.get("role", None),
+                        "function_metric_name": self.function_metric_name,
+                        "metric_value": entry.get("value", None),
                     }
                 )

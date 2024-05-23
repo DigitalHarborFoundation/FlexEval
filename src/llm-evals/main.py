@@ -350,33 +350,61 @@ if __name__ == "__main__":
     for result_path in results_paths:
         read_save_data(result_path, config["database_path"], run_kwargs_dict)
 
-    # # create views
-    # with sqlite3.connect(config["database_path"]) as conn:
-    #     cursor = conn.cursor()
-    #     # Check if the view exists
-    #     cursor.execute(
-    #         """
-    #         CREATE VIEW IF NOT EXISTS v_summary
-    #             AS
-    #                 SELECT
-    #                     run_metadata.run_id,
-    #                     base_eval as eval_base_name,
-    #                     run_config__completion_fns__0 as endpoint,
-    #                     json_extract(run_config__eval_spec__args,'$.samples_jsonl') as data,
-    #                     run_config__completion_fns__1 as rubric_grader_llm,
-    #                     run_aggregate_score.metric_name as metric_name,
-    #                     run_aggregate_score.metric_aggregate_value as metric_value,
-    #                     run_aggregate_score.aggregation as aggregation,
-    #                     run_aggregate_score.metric_aggregate_value as metric_value,
-    #                     created_at
-    #                     from run_metadata
-    #                     left join run_aggregate_score on run_metadata.run_id = run_aggregate_score.run_id
-    #                     where metric_aggregate_value is not null
-    #         """
-    #     )
-    #     cursor.execute(
-    #         "CREATE INDEX IF NOT EXISTS run_metadata_run_id_index on run_metadata (run_id);"
-    #     )
-    #     cursor.execute(
-    #         "CREATE INDEX IF NOT EXISTS run_aggregate_score_run_id_index on run_aggregate_score (run_id);"
-    #     )
+    # create views
+    with sqlite3.connect(config["database_path"]) as conn:
+        cursor = conn.cursor()
+        # Check if the view exists
+        cursor.execute(
+            """
+            CREATE VIEW IF NOT EXISTS v_metrics AS
+            SELECT
+            -- sample_id is row number in dataset
+            run_single_score.run_id,
+            sample_id,
+            -- dataset
+            json_extract(run_config__eval_spec__args, '$.samples_jsonl') AS data_file,
+            json_extract(data, '$.turn') AS turn,
+            split,
+            CASE 
+                WHEN split = 'CompletionMetric' THEN 'assistant'
+                WHEN split = 'ConversationMetric' THEN 'conversation'
+                ELSE json_extract(data, '$.role')
+            END AS role,
+            COALESCE(
+                json_extract(data, '$.score'),
+                json_extract(data, '$.metric_value')
+            ) AS metric_value,
+            json_extract(data, '$.function_metric_name') AS function_metric_name,
+            json_extract(data, '$.content') AS content
+        FROM run_single_score
+        INNER JOIN run_metadata ON run_single_score.run_id = run_metadata.run_id
+        WHERE type = 'metrics'
+        """
+        )
+
+        # cursor.execute(
+        #     """
+        #     CREATE VIEW IF NOT EXISTS v_summary
+        #         AS
+        #             SELECT
+        #                 run_metadata.run_id,
+        #                 base_eval as eval_base_name,
+        #                 run_config__completion_fns__0 as endpoint,
+        #                 json_extract(run_config__eval_spec__args,'$.samples_jsonl') as data,
+        #                 run_config__completion_fns__1 as rubric_grader_llm,
+        #                 run_aggregate_score.metric_name as metric_name,
+        #                 run_aggregate_score.metric_aggregate_value as metric_value,
+        #                 run_aggregate_score.aggregation as aggregation,
+        #                 run_aggregate_score.metric_aggregate_value as metric_value,
+        #                 created_at
+        #                 from run_metadata
+        #                 left join run_aggregate_score on run_metadata.run_id = run_aggregate_score.run_id
+        #                 where metric_aggregate_value is not null
+        #     """
+        # )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS run_metadata_run_id_index on run_metadata (run_id);"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS run_single_score_run_id_index on run_single_score (run_id);"
+        )
