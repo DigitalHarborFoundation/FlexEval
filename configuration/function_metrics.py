@@ -3,6 +3,29 @@ import math
 import openai
 import os
 
+## ~~function templates starts~~
+from typing import Union, Dict, List, Any
+
+SingleTurnExample = "This is a conversatioal turn."
+ConversationExample = [{'role':"X1", 'content': "Y1"}, 
+                       {'role':"X2", 'content': "Y2"}, ...]
+
+def process_single_turn(SingleTurnExample: str) -> Union[str, int, float, Dict[str, Any], List[Any]]:
+    """
+        Process a single conversational turn and return the desired output. 
+        The output can be a string, integer, float, a dictionary, or a list. 
+    """
+    pass 
+
+def process_conversation(ConversationExample:list)-> Union[str, int, float, Dict[str, Any], List[Any]]:
+    """
+        Process a single conversational turn and return the desired output. 
+        The output can be a string, integer, float, a dictionary, or a list. 
+    """
+    pass 
+
+## ~~function templates ends~~
+
 
 def string_length(sample):
     """Input is a text string.

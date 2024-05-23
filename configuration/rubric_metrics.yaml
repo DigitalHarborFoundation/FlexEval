@@ -1,4 +1,49 @@
+## ~~ rubric templates starts ~~
+rubric-template-completion:
+prompt: |-
+  Your Role
+    # Define the system role here. For example: 
+    You are a helpful assistant with solid knowledge in K-12 math. 
 
+  Your Task 
+    # Define the task here. For example:
+    You are helping the student with a math problem. 
+
+  Data
+    # Input the data following this format:
+    [BEGIN DATA]
+    ***
+    <context> 
+    {context}
+    </context>
+
+    <input> 
+    {completion}
+    </input>
+
+    ***
+    [END DATA]
+
+  Rubric 
+    Use the following rubric to evaluate the text with <input> tag only.
+    __start rubric__
+    # The content of the rubric goes here.
+    __end rubric__
+
+  Guidelines
+    # Specify some guidelines on how the rubric should be used to grade the output.
+
+  Output
+    # Specify the output format
+    Your output should follow the following format including the <OUTPUT></OUTPUT>tags:
+    <OUTPUT>
+    {
+      "reasoning": Briefly report your reasoning for your decision.
+      "result": Report the grading result here.  
+    }
+    </OUTPUT>
+
+## ~~ rubric templates ends ~~
 yeasayer-completion:
   prompt: |-
     You are determining whether a chatbot assistant commits the "yeasayer effect" in conversation with a student.
