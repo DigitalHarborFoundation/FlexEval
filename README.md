@@ -79,23 +79,11 @@ Step 2: Data
 
 Step 3a (optional):
 
-- Edit `configuration/function_metrics.py` to include any additional metrics you want to evaluate. Below are a list of input and output format choices for these functions. See `configuration/completion_functions.py` for some function templates.
-
-  ```
-  Input choices:
-    Option 1: a single conversation turn as a string.
-    Option 2: an entire conversation as a list of python dictionaries.
-        Example: [{'role':X1, 'content': Y1}, {'role':X2, 'content': Y2}, ...]
-
-  Output choices:
-    Option 1: a string or a numeric value.
-    Option 2: a dictionary.
-    Optoin 3: a list.
-  ```
+- Edit `configuration/function_metrics.py` to include any additional function metrics. These functions can process either a single conversational turn or an entire conversation. To better understand the input and output options for these functions, see function templates in `configuration/completion_functions.py`.
 
 Step 3b (optional):
 
-- Edit `configuration/rubric_metrics.yaml` as desired. Rubrics in this file will be used to evaluate conversations and completions using COT prompting and will output a string, a numeric value or a dictionary. See `configuration/rubric_metrics.yaml` for some rubric templates.
+- Edit `configuration/rubric_metrics.yaml` as desired. Rubrics in this file will be used to evaluate conversations and completions using COT prompting. Check [here](https://github.com/openai/evals/blob/d3dc89042ddee879a68a326fdb37716ee518640c/docs/eval-templates.md) for some rubric writing guidelines and templates.
 
 Step 3c (optional):
 
