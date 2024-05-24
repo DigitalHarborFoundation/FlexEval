@@ -38,9 +38,10 @@ cl:
     - name: string_length
     - name: number_of_turns
 
+
 bad:
   data:
-    path: ../../data/test-cases/bot-adversarial-dataset-test-cases-first-5.jsonl
+    path: ../../data/test-cases/bot-adversarial-dataset-test-cases-sample-100.jsonl
 
   function_metrics:
     - name: string_length
@@ -56,7 +57,7 @@ bad:
   
   completion_llm:
     function_name: open_ai_completion
-    model_name: gpt-3.5-turbo
+    model_name: gpt-4o
     api_key_name: OPENAI_API_KEY
   
   grader_llm:

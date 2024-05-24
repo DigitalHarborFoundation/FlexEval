@@ -168,6 +168,7 @@ data/results/evals-outputs/*
 
 .DS_Store
 temp/
-results.db
 test-cases/
-evals_sync/
+src/llm-evals/evals_sync/
+*.db
+.*

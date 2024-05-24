@@ -368,6 +368,7 @@ if __name__ == "__main__":
                 json_extract(data, '$.score'),
                 json_extract(data, '$.metric_value')
             ) AS metric_value,
+            json_extract(run_metadata.run_config__eval_spec__args, '$.run_kwargs.completion_llm.model_name') model_name,
             base_eval,
             json_extract(data, '$.function_metric_name') AS function_metric_name,
             json_extract(data, '$.content') AS content

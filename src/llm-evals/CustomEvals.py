@@ -81,7 +81,8 @@ class TurnMetric(BaseMetric):
 
     def eval_sample(self, test_sample, rng: random.Random):
         """
-        Called by the `eval_all_samples` method to evaluate a single sample.
+        Called by the `eval_all_samples` method to evaluate a single sample
+        where a sample is a conversation from the dataset, one line of the jsonl.
 
         ARGS
         ====
@@ -144,17 +145,13 @@ class CompletionMetric(BaseMetric):
 
     def eval_sample(self, test_sample, rng: random.Random):
         """
-        Called by the `eval_all_samples` method to evaluate a single sample.
+        Called by the `eval_all_samples` method to evaluate a single sample
+        where a sample is a conversation from the dataset, one line of the jsonl.
 
         ARGS
         ====
         `test_sample`: a line from the JSONL test file formatted like:
             {'input':[{'role':X1, 'content': Y1}, {'role':X2, 'content': Y2}, ...]}
-
-        This function logs metrics in two ways. First, it computes metrics turn-by-turn.
-
-        Then, it concatenates all the text from each role together, and returns the metric over the concatenated value.
-        For this, it codes the 'turn' as -1.
 
         """
         result = self.completion_fn(prompt=test_sample)
@@ -220,7 +217,8 @@ class ConversationMetric(BaseMetric):
 
     def eval_sample(self, test_sample, rng: random.Random):
         """
-        Called by the `eval_all_samples` method to evaluate a single sample.
+        Called by the `eval_all_samples` method to evaluate a single sample
+        where a sample is a conversation from the dataset, one line of the jsonl.
 
         ARGS
         ====
@@ -228,7 +226,7 @@ class ConversationMetric(BaseMetric):
             {'input':[{'role':X1, 'content': Y1}, {'role':X2, 'content': Y2}, ...]}
 
         This function logs metrics by computing a function on each CONVERSATION
-        The function will return a JSON like this for each role:
+        The function will record a JSON like this for each role:
         {
             "role": role,
             "function_metric_name": name,
