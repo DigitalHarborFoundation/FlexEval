@@ -1,5 +1,4 @@
 import textstat
-import math
 import openai
 import os
 import re
@@ -22,15 +21,15 @@ def number_of_turns_per_role(conversation: List[Dict[str, Any]]) -> Dict[int, fl
                                              Each dictionary should have a 'role' key indicating the role of the participant.
 
     Returns:
-        Dict[str, int]: A dictionary where the keys are roles and the values are the number of turns taken by each role.
+        List[Dict[str, Any]]: A list of dicts with role/value entries indicating the number of turns for each role
     """
     roles = set([i["role"] for i in conversation])
-    results = {}
+    results = []
     for role in roles:
         # get just the turns for the role
         turns = [i for i in conversation if i["role"] == role]
         # get the number of turns
-        results[role] = len(turns)
+        results.append({"role": role, "value": len(turns)})
     return results
 
 

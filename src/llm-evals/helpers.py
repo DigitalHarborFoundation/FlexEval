@@ -142,7 +142,6 @@ def read_save_data(
         run_kwargs_dict (Dict[str, Any]): Extra metadata about the completion and grader LLMs.
     """
     try:
-        print("Opening", file_path)
         with open(file_path, "r") as read_file:
             data = [json.loads(line) for line in read_file]
             spec_line = None

@@ -46,6 +46,7 @@ bad:
     - name: string_length
       completion: false
     - name: number_of_turns
+    - name: number_of_turns_per_role
     - name: openai_moderation_api
       completion: true
 

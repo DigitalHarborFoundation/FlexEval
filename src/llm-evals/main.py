@@ -23,6 +23,12 @@ from helpers import (
     read_save_data,
 )
 
+# Features to add:
+# - allow comparison with 'ideal' responses
+# - collect costs for evaluations (and perhaps estimate them??)
+# -
+
+
 if __name__ == "__main__":
     ################################################################################
     ## Verify configuration
@@ -39,9 +45,6 @@ if __name__ == "__main__":
             "Something is wrong with your configuration. See error messages for details. Exiting."
         )
         sys.exit()
-
-    # from pathlib import Path
-    # sys.path.append(str(Path(__file__).parent))
 
     ################################################################################
     ## Parse inputs and load config files
@@ -158,8 +161,6 @@ if __name__ == "__main__":
     run_kwargs_list = [
         f"{i}: '{j}'" for i, j in run_kwargs_dict["completion_llm"].items()
     ] + [f"{i}: '{j}'" for i, j in run_kwargs_dict["grader_llm"].items()]
-    # print(run_kwargs_list)
-    # sys.exit()
 
     for function_metric in eval_suite_to_run["function_metrics"]:
         # Fill out template definition and write to file
@@ -198,7 +199,6 @@ if __name__ == "__main__":
 
     # Fill out the completion_fn registry entry. The name will match the completion_fn string
     # specified in the evals.yaml file
-    # TODO We could do this for the grader LLM too
     completion_fn_templated_filled = completion_fn_template.format(
         completion_fn_name=eval_suite_to_run.get(
             "completion_llm", {"function_name": "no_completion_fn"}
@@ -299,21 +299,14 @@ if __name__ == "__main__":
         # The first is used to complete conversations, and the last is used in machine-graded evals
         # to evaluate completions.
         # If there is only one listed, it's used for both.
-        # command = f'PYTHONPATH=$PYTHONPATH:.; oaievalset {eval_suite_to_run["completion"].get("function_name", "no_completion_fn")},{eval_suite_to_run["grader_llm"].get("model", "gpt-3.5-turbo")} {args.eval_suite} --log_to_file {logfile}'
         command = f'oaievalset {eval_suite_to_run.get("completion_llm", {}).get("function_name", "no_completion_fn")}__completion,{eval_suite_to_run["grader_llm"].get("function_name", "no_completion_fn")}__grader {args.eval_suite} --log_to_file "{logfile}"'
         # record_path is overwritten, so can't use it for oaievalset
-        # command = f'oaieval {eval_suite_to_run["grader_llm"]} {eval_suite_to_run["function_metrics"][0]} --log_to_file {logfile} --record_path {record_path}'
         print(f"running {command}")
         # Run a subprocess with a modified environment
         custom_env = os.environ.copy()
-        # for key, value in config["env"].items():
-        #     custom_env[key] = str(value)
         custom_env["PYTHONPATH"] = (
             os.path.abspath("./") + os.pathsep + custom_env.get("PYTHONPATH", "")
         )
-        # with subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=1, text=True) as proc:
-        ##for line in proc.stdout:
-        # print(line, end='')  # Print each line as it is received
 
         result = subprocess.run(
             command,
@@ -344,16 +337,15 @@ if __name__ == "__main__":
     # # Look through logfile and find where results were written to
     with open(logfile, "r") as file:
         log_lines = file.readlines()
-        # eval_lines = [i for i in log_lines if '/tmp/evallogs/' in i]
     results_paths = set(extract_results_paths(log_lines))
-    print(results_paths)
     for result_path in results_paths:
         read_save_data(result_path, config["database_path"], run_kwargs_dict)
 
     # create views
     with sqlite3.connect(config["database_path"]) as conn:
         cursor = conn.cursor()
-        # Check if the view exists
+
+        cursor.execute("DROP VIEW IF EXISTS v_metrics")
         cursor.execute(
             """
             CREATE VIEW IF NOT EXISTS v_metrics AS
@@ -361,10 +353,12 @@ if __name__ == "__main__":
             -- sample_id is row number in dataset
             run_single_score.run_id,
             sample_id,
+            SUBSTR(sample_id, LENGTH(sample_id) - INSTR(REVERSE(sample_id), '.') + 2) as row_number,
             -- dataset
             json_extract(run_config__eval_spec__args, '$.samples_jsonl') AS data_file,
             json_extract(data, '$.turn') AS turn,
             split,
+            --todo - update this 
             CASE 
                 WHEN split = 'CompletionMetric' THEN 'assistant'
                 WHEN split = 'ConversationMetric' THEN 'conversation'
@@ -374,6 +368,7 @@ if __name__ == "__main__":
                 json_extract(data, '$.score'),
                 json_extract(data, '$.metric_value')
             ) AS metric_value,
+            base_eval,
             json_extract(data, '$.function_metric_name') AS function_metric_name,
             json_extract(data, '$.content') AS content
         FROM run_single_score
@@ -382,28 +377,34 @@ if __name__ == "__main__":
         """
         )
 
-        # cursor.execute(
-        #     """
-        #     CREATE VIEW IF NOT EXISTS v_summary
-        #         AS
-        #             SELECT
-        #                 run_metadata.run_id,
-        #                 base_eval as eval_base_name,
-        #                 run_config__completion_fns__0 as endpoint,
-        #                 json_extract(run_config__eval_spec__args,'$.samples_jsonl') as data,
-        #                 run_config__completion_fns__1 as rubric_grader_llm,
-        #                 run_aggregate_score.metric_name as metric_name,
-        #                 run_aggregate_score.metric_aggregate_value as metric_value,
-        #                 run_aggregate_score.aggregation as aggregation,
-        #                 run_aggregate_score.metric_aggregate_value as metric_value,
-        #                 created_at
-        #                 from run_metadata
-        #                 left join run_aggregate_score on run_metadata.run_id = run_aggregate_score.run_id
-        #                 where metric_aggregate_value is not null
-        #     """
-        # )
+        cursor.execute(
+            """
+        CREATE VIEW IF NOT EXISTS v_most_recent_eval AS
+           WITH ranked_runs AS (
+            SELECT
+                    run_id,
+                    created_at,
+                    base_eval,
+                    ROW_NUMBER() OVER (PARTITION BY base_eval ORDER BY created_at DESC) AS rn
+                FROM
+                    run_metadata
+            )
+            SELECT
+                run_id,
+                created_at,
+                base_eval
+            FROM
+                ranked_runs
+            WHERE
+                rn = 1;
+            """
+        )
+
         cursor.execute(
             "CREATE INDEX IF NOT EXISTS run_metadata_run_id_index on run_metadata (run_id);"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS run_metadata_created_at_index on run_metadata (created_at);"
         )
         cursor.execute(
             "CREATE INDEX IF NOT EXISTS run_single_score_run_id_index on run_single_score (run_id);"
