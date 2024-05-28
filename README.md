@@ -83,7 +83,7 @@ Step 3a (optional):
 
 Step 3b (optional):
 
-- Edit `configuration/rubric_metrics.yaml` as desired. Rubrics in this file will be used to evaluate conversations and completions using COT prompting and will report a numeric score. Check [here](https://github.com/openai/evals/blob/d3dc89042ddee879a68a326fdb37716ee518640c/docs/eval-templates.md) for some rubric writing guidelines and templates.
+- Edit `configuration/rubric_metrics.yaml` as desired. Rubrics in this file will be used to evaluate conversations and completions using COT prompting and will report a numeric score (e.g., 0 or 1) or a choice string (e.g.,"A", "B", "C", or "D"). Check the `The model-graded eval template` section in [Existing templates for evals](https://github.com/openai/evals/blob/d3dc89042ddee879a68a326fdb37716ee518640c/docs/eval-templates.md) for some rubric writing guidelines and templates.
 
 Step 3c (optional):
 

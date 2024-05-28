@@ -3,8 +3,9 @@ import math
 import openai
 import os
 import re
+
 ## ~.~ function templates starts ~.~
-from typing import Union, Dict, List
+from typing import Union
 
 # Example input: either a single turn as a string or an entire conversation as a list of libraries. 
 turn_example = "This is a conversatioal turn."
@@ -12,7 +13,7 @@ conversation_example = [{'role':"X1", 'content': "Y1"},
                         {'role':"X2", 'content': "Y2"}, ...]
 
 # A function template to process a single turn
-def process_single_turn(turn: str) -> Union[int, float, Dict[str, int|float]]:
+def process_single_turn(turn: str) -> Union[int, float, dict[str, Union[int, float]]]:
     """
         Process a single conversational turn and return the desired output
         
@@ -28,7 +29,7 @@ def process_single_turn(turn: str) -> Union[int, float, Dict[str, int|float]]:
     pass 
 
 # A function template to process an entire conversation
-def process_conversation(conversation:list)-> Union[int, float, Dict[str, int|float], List[Dict[str, int|float]]]:
+def process_conversation(conversation:list)-> Union[int, float, dict[str, Union[int, float]], list[dict[str, Union[int, float]]]]:
     """
         Process an entire conversation and return the desired output
         
