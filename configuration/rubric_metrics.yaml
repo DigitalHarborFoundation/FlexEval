@@ -52,51 +52,112 @@ yeasayer-completion:
   input_outputs:
     input: "completion"
 
-  Request-for-Plot-Identification:
-    prompt: |-
-      Your Role:
-        You are a helpful assistant. You have solid knowledge in K-12 math instruction. 
+Request-for-Plot-Identification:
+  prompt: |-
+    Your Role:
+      You are a helpful assistant. You have solid knowledge in K-12 math instruction. 
 
-      Context:
-        A K-12 student learns math using an online tutoring system. 
-        During the session, the student asks the tutor for help with some math problems. 
-        To aid understanding, the tutor may generate a plot to illustrate the math concepts more clearly.
+    Context:
+      A K-12 student learns math using an online tutoring system. 
+      During the session, the student asks the tutor for help with some math problems. 
+      To aid understanding, the tutor generates a plot to illustrate the math concepts more clearly.
 
-      Your Task:
-        Decide whether the plot is generated with or without the student's requests during the conversation.
+    Your Task:
+      Decide whether the plot is generated with or without the student's requests during the conversation.
 
-      Data:
-        The following contains a conversation between the student and the tutor. 
-        The [plot-related turn] indicates the exact conversational turn where the tutor introduces or generates the plot. 
-        The [previous turns] includes the earlier exchanges between the student and the tutor that lead up to the plot-related turn. 
+    Data:
+      The following contains a conversation between the student user and the tutor. 
+      The [plot turns] includes the exchanges between the user and the tutor that lead up to the plot-related turn. 
+      
+      [BEGIN DATA]
+      ***
+      [plot turns]: {conversation}
+      ***
+      [END DATA]
+
+    __start rubric__
+    If the plot is generated with the student's request, print "YES".
+    If the plot is generated without the student's request, print "NO".
+    Note:
+    If the user acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?", do NOT treat it as a request for plots. 
+    __end rubric__
+
+    Output:
+      First, report your reasoning for your decision. 
+      Second, print your decision.
+      IMPORTANT:After your reasoning, print the choice string of "YES" or "NO" on a separate line with NO OTHER TEXT on that line.
+
+  eval_type: cot_classify
+  choice_strings:
+    - "YES"
+    - "NO"
+  choice_scores:
+    "YES": 1
+    "NO": 0
+  input_outputs:
+    input: "conversation"
+
+Unanswered-Request-Count:
+  prompt: |-
+    Your Role:
+      You are a helpful assistant. You have solid knowledge in K-12 math instruction. 
+
+    Context:
+      A K-12 student learns math using an online tutoring system. 
+      During the session, the student asks the tutor for help with some math problems. 
+      To aid understanding, the tutor generates a plot to illustrate the math concepts more clearly.
+
+    Your Task:
+      There are occasions in the conversation when a plot is requested by the student but no tool call is done. These occasions are called "Unanswered Request".
+      Your job is to identify instances of "Unanswered Request" in a conversation and report the count of these instances. 
+
+    Data:
+      The [Conversation] includes the conversation between the student user and the tutor. 
        
-        [BEGIN DATA]
-        ***
-        [plot-related turn]: {plot}
+      [BEGIN DATA]
+      ***
+      [Conversation]: {conversation}
+      ***
+      [END DATA]
 
-        [previous turns]: {conversation}
-        ***
-        [END DATA]
+    Guidelines:
+    How to identify an instance of "Unanswered Request"? 
+      Example:
+      During the conversation, the user requests for a plot:"Can you show me the graph of y = 2^x?". However, in the ensuing converation, the assistant does not do a tool call to generate a plot in response to the student's request. 
+      Special Cases:
+        1. In the conversation, the assistant usually does a tool call to generate a plot right after a "None" or "null" response message. Simply ignore this message.   
+        2. The user requests for a plot but the assistant does not answer the request by a tool call. Then the user makes the request again and again till a tool call is made by the assisant. In this case, all the previous user requests except the last successful one are deamed as unanswered requests.
+        3. The user requests for a plot. The assistant does not immediately do the tool call to generate a plot. Instead, the assistant explains the math concept or the related plot before providing the plot. In this case, it is NOT an "unanswered request".
+        4. The user acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?". This is not a request for plots. Therefore, in this case, if the assistant does not generate a plot, it is NOT an "unanswered request".
+      
+    Output:
+      First, report all the instances of unanswered requests in the conversation and give a brief description of your reasoning for your decision. 
+      Second, count the number of these instances and report the count as a string, i.e., "0", "1", "2", "3", "4", "5", "6", "7", "8", or "9". If the count is more than 9, just print "9". 
+      
+      IMPORTANT:Print the count number (e.g., "0", "1", "2") on a separate line with NO OTHER TEXT on that line.
 
-      __start rubric__
-      If the plot is generated with the student's request, print "YES".
-      If the plot is generated without the student's request, print "NO".
-      If it is not clear to decide, print "UNCLEAR". 
-      __end rubric__
-
-      Output:
-        First, report your reasoning for your decision. 
-        Second, print your decision.
-        IMPORTANT:After your reasoning, print the choice string of "YES", "NO", or "UNCLEAR" on a separate line with NO OTHER TEXT on that line.
-
-    eval_type: cot_classify
-    choice_strings:
-      - "YES"
-      - "NO"
-      - "UNCLEAR"
-    choice_scores:
-      "YES": 1
-      "NO": 0
-      "UNCLEAR": NULL
-    input_outputs:
-      input: "conversation"
+  eval_type: cot_classify
+  choice_strings:
+    - "0"
+    - "1"
+    - "2"
+    - "3"
+    - "4"
+    - "5"
+    - "6"
+    - "7"
+    - "8"
+    - "9"
+  choice_scores:
+    "0": 0
+    "1": 1
+    "2": 2
+    "3": 3
+    "4": 4
+    "5": 5
+    "6": 6
+    "7": 7
+    "8": 8
+    "9": 9
+  input_outputs:
+    input: "conversation"
