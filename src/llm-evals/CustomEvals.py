@@ -91,6 +91,7 @@ class TurnMetric(BaseMetric):
 
 
         """
+        print("in eval sample")
         for turn_ix, turn in enumerate(test_sample["input"]):
             if turn["role"] not in ["system"]:
                 # Check if the function name exists in the global namespace and call it
@@ -99,7 +100,8 @@ class TurnMetric(BaseMetric):
                 ):
                     if turn.get("content", None) is None:
                         print(turn)
-                    metric_value = globals()[self.function_metric_name](turn["content"])
+
+                    metric_value = globals()[self.function_metric_name](turn["content"], **self.kwargs)
                 else:
                     print(
                         "No callable function named "
@@ -165,7 +167,8 @@ class CompletionMetric(BaseMetric):
                 if result is None:
                     # TODO log WARNING
                     pass
-                metric_value = globals()[self.function_metric_name](result)
+
+                metric_value = globals()[self.function_metric_name](result, **self.kwargs)
             else:
                 print("globals", globals())
                 raise Exception(
@@ -242,7 +245,8 @@ class ConversationMetric(BaseMetric):
             if test_sample is None:
                 # TODO log WARNING
                 pass
-            metric_values = globals()[self.function_metric_name](test_sample["input"])
+ 
+            metric_values = globals()[self.function_metric_name](test_sample["input"], **self.kwargs)
         else:
             print("No callable function named " + self.function_metric_name + " found.")
             metric_values = None

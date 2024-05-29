@@ -153,14 +153,22 @@ if __name__ == "__main__":
     run_kwargs_dict = {}
     run_kwargs_dict["grader_llm"] = {}
     run_kwargs_dict["completion_llm"] = {}
+    run_kwargs_dict["function_metrics"] = {}
+
 
     for i, j in eval_suite_to_run.get("grader_llm", {}).items():
         run_kwargs_dict["grader_llm"][i] = j
     for i, j in eval_suite_to_run.get("completion_llm", {}).items():
         run_kwargs_dict["completion_llm"][i] = j
+    for fn_list in eval_suite_to_run.get("function_metrics", []):
+        name = fn_list["name"]
+        run_kwargs_dict["function_metrics"][name] = {}
+        for i, j in fn_list.items():
+            run_kwargs_dict["function_metrics"][name][i] = j
     run_kwargs_list = [
         f"{i}: '{j}'" for i, j in run_kwargs_dict["completion_llm"].items()
-    ] + [f"{i}: '{j}'" for i, j in run_kwargs_dict["grader_llm"].items()]
+    ] + [f"{i}: '{j}'" for i, j in run_kwargs_dict["grader_llm"].items()
+    ] 
 
     for function_metric in eval_suite_to_run["function_metrics"]:
         # Fill out template definition and write to file
@@ -168,7 +176,7 @@ if __name__ == "__main__":
         eval_class_name, completion_fn_kwargs = get_eval_class_name(
             function_metric, eval_suite_to_run
         )
-
+        cur_kwargs =  [f"{i}: '{j}'" for i, j in run_kwargs_dict["function_metrics"].get(function_metric["name"], {}).items()]
         function_metric_template_filled = function_metric_template.format(
             function_metric_name=function_metric["name"],
             eval_class_name=eval_class_name,
@@ -176,8 +184,9 @@ if __name__ == "__main__":
             completion_fn_name=eval_suite_to_run.get(
                 "completion_llm", {"function_name": "no_completion_fn"}
             ).get("function_name", "no_completion_fn"),
-            run_kwargs="\n    ".join(run_kwargs_list),
+            run_kwargs="\n    ".join(run_kwargs_list + cur_kwargs),
         )
+        
         all_evals += function_metric_template_filled
 
     for rubric_metric in eval_suite_to_run.get("rubric_metrics", []):

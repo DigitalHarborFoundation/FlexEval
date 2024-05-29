@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Union
 #
 
 
-def number_of_turns_per_role(conversation: List[Dict[str, Any]]) -> Dict[int, float]:
+def number_of_turns_per_role(conversation: List[Dict[str, Any]], **kwargs:Any) -> Dict[int, float]:
     """
     Calculate the number of conversational turns for each role. Excludes the system prompt.
 
@@ -33,7 +33,7 @@ def number_of_turns_per_role(conversation: List[Dict[str, Any]]) -> Dict[int, fl
     return results
 
 
-def number_of_turns(conversation: List[Dict[str, Any]]) -> int:
+def number_of_turns(conversation: List[Dict[str, Any]], **kwargs: Any) -> int:
     """
     Calculate the number of conversational turns in the conversation. Excludes the system prompt.
 
@@ -48,7 +48,31 @@ def number_of_turns(conversation: List[Dict[str, Any]]) -> int:
     return len(turns)
 
 
-def count_emojis(turn: str) -> Union[int, float]:
+def number_of_tool_calls(conversation: List[Dict[str, Any]], **kwargs: Any) -> List[Dict[str, Any]]:
+    """
+    Calculate the number of calls to a tool, aggregated by name, in the conversation. Assumes the roll will be tool.
+
+    Args:
+        conversation (List[Dict[str, Any]]): A list of dictionaries representing conversational turns.
+                                             Each dictionary should have a 'role' key indicating the role of the participant.
+
+    Returns:
+        int: The number of conversational turns in the conversation.
+    """
+    # Count number of tool calls by name
+    counter = {}
+    for turn in conversation:
+        if turn["role"] == "tool":
+            counter[turn["name"]] = counter.get(turn["name"], 0) + 1
+    
+    # Convert to list of dictionaries for output
+    results = []
+    for name, val in counter.items():
+        results.append({"role": name, "value": val})
+    return results
+
+
+def count_emojis(turn: str, **kwargs:Any) -> Union[int, float]:
     """
     Calculate the number of emojis in a given text string.
 
@@ -72,7 +96,7 @@ def count_emojis(turn: str) -> Union[int, float]:
     return len(emoji_pattern.findall(turn))
 
 
-def string_length(turn: str) -> Union[int, float]:
+def string_length(turn: str, **kwargs: Any) -> Union[int, float]:
     """
     Calculate the length of the input string.
 
@@ -87,7 +111,7 @@ def string_length(turn: str) -> Union[int, float]:
     return len(turn)
 
 
-def flesch_reading_ease(turn: str) -> Union[int, float]:
+def flesch_reading_ease(turn: str, **kwargs:Any) -> Union[int, float]:
     """
     Calculate the Flesch Reading Ease score for a given text string.
 
@@ -104,7 +128,7 @@ def flesch_reading_ease(turn: str) -> Union[int, float]:
     return textstat.flesch_reading_ease(turn)
 
 
-def flesch_kincaid_grade(turn: str) -> Union[int, float]:
+def flesch_kincaid_grade(turn: str, **kwargs:Any) -> Union[int, float]:
     """
     Calculate the Flesch-Kincaid Grade Level score for a given text string.
 
