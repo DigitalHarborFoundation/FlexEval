@@ -18,5 +18,7 @@ evals_output_path: ../../data/results/evals-outputs
 
 database_path: ../../data/results/results.db
 
+max_workers: 1
+
 # any additional environment variables
 env:

@@ -32,26 +32,31 @@
 #     n: 2
 
 
-example:
+example-completion:
   data:
-    path: ../../data/test-cases/example.jsonl
+    - ../../data/test-cases/bot-adversarial-dataset-test-cases-first-5.jsonl
 
-  function_metrics:
-    - name: string_length
-      completion: false
-    # - name: number_of_turns
-    # - name: number_of_turns_per_role
-    # - name: openai_moderation_api
-    #   completion: true
+  do_completion: True
 
-  rubric_metrics:
-    - name: yeasayer-completion
-      completion: true
+  name: my_eval
+  notes: my notes    
+
+  metrics:
+    function:
+      - name: string_length
+        kwargs: 
+          arg1: val1
+    rubric:
+      - name: yeasayer-completion
   
   completion_llm:
     function_name: open_ai_completion
-    model_name: gpt-4o
-    api_key_name: OPENAI_API_KEY
+    include_system_prompt: False
+    kwargs:
+      model_name: gpt-4o
+      api_key_name: OPENAI_API_KEY
+      n: 2
+    
   
   grader_llm:
     function_name: open_ai_completion

@@ -13,9 +13,11 @@ config_file = "config-dev.yaml"
 
 class TestConfiguration(unittest.TestCase):
     @classmethod
-    def setUp(self):
+    def setUpClass(self):
         self.eval_suite_name = sys.argv[1]
-        self.config_file_name = config_file
+        self.config_file_name = os.getenv(
+            "CONFIG_FILENAME"
+        )  # was set before this was called
 
         with open(self.config_file_name) as file:
             self.config = yaml.safe_load(file)
@@ -102,13 +104,14 @@ class TestConfiguration(unittest.TestCase):
                     rubric["name"] in self.rubric_metrics.keys()
                 ), f"Your eval suite `{self.eval_suite_name}` uses a rubric named `{rubric['name']}`, but no rubric with this name was found in configuration/rubric_metrics.yaml."
 
-    def test_datafile_is_found(self):
-        data_path = (
-            self.user_evals[self.eval_suite_name].get("data", {}).get("path", "")
+    def test_datafiles_are_found(self):
+        data_paths = (
+            self.user_evals[self.eval_suite_name].get("data", {}).get("path", [])
         )
-        assert os.path.exists(
-            data_path
-        ), f"The data file you specified is not found. You asked for `{data_path}`, which has the absolute path `{os.path.abspath(data_path)}"
+        for data_path in data_paths:
+            assert os.path.exists(
+                data_path
+            ), f"The data file you specified is not found. You asked for `{data_path}`, which has the absolute path `{os.path.abspath(data_path)}"
 
     # def test_evals_has_required_components(self):
     #     with open(self.config_file_name) as file:

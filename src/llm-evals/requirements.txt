@@ -13,3 +13,5 @@ textstat
 
 # for database building and management
 flatten_json
+
+peewee
