@@ -91,7 +91,10 @@ class TurnMetric(BaseMetric):
 
 
         """
+        # this is lag=lead=0
         for turn_ix, turn in enumerate(test_sample["input"]):
+            # could do
+            # turn_to_analyze = turn_ix - lag
             if turn["role"] not in ["system"]:
                 # Check if the function name exists in the global namespace and call it
                 if self.function_metric_name in globals() and callable(
@@ -154,6 +157,8 @@ class CompletionMetric(BaseMetric):
             {'input':[{'role':X1, 'content': Y1}, {'role':X2, 'content': Y2}, ...]}
 
         """
+        # this is really calling OpenAICompletionFunction or something similar,
+        # and returning the next turn in the conversation
         result = self.completion_fn(prompt=test_sample)
         results = result.get_completions()
 
@@ -285,6 +290,21 @@ class ConversationMetric(BaseMetric):
 
 class RubricMetric(ModelBasedClassify):
 
+    def run(self, recorder):
+        samples = self.get_samples()
+
+        self.eval_all_samples(recorder, samples)
+        record_metrics = {}
+
+        all_sample_metrics = recorder.get_metrics()
+        if not all_sample_metrics:
+            return record_metrics
+
+        # record the counts
+        choices = [m["choice"] for m in all_sample_metrics]
+        counts = dict(Counter(choices))
+        record_metrics.update({f"counts/{k}": v for k, v in counts.items()})
+
     def eval_sample(self, test_sample: dict, rng: Random) -> None:
         """Evaluate a single sample.
 
@@ -346,11 +366,25 @@ class RubricMetric(ModelBasedClassify):
             metrics["metascore"] = choice == test_sample["choice"]
 
         evals.record.record_metrics(**metrics)
+        # return choice
 
-        return choice
+        return {}
+
+
+class ConditionalMetric(ModelBasedClassify):
+    """In some cases, we don't want to calculate a number for EVERY conversation or
+    EVERY turn.
+
+
+    """
 
     def run(self, recorder):
-        samples = self.get_samples()
+        samples_original = self.get_samples()
+
+        # INSERT DATA CLEANING FOR PLOT ANALYSIS
+        # What we need is to know how to DETECT function calls, e.g. there is a key like "toolid" that only exists in function call turns
+        # "role" will be "tool"
+        # reconstruct the list of samples so it just contains chunks of conversation of size N leading up to a tool call
 
         self.eval_all_samples(recorder, samples)
         record_metrics = {}
@@ -363,6 +397,71 @@ class RubricMetric(ModelBasedClassify):
         choices = [m["choice"] for m in all_sample_metrics]
         counts = dict(Counter(choices))
         record_metrics.update({f"counts/{k}": v for k, v in counts.items()})
+
+    def eval_sample(self, test_sample: dict, rng: Random) -> None:
+        """Evaluate a single sample.
+
+        Recorded metrics are always: one of the self.choice_strings, or "__invalid__".
+        """
+        # process test_sample
+        for k in self.mg.input_outputs:
+            test_sample[k] = scrub_formatting_from_prompt(test_sample[k])
+
+        # # run policy completions
+        # completions = {}
+        # for k, v in self.mg.input_outputs.items():
+        #     if v in test_sample:  # test_sample already has completion, skip.
+        #         continue
+        #     if self.multicomp_n > 1:
+        #         completion = sample_and_concat_n_completions(
+        #             self.completion_fns,
+        #             prompt=test_sample[k],
+        #             template_i=self.mg.output_template,
+        #             sample_kwargs=self.sample_kwargs,
+        #             n=self.multicomp_n,
+        #         )
+        #     else:
+        #         get_input_completion = PromptFn(
+        #             test_sample[k],
+        #             completion_fn=self.completion_fn,
+        #             **self.sample_kwargs,
+        #         )
+        #         completion, _ = get_input_completion()
+        #     completions[v] = completion
+
+        # run modelgraded eval
+        metrics = {}
+        choice, info = classify(
+            mg=self.mg,
+            completion_fn=self.eval_completion_fn,
+            completion_kwargs=self.eval_kwargs,
+            eval_type=self.eval_type,
+            n=self.multicomp_n,
+            match_fn=self.match_fn,
+            format_kwargs={**completions, **test_sample, **self.modelgraded_spec_args},
+        )
+
+        # one metric PER TOOL CALL
+        metrics.update(
+            dict(
+                choice=choice,
+                metric_value=info["score"],
+                content=None,
+                turn=-1,
+                role="assistant",
+                # function_metric_name=
+            )
+        )
+        # json_extract(data, '$.function_metric_name') AS function_metric_name,
+
+        # run metaeval if requested
+        if self.metaeval:
+            assert "choice" in test_sample
+            metrics["metascore"] = choice == test_sample["choice"]
+
+        evals.record.record_metrics(**metrics)
+
+        return choice
 
         # # record the scores
         # scores = [m["score"] for m in all_sample_metrics if m["score"] is not None]

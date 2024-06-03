@@ -2,75 +2,113 @@ import unittest
 import os
 from openai import OpenAI
 import yaml
-import importlib
-import inspect
-import re
 import sys
 import dotenv
 
 dotenv.load_dotenv()
 
 
+config_file = "config-dev.yaml"
+
+
 class TestConfiguration(unittest.TestCase):
     @classmethod
     def setUp(self):
         self.eval_suite_name = sys.argv[1]
-        self.config_file_name = "config-dev.yaml"
+        self.config_file_name = config_file
+
+        with open(self.config_file_name) as file:
+            self.config = yaml.safe_load(file)
+        with open(self.config["evals_path"]) as file:
+            self.user_evals = yaml.safe_load(file)
+        with open(self.config["rubric_metrics_path"]) as file:
+            self.rubric_metrics = yaml.safe_load(file)
 
     def test_env_file_exists(self):
         assert os.path.exists(
             ".env"
         ), ".env file must be defined in the root of the project folder"
 
-    # def test_openai_key_set(self):
-    #     assert (
-    #         os.environ.get("OPENAI_API_KEY", "") != ""
-    #     ), "OPENAI_API_KEY must be set in the .env file"
+    def test_openai_key_set(self):
+        assert (
+            os.environ.get("OPENAI_API_KEY", "") != ""
+        ), "OPENAI_API_KEY must be set in the .env file"
 
-    # def test_openai_is_valid(self):
-    #     # will raise exception if key is not set
-    #     try:
-    #         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    #         client.chat.completions.create(
-    #             model="gpt-3.5-turbo",
-    #             messages=[{"role": "user", "content": "What is blue plus orange?"}],
-    #             temperature=0,
-    #         )
+    def test_openai_is_valid(self):
+        # will raise exception if key is not set
+        try:
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": "What is blue plus orange?"}],
+                temperature=0,
+            )
 
-    #     except Exception as e:
-    #         print(
-    #             "Your OpenAI key appears to not be valid! Double check the key in the .env file"
-    #         )
-    #         raise e
+        except Exception as e:
+            print(
+                "Your OpenAI key appears to not be valid! Double check the key in the .env file"
+            )
+            raise e
 
-    # ## Make sure every location specified in the config file exists
-    # def test_config_file(self):
-    #     with open(self.config_file_name) as file:
-    #         config = yaml.safe_load(file)
+    ## Make sure every location specified in the config file exists
+    def test_config_file(self):
 
-    #     def check_file_or_dir(path):
-    #         """Check if a given path exists and is a file or directory."""
-    #         return os.path.isfile(path) or os.path.isdir(path)
+        def check_file_or_dir(path):
+            """Check if a given path exists and is a file or directory."""
+            return os.path.isfile(path) or os.path.isdir(path)
 
-    #     def traverse_yaml(node, base_path=""):
-    #         """Traverse the YAML tree and check existence of leaf entries."""
-    #         if isinstance(node, str):
-    #             path = node
-    #             # path = os.path.join(base_path, node)
-    #             if not check_file_or_dir(path) and not path.endswith("db"):
-    #                 print(
-    #                     f'Error: File or directory "{path}" specified in the src/llm-evals/config.yaml file does not exist'
-    #                 )
-    #             elif os.path.islink(path):
-    #                 print(f'Warning: Found a symbolic link at path "{path}"')
-    #         elif isinstance(node, list):
-    #             for item in node:
-    #                 traverse_yaml(item, base_path=os.path.join(base_path, node[0]))
-    #         elif isinstance(node, dict):
-    #             for key, value in node.items():
-    #                 traverse_yaml(value, base_path=os.path.join(base_path, key))
+        def traverse_yaml(node, base_path=""):
+            """Traverse the YAML tree and check existence of leaf entries."""
+            if isinstance(node, str):
+                path = node
+                # path = os.path.join(base_path, node)
+                if not check_file_or_dir(path) and not path.endswith("db"):
+                    print(
+                        f'Error: File or directory "{path}" specified in the src/llm-evals/config.yaml file does not exist'
+                    )
+                elif os.path.islink(path):
+                    print(f'Warning: Found a symbolic link at path "{path}"')
+            elif isinstance(node, list):
+                for item in node:
+                    traverse_yaml(item, base_path=os.path.join(base_path, node[0]))
+            elif isinstance(node, dict):
+                for key, value in node.items():
+                    traverse_yaml(value, base_path=os.path.join(base_path, key))
 
-    #     traverse_yaml(config)
+        traverse_yaml(self.config)
+
+    def test_tests_are_unique(self):
+        # this is tricky because the test names ALSO can't overlap with pre-installed eval names......
+        import evals
+
+        evals_location = os.path.dirname(evals.__file__)
+        evals_test_path = os.path.join(evals_location, "elsuite")
+        existing_tests = os.listdir(evals_test_path)
+        for user_eval in self.user_evals.keys():
+            assert (
+                user_eval not in existing_tests
+            ), f"Your eval name `{user_eval}` is already in use by OpenAI Evals. Please use a different name."
+
+    def test_rubrics_requested_are_available(self):
+        if (
+            self.user_evals[self.eval_suite_name].get("rubric_metrics", None)
+            is not None
+        ):
+            for rubric in self.user_evals[self.eval_suite_name].get("rubric_metrics"):
+                assert (
+                    "name" in rubric
+                ), f"All rubric_metrics entries must have an entry with a `name` key."
+                assert (
+                    rubric["name"] in self.rubric_metrics.keys()
+                ), f"Your eval suite `{self.eval_suite_name}` uses a rubric named `{rubric['name']}`, but no rubric with this name was found in configuration/rubric_metrics.yaml."
+
+    def test_datafile_is_found(self):
+        data_path = (
+            self.user_evals[self.eval_suite_name].get("data", {}).get("path", "")
+        )
+        assert os.path.exists(
+            data_path
+        ), f"The data file you specified is not found. You asked for `{data_path}`, which has the absolute path `{os.path.abspath(data_path)}"
 
     # def test_evals_has_required_components(self):
     #     with open(self.config_file_name) as file:
@@ -331,3 +369,4 @@ class TestConfiguration(unittest.TestCase):
 #      'completion', 'per_turn_by_role', 'per_conversation_by_role'
 #      have the right kind of input signature - string or list
 # verify each data input has 'input' as a key, and 'role'/'content' as values
+# make sure the input is "turn" or "conversation"

@@ -31,25 +31,18 @@
 #     #model_name: mistral-ins-7b-q4
 #     n: 2
 
-cl:
-  data:
-    path: ../../data/test-cases/bot-adversarial-dataset-test-cases-first-5.jsonl
-  function_metrics:
-    - name: string_length
-    - name: number_of_turns
 
-
-bad:
+example:
   data:
-    path: ../../data/test-cases/bot-adversarial-dataset-test-cases-sample-100.jsonl
+    path: ../../data/test-cases/example.jsonl
 
   function_metrics:
     - name: string_length
       completion: false
-    - name: number_of_turns
-    - name: number_of_turns_per_role
-    - name: openai_moderation_api
-      completion: true
+    # - name: number_of_turns
+    # - name: number_of_turns_per_role
+    # - name: openai_moderation_api
+    #   completion: true
 
   rubric_metrics:
     - name: yeasayer-completion

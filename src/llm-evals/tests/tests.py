@@ -8,4 +8,9 @@
 # turns by conversation
 # strength_length by completion -- where completion function is a dummy that always returns "hi"
 # make sure completions work
-# make sure
+
+# test -- evals still works when functions have arguments
+# test -- evals still works when functions do NOT have arguments
+# test -- evals works when using OpenAI completion function
+# test -- evals works when using rubric metric
+# test -- evals BREAK when rubric template is incorrectly written  <-- expected failure

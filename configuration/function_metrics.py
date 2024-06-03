@@ -3,6 +3,7 @@ import openai
 import os
 import re
 from typing import List, Dict, Any, Union
+import json
 
 # A metric is a function that
 # - accepts a conversation or conversational turn as input
@@ -51,6 +52,32 @@ def number_of_turns(conversation: List[Dict[str, Any]]) -> int:
 def count_emojis(turn: str) -> Union[int, float]:
     """
     Calculate the number of emojis in a given text string.
+
+    Args:
+        turn (str): The input text string to be evaluated.
+
+    Returns:
+        Union[int, float]: The number of emojis in the input text.
+    """
+    emoji_pattern = re.compile(
+        "["
+        "\U0001F600-\U0001F64F"  # emoticons
+        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+        "\U0001F680-\U0001F6FF"  # transport & map symbols
+        "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+        "\U00002702-\U000027B0"  # Dingbats
+        "\U000024C2-\U0001F251"
+        "]+",
+        flags=re.UNICODE,
+    )
+    return len(emoji_pattern.findall(turn))
+
+
+def count_unusual_function_calls(turn: str) -> Union[int, float]:
+    """
+    See how often an exponential function is called with strange parameters
+
+
 
     Args:
         turn (str): The input text string to be evaluated.
@@ -135,3 +162,21 @@ def openai_moderation_api(turn: str, **kwargs: Any) -> Dict[str, float]:
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.moderations.create(input=turn)
     return response.results[0].model_dump(exclude_unset=True)["category_scores"]
+
+
+def function_has_error(turn: Dict):
+    """Returns the number of rendering errors if the turn is a function call
+    or None otherwise
+    """
+    if turn.get("role", None) == "tool":
+        ct = 0
+        for element in turn.get("content", []):
+            if "error" in element.get("type", ""):
+                try:
+                    errors = json.loads(element.get("text", "[]"))
+                    ct += len(errors)
+                except:
+                    pass
+        return ct
+    else:
+        return None

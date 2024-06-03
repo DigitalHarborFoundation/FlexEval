@@ -58,11 +58,14 @@ if __name__ == "__main__":
         type=str,
         help="Which eval set in evals.yaml you want to run",
     )
+    parser.add_argument(
+        "config_file", type=str, help="Which config file to use", default="config.yaml"
+    )
     # Parse the argument
     args = parser.parse_args()
 
     # Load configs
-    with open("config-dev.yaml") as file:
+    with open(args.config_file) as file:
         config = yaml.safe_load(file)
     (
         function_metric_template,
