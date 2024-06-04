@@ -39,7 +39,7 @@ def compute_metric(metric_name: str, metric_definition: dict, turn: Turn) -> lis
     # this is NOT a method - it's a function b/c we want it to be able to return multiple metrics, if more than one is returned
     # they share most of the same information though so it's convenient to have them constructed similarly
     # will return a list of dictionaries
-    metric_kwargs = json.loads(metric_definition).get("kwargs", None)
+    metric_kwargs = metric_definition.get("kwargs", {})
 
     # Check if the function name exists in the global namespace and call it
 
@@ -47,14 +47,20 @@ def compute_metric(metric_name: str, metric_definition: dict, turn: Turn) -> lis
         metric_function = getattr(fm, metric_name, None)
         metric_source = inspect.getsource(metric_function)
 
-        input_type = inspect.signature(metric_function).parameters.items()[0]
+        input_type = next(
+            iter(inspect.signature(metric_function).parameters.values())
+        ).annotation
         # conditional depending on the type
-        if isinstance(input_type, str):
+        if input_type is str:
             # just pass in the content
             metrics_result = metric_function(turn.content, **metric_kwargs)
-        elif isinstance(input_type, list):
+        elif input_type is list:
             # this is on a single turn - pass in the parsed list
             metrics_result = metric_function(json.loads(turn.turn), **metric_kwargs)
+        else:
+            raise Exception(
+                f"Result type {input_type} is not supported in metric function {metric_name}"
+            )
 
         base_result = {
             "turn": turn,

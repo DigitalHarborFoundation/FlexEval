@@ -44,8 +44,10 @@ example-completion:
   metrics:
     function:
       - name: string_length
-        kwargs: 
-          arg1: val1
+      - name: count_emojis
+      - name: count_unusual_function_calls
+      - name: flesch_kincaid_grade
+        
     rubric:
       - name: yeasayer-completion
   

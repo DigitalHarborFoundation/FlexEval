@@ -2,7 +2,7 @@ import textstat
 import openai
 import os
 import re
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, AnyStr
 import json
 
 # A metric is a function that
@@ -164,7 +164,7 @@ def openai_moderation_api(turn: str, **kwargs: Any) -> Dict[str, float]:
     return response.results[0].model_dump(exclude_unset=True)["category_scores"]
 
 
-def function_has_error(turn: Dict):
+def function_has_error(turn: list):
     """Returns the number of rendering errors if the turn is a function call
     or None otherwise
     """

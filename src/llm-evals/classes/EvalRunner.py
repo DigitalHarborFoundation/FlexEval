@@ -13,6 +13,7 @@ from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
 from classes.DatasetRow import DatasetRow
 from classes.Turn import Turn
+from classes.TurnMetric import TurnMetric
 
 
 class EvalRunner(Model):
@@ -114,8 +115,8 @@ class EvalRunner(Model):
             conn.execute("PRAGMA journal_mode=WAL;")  # Enable Write-Ahead Logging
 
     def initialize_database_tables(self):
-
-        for cls in [EvalSetRun, Dataset, DatasetRow, Turn]:
+        """Initializes database tables"""
+        for cls in [EvalSetRun, Dataset, DatasetRow, Turn, TurnMetric]:
             cls.initialize_database()
             db = cls._meta.database
             db.connect()
@@ -123,8 +124,8 @@ class EvalRunner(Model):
             db.drop_tables([cls])
             db.create_tables([cls], safe=False)  # can alter tables if needed
 
-    def connect_to_db(self):
-        return SqliteDatabase(os.environ["DATABASE_PATH"])
+    # def connect_to_db(self):
+    #     return SqliteDatabase(os.environ["DATABASE_PATH"])
 
     def load_evaluation_settings(self):
         with open(self.configuration["evals_path"]) as file:

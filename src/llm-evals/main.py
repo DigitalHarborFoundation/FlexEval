@@ -29,7 +29,7 @@ from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
 from classes.DatasetRow import DatasetRow
 from classes.Turn import Turn
-from classes.TurnProperty import TurnProperty, compute_metric
+from classes.TurnMetric import TurnMetric, compute_metric
 
 # Features to add:
 # - allow comparison with 'ideal' responses
@@ -51,7 +51,7 @@ def run(args):
         evalsetrun = EvalSetRun.create(
             name=runner.eval.get("name", ""),
             notes=runner.eval.get("notes", ""),
-            metrics=runner.eval.get("metrics", ""),
+            metrics=json.dumps(runner.eval.get("metrics", "")),
             dataset_files=json.dumps(runner.eval.get("data", "")),
             do_completion=runner.eval.get("do_completion", False),
             completion_llm=json.dumps(runner.eval.get("completion_llm", None)),
@@ -192,8 +192,6 @@ def run(args):
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)
 
-
-
     # Now compute metircs in parallel
     try:
         # We do this by creating new turns
@@ -204,64 +202,67 @@ def run(args):
         runner.logger.info(f"Generating function metrics with {n_workers} workers.")
         if n_workers == 1:
             metrics = []
-            #just calculate metrics on completions
-            if evalsetrun.do_completions:
-                #for each metric
-                for target_metric in json.loads(evalsetrun.metrics).get('function', []):
-                    metric_name = target_metric.get('name', None)
-                    
+            # just calculate metrics on completions
+            if evalsetrun.do_completion:
+                # for each metric
+
+                for target_metric in json.loads(evalsetrun.metrics).get("function", []):
+                    metric_name = target_metric.get("name", None)
+
                     for turn in evalsetrun.turns:
                         if turn.is_completion:
-                            
-                            metric = compute_metric(metric_name=metric_name, metric_definition=metric_definition, turn=turn)
-                        
+                            metric = compute_metric(
+                                metric_name=metric_name,
+                                metric_definition=target_metric,
+                                turn=turn,
+                            )
+                            metrics += metric
         elif n_workers > 1:
 
             with ThreadPoolExecutor(max_workers=n_workers) as executor:
                 # Submit all turns to the executor
-                futures = [
-                    executor.submit(
-                        turn.get_completion, include_system_prompt=False
-                    )  # TODO - pull this from config
-                    for turn in evalsetrun.turns
-                ]
+
+                for target_metric in json.loads(evalsetrun.metrics).get("function", []):
+                    metric_name = target_metric.get("name", None)
+
+                    for turn in evalsetrun.turns:
+                        futures.append(
+                            executor.submit(
+                                compute_metric,
+                                metric_name=metric_name,
+                                metric_definition=target_metric,
+                                turn=turn,
+                            )  # TODO - pull this from config
+                        )
 
                 # Optionally, wait for all futures to complete and handle exceptions
                 for future in futures:
                     try:
                         future.result()  # If you need to catch exceptions or ensure completion
                     except Exception as e:
-                        runner.logger.exception(
-                            "An error occurred during processing"
-                        )
-            completions = [
-                future.result() for future in futures if future.result() is not None
-            ]
+                        runner.logger.exception("An error occurred during processing")
+                metrics = []
+                for future in futures:
+                    metrics += future.result()
 
-        for completion in completions:
-            # {"choices": [{"message": {"content": "hi", "role": "assistant"}}]}
-            for message in completion:
-                assert isinstance(message["turn"], list)
-                print(message["turn"])
-                Turn.create(
-                    evalsetrun=message["evalsetrun"],
-                    dataset=message["dataset"],
-                    datasetrow=message["datasetrow"],
-                    turn_number=message["turn_number"],
-                    turn=json.dumps(message["turn"]),
-                    role=message["role"],
-                    content="\n".join(
-                        [i.get("content", "") for i in message["turn"]]
-                    ),
-                    tool_used=message["tool_used"],
-                    system_prompt=message["system_prompt"],
-                    context=message["context"],
-                    is_final_turn_in_input=message["is_final_turn_in_input"],
-                    is_completion=True,
-                    prompt_tokens=message["prompt_tokens"],
-                    completion_tokens=message["completion_tokens"],
-                )
+        for metric in metrics:
+            # assert isinstance(metric["turn"], list)
+            print(metric)
+            TurnMetric.create(
+                turn=metric["turn"],
+                evalsetrun=metric["turn"].evalsetrun,
+                dataset=metric["turn"].dataset,
+                datasetrow=metric["turn"].datasetrow,
+                metric_definition=json.dumps(metric["metric_definition"]),
+                metric_function_name=metric["metric_function_name"],
+                metric_name=metric["metric_name"],
+                metric_value=metric["metric_value"],
+                metric_kwargs=metric["metric_kwargs"],
+                metric_source=metric["metric_source"],
+            )
 
+    except Exception as e:
+        runner.logger.exception("An error occurred", exc_info=True)
 
     # ################################################################################
     # ## Verify configuration
