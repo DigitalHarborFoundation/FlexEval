@@ -39,7 +39,7 @@ example-completion:
   do_completion: True
 
   name: my_eval
-  notes: my notes    
+  notes: my notes
 
   metrics:
     function:

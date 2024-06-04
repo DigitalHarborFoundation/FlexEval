@@ -24,6 +24,7 @@ class EvalSetRun(BaseModel):
     grader_llm = pw.TextField(null=True)  # JSON string
     model_name = pw.TextField(null=True)  # JSON string
     success = pw.BooleanField(null=True)
+    rubrics = pw.TextField(null=True)
     timestamp = pw.DateTimeField(
         default=datetime.now
     )  # Automatically set to current date and time

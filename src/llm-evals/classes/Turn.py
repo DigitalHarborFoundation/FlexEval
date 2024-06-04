@@ -53,7 +53,7 @@ class Turn(BaseModel):
                     conversation_history=self.get_formatted_prompt(
                         include_system_prompt=False
                     ),
-                    **completion_function_kwargs
+                    **completion_function_kwargs,
                 )
             else:
                 print(
@@ -110,3 +110,15 @@ class Turn(BaseModel):
         for t in json.loads(self.turn):
             formatted_prompt.append({"role": t["role"], "content": t["content"]})
         return formatted_prompt
+
+    def format_input_for_rubric(self):
+        input = self.get_formatted_prompt()
+        output_minus_completion = ""
+        for i in input[:-1]:
+            output_minus_completion += f"{i['role']}: {i['content']}\n"
+        completion = f"{input[-1]['role']}: {input[-1]['content']}\n"
+        output = output_minus_completion + completion
+        # output - all turns
+        # output_minus_completion - all turns except the last
+        # completion - last turn
+        return output, output_minus_completion, completion
