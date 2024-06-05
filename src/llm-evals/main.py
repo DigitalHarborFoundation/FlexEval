@@ -1,37 +1,20 @@
 import argparse
-import os
-import shutil
-import subprocess
-from datetime import datetime
 import yaml
-import sqlite3
-import unittest
-import sys
-import helpers
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-
-import dotenv
-
-dotenv.load_dotenv(".env")
-
-from configuration.function_metrics import *
-
-from helpers import (
-    MyDumper,
-    extract_results_paths,
-    load_templates,
-    sync_directories,
-    read_save_data,
-)
+import json
 from classes.EvalRunner import EvalRunner
 from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
 from classes.DatasetRow import DatasetRow
 from classes.Turn import Turn
 from classes.TurnMetric import TurnMetric, compute_metric
+import dotenv
+
+dotenv.load_dotenv(".env")
 
 # Features to add:
+# - compute metrics for LAGGED inputs
 # - allow comparison with 'ideal' responses
 # - collect costs for evaluations (and perhaps estimate them??)
 # -
@@ -63,8 +46,11 @@ def run(args):
             grader_llm=json.dumps(runner.eval.get("grader_llm", None)),
             rubrics=json.dumps(rubrics),
         )
+        evalsetrun.create_metrics_graph()
+        runner.logger.info(evalsetrun.metric_graph_text)
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)
+        raise e
 
     try:
         runner.logger.info("Loading data")
@@ -108,6 +94,20 @@ def run(args):
                 turns = row.get_turns()
                 for turn_ix, turn in enumerate(turns):
                     assert isinstance(turn["turn"], list)
+
+                    # some turns have tool calls, in which case the content
+                    # is actually a list of dicts
+                    content = ""
+                    for i in turn["turn"]:
+                        c = i.get("content", "")
+                        if isinstance(c, str):
+                            content += f"\n{c}"
+                        elif isinstance(c, list):
+                            for entry in c:
+                                c2 = entry.get("content", "")
+                                if isinstance(c, str):
+                                    content += f"\n{c2}"
+
                     Turn.create(
                         evalsetrun=row.evalsetrun,
                         dataset=dataset,
@@ -115,7 +115,7 @@ def run(args):
                         turn_number=turn_ix + 1,
                         turn=json.dumps(turn["turn"]),
                         role=turn["role"],
-                        content="\n".join([i.get("content", "") for i in turn["turn"]]),
+                        content=content,
                         tool_used=turn["tool_used"],
                         system_prompt=turn["system_prompt"],
                         context=json.dumps(
@@ -227,18 +227,26 @@ def run(args):
                         }
                     )
 
+        runner.logger.info(
+            f"Metrics will include {len([arg for arg in arg_list if arg['metric_type'] == 'rubric'])} rubric evaluations."
+        )
         if n_workers == 1:
             metrics = []
             for arg in arg_list:
                 metric = compute_metric(**arg)
                 for m in metric:
                     if m.get("type", None) is None:
-                        print("HELP", m)
+                        runner.logger.exception(
+                            f"Metric {m} does not have a value for the key `type`."
+                        )
                     if m.get("value", None) is None:
-                        print("HELP", m)
+                        runner.logger.exception(
+                            f"Metric {m} does not have a value for the key `value`."
+                        )
                 metrics += metric
         else:
             with ThreadPoolExecutor(max_workers=n_workers) as executor:
+                futures = []
                 for arg in arg_list:
                     futures.append(executor.submit(compute_metric, **arg))
 
@@ -254,7 +262,7 @@ def run(args):
 
         runner.logger.info(f"Saving metrics to database.")
         for metric in metrics:
-            # assert isinstance(metric["turn"], list)
+            # TODO - speed this up somehow
             TurnMetric.create(
                 turn=metric["turn"],
                 evalsetrun=metric["turn"].evalsetrun,

@@ -69,15 +69,17 @@ def compute_function_metric(metric_name: str, metric_definition: dict, turn: Tur
 
     # Check if the function name exists in the global namespace and call it
 
-    if hasattr(function_metrics, metric_name) and hasattr(
-        function_metrics, metric_name
+    if hasattr(function_metrics, metric_name) and callable(
+        getattr(function_metrics, metric_name, None)
     ):
         metric_function = getattr(function_metrics, metric_name, None)
         metric_source = inspect.getsource(metric_function)
 
+        # This gets the type of the first argument of the function
         input_type = next(
             iter(inspect.signature(metric_function).parameters.values())
         ).annotation
+
         # conditional depending on the type
         if input_type is str:
             # just pass in the content
@@ -131,6 +133,7 @@ def compute_function_metric(metric_name: str, metric_definition: dict, turn: Tur
 
 
 def compute_rubric_metric(metric_name: str, metric_definition: dict, turn: Turn):
+
     # load metrics
     rubrics = json.loads(turn.evalsetrun.rubrics)
     assert (
@@ -140,32 +143,121 @@ def compute_rubric_metric(metric_name: str, metric_definition: dict, turn: Turn)
     metric_kwargs = metric_definition.get("kwargs", {})
 
     prompt = rubrics.get(metric_name).get("prompt", "")
-    assert (
-        "{input}" in prompt
-    ), f"The specified rubric metric {metric_name} must contain the string {{input}}."
 
-    if "{completion}" in prompt and not turn.is_completion:
-        raise Exception(
-            f'The specified metric {metric_name} requires a completion to be completed, but you set "do_completion" to False (or missing) in the evals.yaml file.'
-        )
+    # # if do_completion is False,
+    # if "{completion}" in prompt and not turn.is_completion:
+    #     raise Exception(
+    #         f'The specified metric {metric_name} requires a completion to be completed, but you set "do_completion" to False (or missing) in the evals.yaml file.'
+    #     )
 
     # format input for rubric
-    input, input_minus_completion, completion = turn.format_input_for_rubric()
+    conversation, context, completion = turn.format_input_for_rubric()
 
-    if not turn.is_completion:
+    # TODO possibly -- make "format_input_for_rubric" return just a single turn at a given lag???? or a range?
+
+    # assistant: what's up
+    # user: i need help with a problem
+    # assistant: ok what problem
+    # user: what does a parabola look like?
+    # assistant: it's curvy
+
+    # assistant: what's up
+    # user: i need help with a problem
+    # assistant: ok what problem
+    # user: I need to find the roots of a parabola
+    # assistant: here's a graph of a parabola <graph> the roots are where it crosses the x-axis
+
+    # Q: is this tool call a response to a student request for a plot?
+    # given that it's a tool call, what proportion of PREVIOUS adjacent user turns are requests for a plot?
+
+    # We need to know: is the previous user turn (or N turns) a request for a plot?
+
+    # TAKEAWAY: to evaluate this question on THIS turn, we need to evaluate a rubric on a PREVIOUS turn or turns
+
+    # Q: when a student requests a plot, does the tutor oblige?
+    # This one would requre EVERY student turn to be evaluated?
+
+    # Can we distinguish these somehow?
+
+    # student: draw a plot
+    # tutor: no let's talk about the problem
+    # student: do it now
+    # tutor: here's a plot <plot>
+
+    # A, B
+    # p(B=T|A=T) <- allows us to filter out A=F b/c we don't care
+
+    # but we could also compute counts for B=T, B=F, A=T, A=F and then do queries after the fact
+
+    # given that it's a tool call, what proportion of PREVIOUS adjacent user turns are requests for a plot?
+
+    # TODO - re-think how these are separated - sometimes we want to analyze non-completed conversations
+    # as if they were completions
+
+    # The prompts will have three types
+    # {context} -- everything BEFORE the last entry
+    # {completion} -- new completion or last entry
+    # {turn} -- just the current turn -- cannot be used with the other two
+
+    # TODO - put these in the verification
+    options = [("{turn}",), ("{context}", "{completion}"), ("{conversation}",)]
+    for option1 in options:
+        for option2 in options:
+            if all([o in prompt for o in option1]):
+                if option2 != option1:
+                    for o2 in option2:
+                        assert (
+                            o2 not in prompt
+                        ), f"Your rubric {metric_name} is has the template `{','.join([i  for i in option1]) }` and cannot also contain the template option `{o2}`."
+    # if "{turn}" in prompt:
+    #     assert (
+    #         "{context}" not in prompt
+    #     ), f"Your rubric {metric_name} is evaluating the current {{turn}}, and cannot have other parts of the convsersation. If you want to evaluate a completion, use {{context}} and {{completion}} placeholders."
+    #     assert (
+    #         "{completion}" not in prompt
+    #     ), f"Your rubric {metric_name} is evaluating the current {{turn}}, and cannot have other parts of the convsersation. If you want to evaluate a completion, use {{context}} and {{completion}} placeholders."
+    # if "{context}" in prompt and "{completion}" not in prompt:
+    #     raise Exception(
+    #         f"Your rubric {metric_name} has {{context}} but no {{completion}}. Please add a {{completion}} entry. If you just want to evaluate a single turn, use {{turn}}"
+    #     )
+    # if "{completion}" in prompt and "{context}" not in prompt:
+    #     raise Exception(
+    #         f"Your rubric {metric_name} has {{completion}} but no {{context}}. Please add a {{context}} entry. If you just want to evaluate a single turn, use {{turn}}"
+    #     )
+
+    if "{turn}" in prompt:
+        # single turn - do this for every turn
         populated_prompt = prompt.format(
-            input=input
+            turn=completion
         )  # just use the entire conversation
+    elif "{completion}" in prompt and "{context}" in prompt:
+        # if 'do_completion', only evaluate completions
+        if turn.evalsetrun.do_completion and turn.is_completion:
+            populated_prompt = prompt.format(context=context, completion=completion)
+        # TODO - if not do_completion, evaluate ???????every turn?????
+        elif not turn.evalsetrun.do_completion:
+            populated_prompt = prompt.format(context=context, completion=completion)
+        else:
+            return []
+    elif "{conversation}" in prompt:
+        # evaluate the full conversation UP TO the existing plot
+        # it's a completion, OR we aren't doing completions so we just do this on the last turn
+        if turn.evalsetrun.do_completion and turn.is_completion:
+            populated_prompt = prompt.format(conversation=conversation)
+        elif not turn.evalsetrun.do_completion:
+            populated_prompt = prompt.format(conversation=conversation)
+        else:
+            return []
     else:
-        populated_prompt = prompt.format(
-            input=input_minus_completion, completion=completion
-        )
+        return []
+
     # if isinstance(rubrics.get(metric_name).get("choice_strings", None), str):
     #     choice_strings = rubrics.get(metric_name).get("choice_strings").split()
     # elif isinstance(rubrics.get(metric_name).get("choice_strings", None), list):
     #     choice_strings = rubrics.get(metric_name).get("choice_strings")
     choice_scores = rubrics.get(metric_name).get("choice_scores")
     # get rubric grader
+    # TODO - this would be the rubric LLM
     completion_function = json.loads(turn.evalsetrun.completion_llm)
     completion_fn_name = completion_function.get("function_name", None)
     completion_fn_kwargs = completion_function.get("kwargs", {})

@@ -12,6 +12,7 @@ from classes.DatasetRow import DatasetRow
 from playhouse.shortcuts import model_to_dict
 import copy
 
+print(os.path.abspath("."))
 # from configuration.completion_functions import *
 from configuration import completion_functions as cf
 

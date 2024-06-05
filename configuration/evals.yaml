@@ -2,35 +2,6 @@
 #docker-compose run llm-evals python main.py EVAL_SUITE_NAME
 #docker-compose up metabase
 
-# example:
-#   data:
-#     path: data/test-cases/example.jsonl
-#   function_metrics:
-#     - name: string_length
-#       score: all_by_role #aggregates across roles
-#     - name: string_length
-#       score: completion #string length of just completions
-
-#   rubric_metrics:
-#     - name: yeasayer-completion
-
-#   grader_llm:
-#     function_name: open_ai_completion # can be empty if not used, but don't delete the key
-#     model_name: gpt-3.5-turbo
-#     api_key_name: OPENAI_API_KEY #set in .env
-#     n: 1
-
-#   completion:
-#     #this example uses a local instance of Jan (jan.ai) 
-#     #hosting the mistral 7B model
-#     function_name: open_ai_completion # can be empty if not used, but don't delete the key
-#     model_name: gpt-3.5-turbo
-#     api_key_name: OPENAI_API_KEY #set in .env
-#     #function_name: jan_completion # defined in completion_functions.py
-#     #endpoint: http://host.docker.internal:1337/v1/ #equivalent to localhost:1234/v1/
-#     #model_name: mistral-ins-7b-q4
-#     n: 2
-
 
 example-completion:
   data:
@@ -40,22 +11,118 @@ example-completion:
 
   name: my_eval
   notes: my notes
+  #TODO - set parallelism here and overwrite the config.yaml if it's set
 
   metrics:
     function:
       - name: string_length
       - name: count_emojis
-      - name: count_unusual_function_calls
+      # - name: count_unusual_function_calls
+      #   depends:
+      #     function_name: has_tool_call
+      #     min_value: 1
       - name: flesch_kincaid_grade
+      # - name: has_tool_call
+      - name: openai_moderation_api
         
     rubric:
       - name: yeasayer-completion
+        # depends:
+        #   function_name: openai_moderation_api
+        #   min_value: 0.1
+        #   max_value: 1.0
+      # - name: tool_call_is_in_response_to_request
+      #   #this will only be run when ALL conditions are met
+      #   depends:
+      #     function_name: has_tool_call
+      #     min_value: 1
+      # - name: is_pedagocally_appropriate_plot
+      #   #TWO conditions here must both be met
+      #   depends:
+      #     has_tool_call: 1
+      #     tool_call_is_in_response_to_request: 1
+
+      #TODO - will need to convert the metrics into a DAG and make sure they are evaluated in order
+      #TODO - think about how to code values of dependencies so that matches are reliable
+
   
   completion_llm:
     function_name: open_ai_completion
     include_system_prompt: False
     kwargs:
-      model_name: gpt-4o
+      model_name: gpt-3.5-turbo
+      api_key_name: OPENAI_API_KEY
+      n: 2
+    
+  
+  grader_llm:
+    function_name: open_ai_completion
+    model_name: gpt-4o
+    api_key_name: OPENAI_API_KEY
+  
+
+
+
+
+cl:
+  data:
+    - ../../data/test-cases/cl-test.jsonl
+
+  do_completion: False
+
+  name: carnegie learning
+  notes: my notes
+
+  #anything in here will overwrite entries in src/llm-evals/config.yaml
+  config:
+    max_workers: 8
+
+  metrics:
+    function:
+      - name: string_length
+      - name: count_emojis
+        depends_on:
+          #list of dependencies
+          - name: string_length
+            min_value: 10
+            max_value: 100
+
+      # - name: count_unusual_function_calls
+      #   depends:
+      #     function_name: has_tool_call
+      #     min_value: 1
+      - name: flesch_kincaid_grade
+      # - name: has_tool_call
+      - name: openai_moderation_api
+        
+    # rubric:
+    #   - name: is_request_for_plot
+    #     depends: 
+    #       role: user
+        # depends:
+        #   function_name: openai_moderation_api
+        #   min_value: 0.1
+        #   max_value: 1.0
+      # - name: tool_call_is_in_response_to_request
+        #this will only be run when ALL conditions are met
+        # depends:
+        #   function_name: has_tool_call
+        #   min_value: 1
+      # - name: is_pedagocally_appropriate_plot
+        #TWO conditions here must both be met
+        # depends:
+        #   has_tool_call: 1
+        #   tool_call_is_in_response_to_request: 1
+
+      #TODO - will need to convert the metrics into a DAG and make sure they are evaluated in order
+      #TODO - think about how to code values of dependencies so that matches are reliable
+
+  
+  completion_llm:
+    function_name: open_ai_completion
+    include_system_prompt: False
+    kwargs:
+      model_name: gpt-3.5-turbo
       api_key_name: OPENAI_API_KEY
       n: 2
     

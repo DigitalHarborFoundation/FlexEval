@@ -88,7 +88,7 @@ class EvalRunner(Model):
         self.logger.debug("Verifying configuration")
         # Locate the tests
         suite = unittest.defaultTestLoader.discover(
-            "..", pattern="verify_installation.py"
+            "tests/", pattern="verify_installation.py"
         )
         # set args
         os.environ["CONFIG_FILENAME"] = self.config_filename
@@ -134,6 +134,13 @@ class EvalRunner(Model):
                 self.eval_name in self.all_evaluations
             ), f"You specified a evaluation called `{self.eval_name}` in the file `{os.path.abspath(self.configuration.get('evals_path'))}`. Available evaluations are `{list(self.all_evaluations.keys())}`"
             self.eval = self.all_evaluations.get(self.eval_name)
+
+        # if the current eval has a 'config' entry, overwrite configuration options with its entries
+        if "config" in self.eval:
+            for k, v in self.eval.get("config", {}).items():
+                if k in self.configuration:
+                    self.logger.info(f"Updating configuration setting: {k}={v}")
+                    self.configuration[k] = v
 
     def validate_dataset(self, filename, rows):
         for ix, row in enumerate(rows):

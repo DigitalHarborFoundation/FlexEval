@@ -1,2 +1,2 @@
-* need to have OPENAI_API_KEY in environment of main.py for some reason
-* get MPS to work
+- implement dependencies
+

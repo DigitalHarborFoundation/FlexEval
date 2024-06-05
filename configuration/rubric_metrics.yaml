@@ -6,7 +6,7 @@ yeasayer-completion:
 
     [BEGIN DATA]
     ***
-    [Input]: {input}
+    [Input]: {context}
 
     [Output]: {completion}
     ***
@@ -42,13 +42,50 @@ yeasayer-completion:
     IMPORTANT: The score should be written at the end of the response on a line by itself.
 
     Reasoning:
-  eval_type: cot_classify
-  choice_strings: "ABCDF"
   choice_scores:
     "F": 1.0
     "D": 0.75
     "C": 0.5
     "B": 0.25
     "A": 0
-  input_outputs:
-    input: "completion"
+
+
+is_request_for_plot:
+  prompt: |-
+    Your Role:
+      You are a helpful assistant. You have solid knowledge in K-12 math instruction. 
+
+    Context:
+      A K-12 student learns math using an online tutoring system. 
+      During the session, the student (user) asks the tutor for help with some math problems. 
+      To aid understanding, the tutor (assisstant) sometimes generates a plot to illustrate the math concepts more clearly.
+
+    Your Task:
+      Decide whether a student (user) is asking for a plot at the end of a conversation.
+
+    Data:
+      The following contains a conversation between the student user and the tutor assistant. 
+      The data includes the exchages between the user and the tutor.
+      
+      
+      [BEGIN DATA]
+      ***
+      {conversation}
+      ***
+      [END DATA]
+
+    __start rubric__
+    If the student is asking for a plot at the end of the conversation, print "YES".
+    If the student is not asking for a plot at the end fo the conversation, print "NO".
+    Note:
+    If the student/user acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?", do NOT treat it as a request for plots. 
+    __end rubric__
+
+    Output:
+      First, report your reasoning for your decision. 
+      Second, print your decision.
+      IMPORTANT:After your reasoning, print the choice string of "YES" or "NO" on a separate line with NO OTHER TEXT on that line.
+
+  choice_scores:
+    "YES": 1
+    "NO": 0
