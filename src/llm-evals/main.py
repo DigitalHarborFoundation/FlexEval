@@ -8,7 +8,7 @@ from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
 from classes.DatasetRow import DatasetRow
 from classes.Turn import Turn
-from classes.TurnMetric import TurnMetric, compute_metric
+from classes.TurnMetric import TurnMetric
 import dotenv
 
 dotenv.load_dotenv(".env")
@@ -47,7 +47,7 @@ def run(args):
             rubrics=json.dumps(rubrics),
         )
         evalsetrun.create_metrics_graph()
-        runner.logger.info(evalsetrun.metric_graph_text)
+        runner.logger.info(evalsetrun.metric_graph)
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)
         raise e
@@ -212,29 +212,29 @@ def run(args):
                 turns_to_evaluate.append(turn)
 
         # collect function calls to make
-        arg_list = []
+        # here, we'll use the metric ordering established in evalsetrun.metric_graph
+        rubric_count = 0
         for turn in turns_to_evaluate:
-            for metric_type in ["function", "rubric"]:
-                for target_metric in json.loads(evalsetrun.metrics).get(
-                    metric_type, []
-                ):
-                    arg_list.append(
-                        {
-                            "metric_name": target_metric.get("name", None),
-                            "metric_definition": target_metric,
-                            "turn": turn,
-                            "metric_type": metric_type,
-                        }
-                    )
+            turn.metrics_to_evaluate = []
+            # metric dependencies happen WITHIN turns, rather than across
+            # this means I can associate a sequence of metrics within each turn
+            # but then have the turns execute them in parallel
+            # each turn will keep track of its own set of metrics
+            for metric_instance in json.loads(evalsetrun.metric_graph):
+                turn.metrics_to_evaluate.append(metric_instance)
+                if metric_instance.get("type") == "rubric":
+                    rubric_count += 1
 
         runner.logger.info(
-            f"Metrics will include {len([arg for arg in arg_list if arg['metric_type'] == 'rubric'])} rubric evaluations."
+            f"Metrics will include up to {rubric_count} rubric evaluations."
         )
         if n_workers == 1:
             metrics = []
-            for arg in arg_list:
-                metric = compute_metric(**arg)
-                for m in metric:
+            for turn in turns_to_evaluate:
+                # it already knows its arguments
+                turn_metrics = turn.compute_metrics()
+                # metric = compute_metric(**arg)
+                for m in turn_metrics:
                     if m.get("type", None) is None:
                         runner.logger.exception(
                             f"Metric {m} does not have a value for the key `type`."
@@ -243,12 +243,15 @@ def run(args):
                         runner.logger.exception(
                             f"Metric {m} does not have a value for the key `value`."
                         )
-                metrics += metric
+                metrics += turn_metrics
         else:
+
+            # if we want the dependencies to be obeyed, we must
+
             with ThreadPoolExecutor(max_workers=n_workers) as executor:
                 futures = []
-                for arg in arg_list:
-                    futures.append(executor.submit(compute_metric, **arg))
+                for turn in turns_to_evaluate:
+                    futures.append(executor.submit(turn.compute_metrics))
 
                 # Wait for all futures to complete and handle exceptions
                 for future in futures:
@@ -260,7 +263,7 @@ def run(args):
                 for future in futures:
                     metrics += future.result()
 
-        runner.logger.info(f"Saving metrics to database.")
+        runner.logger.info(f"Saving {len(metrics)} metrics to database.")
         for metric in metrics:
             # TODO - speed this up somehow
             TurnMetric.create(
@@ -268,12 +271,12 @@ def run(args):
                 evalsetrun=metric["turn"].evalsetrun,
                 dataset=metric["turn"].dataset,
                 datasetrow=metric["turn"].datasetrow,
-                definition=json.dumps(metric["definition"]),
                 function_name=metric["function_name"],
                 name=metric["name"],
                 type=metric["type"],
                 value=metric["value"],
                 kwargs=metric["kwargs"],
+                depends_on=json.dumps(metric["depends_on"]),
                 source=metric["source"],
                 rubric_completion=metric.get("rubric_completion", None),
                 rubric_model=metric.get("rubric_model", None),

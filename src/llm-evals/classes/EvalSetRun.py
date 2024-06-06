@@ -26,9 +26,7 @@ class EvalSetRun(BaseModel):
     model_name = pw.TextField(null=True)  # JSON string
     success = pw.BooleanField(null=True)
     rubrics = pw.TextField(null=True)
-    metric_graph_text = pw.TextField(
-        null=True
-    )  # because it'll be generated after creation
+    metric_graph = pw.TextField(null=True)  # because it'll be generated after creation
     timestamp = pw.DateTimeField(
         default=datetime.now
     )  # Automatically set to current date and time
@@ -41,7 +39,8 @@ class EvalSetRun(BaseModel):
     def create_metrics_graph(self):
         user_metrics = json.loads(self.metrics)
         # Create a directed graph
-        G = nx.DiGraph()
+        self.G = nx.DiGraph()
+        metric_graph_dict = {}
         for metric_type in ["function", "rubric"]:
             if metric_type in user_metrics:
                 assert isinstance(
@@ -70,27 +69,42 @@ class EvalSetRun(BaseModel):
                             assert (
                                 "name" in requirement
                             ), f"Metric must be have a `name` key. You provided: {metric_dict}"
-                            min_value = requirement.get("min_value", "")
-                            max_value = requirement.get("max_value", "")
-                            parent_metric = (
-                                requirement.get("name") + f"[{min_value},{max_value}]"
-                            )
+                            min_value = requirement.get("min_value", None)
+                            max_value = requirement.get("max_value", None)
+                            parent_metric = requirement.get(
+                                "name"
+                            )  # + f"[{min_value},{max_value}]"
                             # Add nodes and edges
-                            G.add_edge(child_metric, parent_metric)
+                            self.G.add_edge(parent_metric, child_metric)
+                            metric_graph_dict[child_metric] = {
+                                "name": child_metric,
+                                "type": metric_type,
+                                "kwargs": metric_dict.get("kwargs", {}),
+                                "depends_on": metric_dict.get("depends_on", []),
+                            }
                     else:
-                        G.add_edge(child_metric, "root")
-
-        # Print all nodes
-        self.metric_graph = G
-        self.metric_graph_text = "Metric Dependencies:"
-        for edge in G.edges():
-            self.metric_graph_text += (
-                f"\n{'' if edge[1] == 'root' else edge[1]} -> {edge[0]}"
-            )
+                        # keep this here - we won't evaluate 'root', but if we don't include this, the child
+                        self.G.add_node(child_metric)
+                        metric_graph_dict[child_metric] = {
+                            "name": child_metric,
+                            "type": metric_type,
+                            "kwargs": metric_dict.get("kwargs", {}),
+                            "depends_on": metric_dict.get("depends_on", []),
+                        }
+                        # G.add_edge("root", child_metric)
 
         assert nx.is_directed_acyclic_graph(
-            self.metric_graph
+            self.G
         ), "The set of metric dependencies must be acyclic! You have cyclical dependencies."
+
+        # Set up sequence of evaluations
+        # Perform topological sort
+        # This is the order in which metrics will be evaluated
+        # and the conditions under which they will be evaluated
+        topological_order = list(nx.topological_sort(self.G))
+        self.metric_graph = json.dumps(
+            [metric_graph_dict[node] for node in topological_order]
+        )
 
 
 # # Create the tables

@@ -75,7 +75,7 @@ cl:
 
   #anything in here will overwrite entries in src/llm-evals/config.yaml
   config:
-    max_workers: 8
+    max_workers: 1
 
   metrics:
     function:
@@ -96,8 +96,11 @@ cl:
       - name: openai_moderation_api
         
     # rubric:
-    #   - name: is_request_for_plot
-    #     depends: 
+    #   - 
+    #   # - name: is_request_for_plot
+      #   depends_on: 
+      #     - name: count_emojis
+      #       min_value: 1
     #       role: user
         # depends:
         #   function_name: openai_moderation_api
@@ -129,7 +132,8 @@ cl:
   
   grader_llm:
     function_name: open_ai_completion
-    model_name: gpt-4o
-    api_key_name: OPENAI_API_KEY
+    kwargs:
+      model_name: gpt-4o
+      api_key_name: OPENAI_API_KEY
   
 

@@ -113,11 +113,12 @@ class TestConfiguration(unittest.TestCase):
 
         user_metrics = self.user_evals[self.eval_suite_name].get("metrics", [])
         # Create a directed graph
+        # I think I switched around 'child' and 'parent' here but it doesn't matter for this purpose
         G = nx.DiGraph()
         for metric_type in ["function", "rubric"]:
             if metric_type in user_metrics:
                 assert isinstance(
-                    user_metrics.get(metric_type), list
+                    user_metrics.get(metric_type, {}), list
                 ), f"Metrics of type {metric_type} must be a list"
 
                 for metric_dict in user_metrics.get(metric_type):
