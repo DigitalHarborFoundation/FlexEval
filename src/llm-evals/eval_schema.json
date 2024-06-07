@@ -49,8 +49,7 @@
                         "properties": {
                           "metric_name": {
                             "type": "string",
-                            "description": "The name of the metric. Will be the function_name unless another value is specified.",
-                            "default": null
+                            "description": "The name of the metric. Will be the function_name unless another value is specified."
                           },
                           "function_name": {
                             "type": "string",
@@ -74,8 +73,7 @@
                                 },
                                 "metric_name": {
                                   "type": "string",
-                                  "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key.",
-                                  "default": null
+                                  "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key."
                                 },
                                 "rubric_name": {
                                     "type": "string",
@@ -134,9 +132,20 @@
                                 "description": "Keyword arguments for the function. Each key must correspond to an argument in the function as implemented in `function_metrics.py`. Extra keys will cause an error.",
                                 "additionalProperties": true
                             },
+                            "context_only": {
+                                "type": "boolean",
+                                "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn.",
+                                "default": false
+                            },
+                            "last_turn_only": {
+                                "type": "boolean",
+                                "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion.",
+                                "default": false
+                            },
                             "depends_on": {
                                 "type": "array",
                                 "description": "List of dependencies that must be satisfied for this metric to be computed.",
+                                "default":[],
                                 "items": {
                                     "type": "object",
                                     "properties": {
@@ -146,8 +155,7 @@
                                         },
                                         "metric_name": {
                                             "type": "string",
-                                            "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key.",
-                                            "default": null
+                                            "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key."
                                         },
                                         "min_value": {
                                             "type": "number",
