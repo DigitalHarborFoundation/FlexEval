@@ -37,6 +37,8 @@ class EvalSetRun(BaseModel):
         return temp
 
     def create_metrics_graph(self):
+        # TODO - maybe double check that a referenced "depends_on" metric is defined
+
         user_metrics = json.loads(self.metrics)
         # Create a directed graph
         self.G = nx.DiGraph()
@@ -57,7 +59,6 @@ class EvalSetRun(BaseModel):
 
                     # if the metric depends on something, that is the PARENT
                     child_metric = metric_dict.get("name")
-                    # print("Adding edge from", "root", child_metric)
                     if "depends_on" in metric_dict:
                         assert isinstance(
                             metric_dict.get("depends_on"), list
@@ -69,8 +70,6 @@ class EvalSetRun(BaseModel):
                             assert (
                                 "name" in requirement
                             ), f"Metric must be have a `name` key. You provided: {metric_dict}"
-                            min_value = requirement.get("min_value", None)
-                            max_value = requirement.get("max_value", None)
                             parent_metric = requirement.get(
                                 "name"
                             )  # + f"[{min_value},{max_value}]"

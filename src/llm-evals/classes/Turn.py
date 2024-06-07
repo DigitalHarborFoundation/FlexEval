@@ -166,6 +166,7 @@ class Turn(BaseModel):
                             # if they are none, set to extreme values
                             max_value_criteria = dependency.get("min_value", -1e20)
                             min_value_criteria = dependency.get("max_value", 1e20)
+                            # TODO - maybe don't do this comparison if neither min or max are set
                             if not (
                                 em["value"] >= min_value_criteria
                                 and em["value"] <= max_value_criteria
@@ -177,6 +178,9 @@ class Turn(BaseModel):
                         break
             if dependencies_are_all_met:
                 # pass through arguments, but add 'self' as the turn
+                # ONLY call if dependencies are ALL met
+                # TODO - maybe in the future we'll want to add the computed value from
+                # the dependency through as an argument here
                 evaluated_metrics += compute_metric(turn=self, **metric_to_evaluate)
 
         return evaluated_metrics

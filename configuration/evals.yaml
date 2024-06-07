@@ -64,62 +64,68 @@ example-completion:
 
 
 
-cl:
+dependency_example:
   data:
-    - ../../data/test-cases/cl-test.jsonl
+    - ../../data/test-cases/dependency_example_test.jsonl
 
   do_completion: False
 
-  name: carnegie learning
+  name: dependency example
   notes: my notes
 
   #anything in here will overwrite entries in src/llm-evals/config.yaml
   config:
     max_workers: 1
 
+
   metrics:
     function:
       - name: string_length
-      - name: count_emojis
+      - name: is_role_assistant
+        function_name: is_role
+        kwargs:
+          role: assistant
+      - name: is_role_user
+        function_name: is_role
+        kwargs:
+          role: user
+      - name: count_tool_calls
         depends_on:
-          #list of dependencies
-          - name: string_length
-            min_value: 10
-            max_value: 100
-
-      # - name: count_unusual_function_calls
-      #   depends:
-      #     function_name: has_tool_call
-      #     min_value: 1
+          name: is_role_assistant
+          min_value: 1
+      - name: value_counts_by_tool_name
+        kwargs:
+          json_key: latex
+        depends_on:
+          name: is_role_assistant
+          min_value: 1
+      - name: count_role_entries_in_turn
+      - name: openai_moderation_api_byturn
+        function_name: openai_moderation_api #run for every turn by default
+      - name: openai_moderation_api_context
+        function_name: openai_moderation_api
+        context_only: true
       - name: flesch_kincaid_grade
-      # - name: has_tool_call
-      - name: openai_moderation_api
         
-    # rubric:
-    #   - 
-    #   # - name: is_request_for_plot
-      #   depends_on: 
-      #     - name: count_emojis
-      #       min_value: 1
-    #       role: user
-        # depends:
-        #   function_name: openai_moderation_api
-        #   min_value: 0.1
-        #   max_value: 1.0
-      # - name: tool_call_is_in_response_to_request
-        #this will only be run when ALL conditions are met
-        # depends:
-        #   function_name: has_tool_call
-        #   min_value: 1
-      # - name: is_pedagocally_appropriate_plot
-        #TWO conditions here must both be met
-        # depends:
-        #   has_tool_call: 1
-        #   tool_call_is_in_response_to_request: 1
-
-      #TODO - will need to convert the metrics into a DAG and make sure they are evaluated in order
-      #TODO - think about how to code values of dependencies so that matches are reliable
-
+    rubric:
+      - name: yeasayer_completion
+        depends_on:
+          - name: openai_moderation_api_context
+            min_value: 0.1
+      - name: is_request_for_plot
+        context_only: true
+        depends_on: 
+          - name: is_role_assistant
+            min_value: 1
+      - name: is_student_acting_as_tutor
+        last_turn_only: true
+      
+      - name: is_pedagocally_appropriate_plot
+        depends:
+        - name: is_role_assistant
+          min_value: 1
+        - function_name: count_tool_calls
+          min_value: 1 #TODO - sum of the 'value' for all rows where function_name is 'count_tool_calls' should be >= 1
   
   completion_llm:
     function_name: open_ai_completion
