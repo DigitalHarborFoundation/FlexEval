@@ -47,9 +47,10 @@
                     "items": {
                         "type": "object",
                         "properties": {
-                          "name": {
+                          "metric_name": {
                             "type": "string",
-                            "description": "The name of the metric."
+                            "description": "The name of the metric. Will be the function_name unless another value is specified.",
+                            "default": null
                           },
                           "function_name": {
                             "type": "string",
@@ -58,7 +59,8 @@
                           "kwargs": {
                             "type": "object",
                             "description": "Keyword arguments for the function. Each key must correspond to an argument in the function as implemented in `function_metrics.py`. Extra keys will cause an error.",
-                            "additionalProperties": true
+                            "additionalProperties": true,
+                            "default": {}
                           },
                           "depends_on": {
                             "type": "array",
@@ -72,7 +74,8 @@
                                 },
                                 "metric_name": {
                                   "type": "string",
-                                  "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key."
+                                  "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key.",
+                                  "default": null
                                 },
                                 "rubric_name": {
                                     "type": "string",
@@ -81,12 +84,12 @@
                                 "min_value": {
                                   "type": "number",
                                   "description": "Minimum value of the dependency to consider it as satisfied.",
-                                  "default": -1e-20
+                                  "default": -1e20
                                 },
                                 "max_value": {
                                   "type": "number",
                                   "description": "Maximum value of the dependency to consider it as satisfied.",
-                                  "default": 1e-20
+                                  "default": 1e20
                                 },
                                 "context_only": {
                                     "type": "boolean",
@@ -143,17 +146,18 @@
                                         },
                                         "metric_name": {
                                             "type": "string",
-                                            "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key."
+                                            "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key.",
+                                            "default": null
                                         },
                                         "min_value": {
                                             "type": "number",
                                             "description": "Minimum value of the dependency to consider it as satisfied.",
-                                            "default": -1e-20
+                                            "default": -1e20
                                         },
                                         "max_value": {
                                             "type": "number",
                                             "description": "Maximum value of the dependency to consider it as satisfied.",
-                                            "default": 1e-20
+                                            "default": 1e20
                                         },
                                         "context_only": {
                                             "type": "boolean",
