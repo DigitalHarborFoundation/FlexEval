@@ -94,6 +94,7 @@ class EvalRunner(Model):
         os.environ["CONFIG_FILENAME"] = self.config_filename
         # Run the tests and capture the results
         result = unittest.TextTestRunner().run(suite)
+        print(result)
         # Check if there were any failures or errors
         test_failed = not result.wasSuccessful()
         if test_failed:

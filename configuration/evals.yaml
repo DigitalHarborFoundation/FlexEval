@@ -1,70 +1,5 @@
-#Instructions for running: 
-#docker-compose run llm-evals python main.py EVAL_SUITE_NAME
-#docker-compose up metabase
 
-
-example-completion:
-  data:
-    - ../../data/test-cases/bot-adversarial-dataset-test-cases-first-5.jsonl
-
-  do_completion: True
-
-  name: my_eval
-  notes: my notes
-  #TODO - set parallelism here and overwrite the config.yaml if it's set
-
-  metrics:
-    function:
-      - name: string_length
-      - name: count_emojis
-      # - name: count_unusual_function_calls
-      #   depends:
-      #     function_name: has_tool_call
-      #     min_value: 1
-      - name: flesch_kincaid_grade
-      # - name: has_tool_call
-      - name: openai_moderation_api
-        
-    rubric:
-      - name: yeasayer-completion
-        # depends:
-        #   function_name: openai_moderation_api
-        #   min_value: 0.1
-        #   max_value: 1.0
-      # - name: tool_call_is_in_response_to_request
-      #   #this will only be run when ALL conditions are met
-      #   depends:
-      #     function_name: has_tool_call
-      #     min_value: 1
-      # - name: is_pedagocally_appropriate_plot
-      #   #TWO conditions here must both be met
-      #   depends:
-      #     has_tool_call: 1
-      #     tool_call_is_in_response_to_request: 1
-
-      #TODO - will need to convert the metrics into a DAG and make sure they are evaluated in order
-      #TODO - think about how to code values of dependencies so that matches are reliable
-
-  
-  completion_llm:
-    function_name: open_ai_completion
-    include_system_prompt: False
-    kwargs:
-      model_name: gpt-3.5-turbo
-      api_key_name: OPENAI_API_KEY
-      n: 2
-    
-  
-  grader_llm:
-    function_name: open_ai_completion
-    model_name: gpt-4o
-    api_key_name: OPENAI_API_KEY
-  
-
-
-
-
-dependency_example:
+evaluation:
   data:
     - ../../data/test-cases/dependency_example_test.jsonl
 
@@ -77,56 +12,67 @@ dependency_example:
   config:
     max_workers: 1
 
-
   metrics:
+
     function:
       - name: string_length
-      - name: is_role_assistant
-        function_name: is_role
+      
+      - name: is_role
         kwargs:
           role: assistant
-      - name: is_role_user
-        function_name: is_role
+      
+      - name: is_role
         kwargs:
           role: user
+
       - name: count_tool_calls
         depends_on:
-          name: is_role_assistant
-          min_value: 1
+          - name: is_role
+            metric_name: assistant
+            metric_min_value: 1
+      
       - name: value_counts_by_tool_name
         kwargs:
           json_key: latex
         depends_on:
-          name: is_role_assistant
-          min_value: 1
+          - name: is_role
+            metric_name: assistant
+            metric_min_value: 1
+      
       - name: count_role_entries_in_turn
-      - name: openai_moderation_api_byturn
-        function_name: openai_moderation_api #run for every turn by default
-      - name: openai_moderation_api_context
-        function_name: openai_moderation_api
+      
+      - name: openai_moderation_api #run for every turn by default
+        context_only: false #this is the default
+      
+      - name: openai_moderation_api
         context_only: true
+      
       - name: flesch_kincaid_grade
-        
+      
     rubric:
       - name: yeasayer_completion
         depends_on:
-          - name: openai_moderation_api_context
-            min_value: 0.1
+          - name: openai_moderation_api
+            context_only: true
+            metric_min_value: 0.1
       - name: is_request_for_plot
         context_only: true
         depends_on: 
-          - name: is_role_assistant
-            min_value: 1
+          - name: is_role
+            metric_name: assistant
+            metric_min_value: 1
+      
       - name: is_student_acting_as_tutor
         last_turn_only: true
       
       - name: is_pedagocally_appropriate_plot
-        depends:
-        - name: is_role_assistant
-          min_value: 1
-        - function_name: count_tool_calls
-          min_value: 1 #TODO - sum of the 'value' for all rows where function_name is 'count_tool_calls' should be >= 1
-  
+        depends_on:
+        - name: is_role
+          metric_name: assistant
+          metric_min_value: 1
+        - name: count_tool_calls
+          metric_min_value: 1 #TODO - sum of the 'value' for all rows where function_name is 'count_tool_calls' should be >= 1
+      
   completion_llm:
     function_name: open_ai_completion
     include_system_prompt: False

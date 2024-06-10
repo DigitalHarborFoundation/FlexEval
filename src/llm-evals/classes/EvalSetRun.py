@@ -10,6 +10,7 @@ from classes.BaseModel import BaseModel
 import pydantic
 import json
 import networkx as nx
+import helpers
 
 
 class EvalSetRun(BaseModel):
@@ -37,73 +38,15 @@ class EvalSetRun(BaseModel):
         return temp
 
     def create_metrics_graph(self):
-        # TODO - maybe double check that a referenced "depends_on" metric is defined
+        """Creates an ordered list of evaluation definitions (as dicts)
+        ordered to satisfy any dependencies between evaluations
 
-        user_metrics = json.loads(self.metrics)
-        # Create a directed graph
-        self.G = nx.DiGraph()
-        metric_graph_dict = {}
-        for metric_type in ["function", "rubric"]:
-            if metric_type in user_metrics:
-                assert isinstance(
-                    user_metrics.get(metric_type), list
-                ), f"Metrics of type {metric_type} must be a list"
+        Input to 'create_metrics_graph' is a string representation of the
+        metrics defined in evals.yaml
 
-                for metric_dict in user_metrics.get(metric_type):
-                    assert isinstance(
-                        metric_dict, dict
-                    ), f"Metric must be defined as a dict. You provided: {metric_dict}"
-                    assert (
-                        "name" in metric_dict
-                    ), f"Metric must be have a `name` key. You provided: {metric_dict}"
-
-                    # if the metric depends on something, that is the PARENT
-                    child_metric = metric_dict.get("name")
-                    if "depends_on" in metric_dict:
-                        assert isinstance(
-                            metric_dict.get("depends_on"), list
-                        ), f"Entries of `depends_on` requirements for the metric {metric_dict.get('name','')} must be formatted as a list, even if it has just one entry."
-                        for requirement in metric_dict.get("depends_on", []):
-                            assert (
-                                "min_value" in requirement or "max_value" in requirement
-                            ), f"Metric requirement must be have either `min_value`, `max_value`, or both. You provided: {requirement}."
-                            assert (
-                                "name" in requirement
-                            ), f"Metric must be have a `name` key. You provided: {metric_dict}"
-                            parent_metric = requirement.get(
-                                "name"
-                            )  # + f"[{min_value},{max_value}]"
-                            # Add nodes and edges
-                            self.G.add_edge(parent_metric, child_metric)
-                            metric_graph_dict[child_metric] = {
-                                "name": child_metric,
-                                "type": metric_type,
-                                "kwargs": metric_dict.get("kwargs", {}),
-                                "depends_on": metric_dict.get("depends_on", []),
-                            }
-                    else:
-                        # keep this here - we won't evaluate 'root', but if we don't include this, the child
-                        self.G.add_node(child_metric)
-                        metric_graph_dict[child_metric] = {
-                            "name": child_metric,
-                            "type": metric_type,
-                            "kwargs": metric_dict.get("kwargs", {}),
-                            "depends_on": metric_dict.get("depends_on", []),
-                        }
-                        # G.add_edge("root", child_metric)
-
-        assert nx.is_directed_acyclic_graph(
-            self.G
-        ), "The set of metric dependencies must be acyclic! You have cyclical dependencies."
-
-        # Set up sequence of evaluations
-        # Perform topological sort
-        # This is the order in which metrics will be evaluated
-        # and the conditions under which they will be evaluated
-        topological_order = list(nx.topological_sort(self.G))
-        self.metric_graph = json.dumps(
-            [metric_graph_dict[node] for node in topological_order]
-        )
+        Output is the ordered list of evaluations mentioned above.
+        """
+        self.metric_graph = helpers.create_metrics_graph(self.metrics)
 
 
 # # Create the tables

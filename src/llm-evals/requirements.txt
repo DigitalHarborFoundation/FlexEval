@@ -18,3 +18,4 @@ flatten_json
 peewee
 #for metric dependencies
 networkx
+jsonschema

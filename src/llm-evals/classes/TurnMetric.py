@@ -25,13 +25,13 @@ class TurnMetric(BaseModel):
     datasetrow = pw.ForeignKeyField(DatasetRow, backref="turnproperties")
     turn = pw.ForeignKeyField(Turn, backref="turnproperties")
 
-    function_name = pw.TextField()
-    name = pw.TextField()
-    value = pw.FloatField(null=True)  # necessary if rubric result is INVALID
+    evaluation_name = pw.TextField()
+    evaluation_type = pw.TextField()
+    metric_name = pw.TextField()
+    metric_value = pw.FloatField(null=True)  # necessary if rubric result is INVALID
     kwargs = pw.TextField()
-    source = pw.TextField()
+    # source = pw.TextField() #TODO - make another table for this
     depends_on = pw.TextField()
-    type = pw.TextField()
     rubric_completion = pw.TextField(null=True)
     rubric_model = pw.TextField(null=True)
     rubric_completion_tokens = pw.IntegerField(null=True)

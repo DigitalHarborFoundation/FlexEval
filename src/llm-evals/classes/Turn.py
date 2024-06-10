@@ -49,7 +49,9 @@ class Turn(BaseModel):
 
             # Check if the function name exists in the global namespace and call it
 
-            if hasattr(cf, completion_fn_name) and hasattr(cf, completion_fn_name):
+            if hasattr(completion_functions, completion_fn_name) and hasattr(
+                completion_functions, completion_fn_name
+            ):
                 completion_function = getattr(cf, completion_fn_name, None)
                 completion = completion_function(
                     conversation_history=self.get_formatted_prompt(
@@ -196,7 +198,7 @@ def compute_metric(
         )
     elif type == "rubric":
         metrics = compute_rubric_metric(
-            metric_name=name, metric_kwargs=kwargs, turn=turn, depends_on=depends_on
+            rubric_name=name, metric_kwargs=kwargs, turn=turn, depends_on=depends_on
         )
     else:
         raise Exception(
@@ -248,23 +250,23 @@ def compute_function_metric(
         # now deal with output
         if isinstance(metrics_result, float) or isinstance(metrics_result, int):
             result = copy.deepcopy(base_result)
-            result["name"] = metric_name
-            result["value"] = metrics_result
+            result["metric_name"] = metric_name
+            result["metric_value"] = metrics_result
             return [result]
         elif isinstance(metrics_result, dict):
             result_list = []
             for k, v in metrics_result.items():
                 result = copy.deepcopy(base_result)
-                result["name"] = k
-                result["value"] = float(v)
+                result["metric_name"] = k
+                result["metric_value"] = float(v)
                 result_list.append(result)
             return result_list
         elif isinstance(metrics_result, list):
             result_list = []
             for entry in metrics_result:
                 result = copy.deepcopy(base_result)
-                result["name"] = entry.get("name", None)
-                result["value"] = float(entry.get("value", None))
+                result["metric_name"] = entry.get("metric_name", None)
+                result["metric_value"] = float(entry.get("metric_value", None))
                 result_list.append(result)
             return result_list
         else:
@@ -278,16 +280,16 @@ def compute_function_metric(
 
 
 def compute_rubric_metric(
-    metric_name: str, metric_kwargs: dict, turn: Turn, depends_on: list
+    rubric_name: str, metric_kwargs: dict, turn: Turn, depends_on: list
 ):
 
     # load metrics
     rubrics = json.loads(turn.evalsetrun.rubrics)
     assert (
-        metric_name in rubrics
-    ), f"You requested a rubric called `{metric_name}`, but only these were found:{rubrics.keys()}."
+        rubric_name in rubrics
+    ), f"You requested a rubric called `{rubric_name}`, but only these were found:{rubrics.keys()}."
 
-    prompt = rubrics.get(metric_name).get("prompt", "")
+    prompt = rubrics.get(rubric_name).get("prompt", "")
 
     # format input for rubric
     conversation, context, completion = turn.format_input_for_rubric()
@@ -306,7 +308,7 @@ def compute_rubric_metric(
                     for o2 in option2:
                         assert (
                             o2 not in prompt
-                        ), f"Your rubric {metric_name} is has the template `{','.join([i  for i in option1]) }` and cannot also contain the template option `{o2}`."
+                        ), f"Your rubric {rubric_name} is has the template `{','.join([i  for i in option1]) }` and cannot also contain the template option `{o2}`."
 
     if "{turn}" in prompt:
         # single turn - do this for every turn
@@ -334,7 +336,7 @@ def compute_rubric_metric(
     else:
         return []
 
-    choice_scores = rubrics.get(metric_name).get("choice_scores")
+    choice_scores = rubrics.get(rubric_name).get("choice_scores")
     # get rubric grader
     # TODO - this would be the rubric LLM
     grader_completion_function = json.loads(turn.evalsetrun.grader_llm)
@@ -389,12 +391,12 @@ Reasoning:""".strip()
         score = get_match(completion_text=completion_text, choice_scores=choice_scores)
         result = {
             "turn": turn,
-            "name": metric_name,
-            "function_name": metric_name,
+            "metric_name": rubric_name,
+            "evaluation_name": rubric_name,
             "kwargs": metric_kwargs,
             "depends_on": depends_on,
             "source": populated_prompt,
-            "value": choice_scores[score],
+            "metric_value": choice_scores[score],
             "type": "rubric",
             "rubric_completion": completion["choices"][0]["message"]["content"],
             "rubric_model": completion.get("model", None),
