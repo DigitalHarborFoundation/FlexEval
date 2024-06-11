@@ -27,7 +27,7 @@ def run(args):
 
     TODO - for webapp, config should be an argument here ^
     """
-
+    # TODO - make evals.yaml file path configurable
     runner = EvalRunner(eval_name=args.eval_name, config_filename=args.config_filename)
     with open(runner.configuration["rubric_metrics_path"]) as file:
         rubrics = yaml.safe_load(file)
@@ -305,6 +305,12 @@ if __name__ == "__main__":
         "eval_name",
         type=str,
         help="Which eval set in evals.yaml you want to run",
+    )
+    parser.add_argument(
+        "--eval_file_path",
+        type=str,
+        defualt=".",
+        help="Path to the evaluation evals.yaml file you want to run.",
     )
     parser.add_argument(
         "--config_filename",

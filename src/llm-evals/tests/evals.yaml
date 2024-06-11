@@ -1,0 +1,7 @@
+#these are our eval suites for tests
+
+
+test_suite_1:
+  config: 
+    evals_path: 'tests/evals.yaml'
+    database_path: tests/results.db
