@@ -28,6 +28,9 @@ evaluation:
       - name: count_tool_calls
         depends_on:
           - name: is_role
+            type: function
+            kwargs:
+              role: assistant
             metric_name: assistant
             metric_min_value: 1
       
@@ -36,6 +39,8 @@ evaluation:
           json_key: latex
         depends_on:
           - name: is_role
+            kwargs:
+              role: assistant
             metric_name: assistant
             metric_min_value: 1
       
@@ -59,6 +64,9 @@ evaluation:
         context_only: true
         depends_on: 
           - name: is_role
+            type: function
+            kwargs:
+              role: assistant
             metric_name: assistant
             metric_min_value: 1
       
@@ -68,6 +76,8 @@ evaluation:
       - name: is_pedagocally_appropriate_plot
         depends_on:
         - name: is_role
+          kwargs:
+            role: assistant
           metric_name: assistant
           metric_min_value: 1
         - name: count_tool_calls

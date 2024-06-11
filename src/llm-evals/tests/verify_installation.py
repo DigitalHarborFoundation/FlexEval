@@ -5,6 +5,8 @@ import yaml
 import sys
 import dotenv
 import networkx as nx
+import helpers
+import json
 
 dotenv.load_dotenv()
 
@@ -110,56 +112,9 @@ class TestConfiguration(unittest.TestCase):
             ), f"The data file you specified is not found. You asked for `{data_path}`, which has the absolute path `{os.path.abspath(data_path)}"
 
     def test_metric_dependencies_are_a_dag(self):
-
-        user_metrics = self.user_evals[self.eval_suite_name].get("metrics", [])
-        # Create a directed graph
-        # I think I switched around 'child' and 'parent' here but it doesn't matter for this purpose
-        G = nx.DiGraph()
-        for metric_type in ["function", "rubric"]:
-            if metric_type in user_metrics:
-                assert isinstance(
-                    user_metrics.get(metric_type, {}), list
-                ), f"Metrics of type {metric_type} must be a list"
-
-                for metric_dict in user_metrics.get(metric_type):
-                    assert isinstance(
-                        metric_dict, dict
-                    ), f"Metric must be defined as a dict. You provided: {metric_dict}"
-                    assert (
-                        "name" in metric_dict
-                    ), f"Metric must be have a `name` key. You provided: {metric_dict}"
-
-                    # if the metric depends on something, that is the PARENT
-                    child_metric = metric_dict.get("name")
-                    # print("Adding edge from", "root", child_metric)
-                    if "depends_on" in metric_dict:
-                        assert isinstance(
-                            metric_dict.get("depends_on"), list
-                        ), f"Entries of `depends_on` requirements for the metric {metric_dict.get('name','')} must be formatted as a list, even if it has just one entry."
-                        for requirement in metric_dict.get("depends_on", []):
-                            assert (
-                                "min_value" in requirement or "max_value" in requirement
-                            ), f"Metric requirement must be have either `min_value`, `max_value`, or both. You provided: {requirement}."
-                            assert (
-                                "name" in requirement
-                            ), f"Metric must be have a `name` key. You provided: {metric_dict}"
-                            parent_metric = requirement.get("name")
-                            # Add nodes and edges
-                            G.add_edge(child_metric, parent_metric)
-                    else:
-                        G.add_edge(child_metric, "root")
-
-        # Print all nodes
-        self.metric_graph = G
-        self.metric_graph_text = "Metric Dependencies:"
-        for edge in G.edges():
-            self.metric_graph_text += (
-                f"\n{'' if edge[1] == 'root' else edge[1]} -> {edge[0]}"
-            )
-
-        assert nx.is_directed_acyclic_graph(
-            self.metric_graph
-        ), "The set of metric dependencies must be acyclic! You have cyclical dependencies."
+        # Error checking will happen in create_metrics_graph function
+        helpers.create_metrics_graph(json.dumps(self.user_evals[self.eval_suite_name].get("metrics", [])))
+       
 
 
 # def test_evals_has_required_components(self):

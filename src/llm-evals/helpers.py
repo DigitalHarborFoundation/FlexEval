@@ -1,29 +1,37 @@
 import json
 import networkx as nx
+from typing import List, Dict, Any, Union, AnyStr
 
 
-def create_metrics_graph(metrics_dict: str) -> str:
-    """ """
+
+def create_metrics_graph(metrics_dict: str) -> List[Any]:
+    """ Input is a json representation of the metrics dictionary.
+    Output is
+    - list of string representations of the nodes in the graph, in topological order
+    """
 
     user_metrics = json.loads(metrics_dict)
     # Create a directed graph
     G = nx.DiGraph()
     metric_graph_dict = {}
     for evaluation_type in user_metrics.keys():
-
-        for metric_dict in user_metrics:
+        
+        for metric_dict in user_metrics[evaluation_type]:
 
             # if the metric depends on something, that is the PARENT
             child_metric, evaluation_name = (
                 get_metric_info(metric_dict)
             )
-            for requirement in metric_dict.get("depends_on"):
-                parent_metrics = get_parent_metrics(
-                    all_metrics=user_metrics, child=requirement
-                )
-
+            # for requirement in metric_dict.get("depends_on", []):
+            parent_metrics = get_parent_metrics(
+                all_metrics=user_metrics, child=metric_dict
+            )
+            if len(parent_metrics) > 0:
                 # Add an edge, which implicitly adds nodes where necessary
-                for parent_metric in parent_metrics:
+                for parent_metric_dict in parent_metrics:
+                    parent_metric, _ = (
+                        get_metric_info(parent_metric_dict)
+                    )
                     G.add_edge(parent_metric, child_metric)
                 metric_graph_dict[child_metric] = {
                     "evaluation_name": evaluation_name,  # function or rubric name
@@ -42,9 +50,17 @@ def create_metrics_graph(metrics_dict: str) -> str:
                 }
                 # G.add_edge("root", child_metric)
 
+
+    # Make string representation with all nodes for error printing in assertion
+    graph_string = "Metric Dependencies:"
+    for edge in G.edges():
+        graph_string += (
+            f"\n{'' if edge[1] == 'root' else edge[1]} -> {edge[0]}"
+        )
+
     assert nx.is_directed_acyclic_graph(
         G
-    ), "The set of metric dependencies must be acyclic! You have cyclical dependencies."
+    ), "The set of metric dependencies must be acyclic! You have cyclical dependencies. {graph_string}"
 
     # Set up sequence of evaluations
     # Perform topological sort
@@ -65,13 +81,13 @@ def get_metric_info(single_metric: dict):
 
 def get_parent_metrics(all_metrics: dict, child: dict):
     """all_metrics will be a dictionary with keys of "rubric" and "function"
-    Both of these map to a list fo dictionaries that are derived from evals.yaml
+    Both of these map to a list of dictionaries that are derived from evals.yaml
     but that have default values filled in
 
     This function takes the eval represented by "child" and finds ALL evals in "all_metrics"
     that quality as the child's immediate parent
 
-    An eval can quality as a parent by having a matching name, type, context_only, last_turn_only
+    An eval can qualify as a parent by having a matching name, type, context_only, last_turn_only
     At this point, we won't have enough information to decide whether the child should be run
     (since the child might have additional requirements on the output of the parent)
     but this is enough to tell us that the child should be run AFTER the parent
@@ -82,20 +98,25 @@ def get_parent_metrics(all_metrics: dict, child: dict):
     #for a dependency, multiple keys might be listed
     #We should find at least one parent that matches ALL of those key/value pairs, otherwise raise an error
     parents = []
-    for requirement in child.get('depends_on'):
+    for requirement in child.get('depends_on', []):
         candidate_parents = []
-        for metric_type in ['function','rubric']:
+        allowed_types = ['function','rubric']
+        if 'type' in requirement:
+            allowed_types = [requirement['type']]
+        for metric_type in allowed_types:
             for candidate in all_metrics.get(metric_type):
-                conditionals = ['last_turn_only','context_only', 'name']
+                conditionals = ['last_turn_only','context_only', 'name', 'kwargs']
                 matches = True
                 for conditional in conditionals:
-                    if conditional in requirement and (requirement.get(conditional,None) != candidate.get('context_only')):
+                    if conditional in requirement and (requirement.get(conditional,None) != candidate.get(conditional)):
                         matches = False
                 if matches:
                         candidate_parents.append(candidate)
         assert len(candidate_parents) > 0, f'We were unable to locate any match for the `depends_on` entry `{json.dumps(requirement,indent=4)}` in the metric `{json.dumps(child,indent=4)}`'
         assert len(candidate_parents) < 2, f'We located more than one match for the `depends_on` entry `{json.dumps(requirement,indent=4)}` in the metric `{json.dumps(child,indent=4)}`. The matches were `{json.dumps(candidate_parents,indent=4)}`. Please add another criterion to disambiguate.'
         parents += candidate_parents
+
+    return parents
 
 
 
