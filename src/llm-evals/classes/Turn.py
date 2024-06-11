@@ -183,8 +183,6 @@ class Turn(BaseModel):
                 # TODO - maybe in the future we'll want to add the computed value from
                 # the dependency through as an argument here
                 evaluated_metrics += compute_metric(turn=self, **metric_to_evaluate)
-        print("EXITING")
-        sys.exit()
         return evaluated_metrics
 
 
