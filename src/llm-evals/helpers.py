@@ -28,7 +28,6 @@ def create_metrics_graph(metrics_dict: str) -> str:
                 metric_graph_dict[child_metric] = {
                     "evaluation_name": evaluation_name,  # function or rubric name
                     "evaluation_type": evaluation_type,  # rubric
-                    "metric_name": metric_name,
                     "kwargs": metric_dict.get("kwargs"),
                     "depends_on": metric_dict.get("depends_on"),
                 }
@@ -38,7 +37,6 @@ def create_metrics_graph(metrics_dict: str) -> str:
                 metric_graph_dict[child_metric] = {
                     "evaluation_name": evaluation_name,  # function or rubric name
                     "evaluation_type": evaluation_type,  # rubric
-                    "metric_name": metric_name,
                     "kwargs": metric_dict.get("kwargs"),
                     "depends_on": metric_dict.get("depends_on"),
                 }
@@ -57,7 +55,7 @@ def create_metrics_graph(metrics_dict: str) -> str:
     return metric_graph
 
 
-def get_metric_info(single_metric: dict)
+def get_metric_info(single_metric: dict):
     '''Input will be a single metric dictionary
     Output will be
     - string representation of metric using json.dumps
@@ -106,6 +104,6 @@ def get_parent_metrics(all_metrics: dict, child: dict):
 # if function_name is defined, rubric
 # make sure "function" and "rubric" default to empty lists
 # TODO - don't set defaults in "depends_on" to make matching more flexible
-evaluation_name: my_rubric
-evaluation_type: rubric
-metric_name: <
+# evaluation_name: my_rubric
+# evaluation_type: rubric
+# metric_name: <
