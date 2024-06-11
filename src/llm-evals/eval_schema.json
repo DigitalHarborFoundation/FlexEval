@@ -47,10 +47,6 @@
                     "items": {
                         "type": "object",
                         "properties": {
-                          "metric_name": {
-                            "type": "string",
-                            "description": "The name of the metric. Will be the function_name unless another value is specified."
-                          },
                           "name": {
                             "type": "string",
                             "description": "The function to call to compute this metric."
@@ -75,6 +71,19 @@
                                   "type": "string",
                                   "description": "One of 'function' or 'rubric' indicating the type of the dependency."
                                 },
+                                "kwargs": {
+                                  "type": "object",
+                                  "description": "The keyword arguments for the dependency. If provided, used to match which evaluation this dependency is for, so must match the keyword args given for some evaluation.",
+                                  "additionalProperties": true
+                                },
+                                "context_only": {
+                                  "type": "boolean",
+                                  "description": "The context_only value for the dependency. If provided, used to match which evaluation this dependency is for."
+                                },
+                                "last_turn_only": {
+                                    "type": "boolean",
+                                    "description": "The last_turn_only value for the dependency. If provided, used to match which evaluation this dependency is for."
+                                },
                                 "metric_name": {
                                   "type": "string",
                                   "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key."
@@ -88,14 +97,6 @@
                                   "type": "number",
                                   "description": "Maximum value of the dependency to consider it as satisfied.",
                                   "default": 1e20
-                                },
-                                "context_only": {
-                                    "type": "boolean",
-                                    "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn."
-                                },
-                                "last_turn_only": {
-                                    "type": "boolean",
-                                    "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion."
                                 }
                               },
                               "additionalProperties": false
@@ -122,7 +123,7 @@
                     "items": {
                         "type": "object",
                         "properties": {
-                            "rubric_name": {
+                            "name": {
                                 "type": "string",
                                 "description": "The rubric to use to evaluate this metric."
                             },
@@ -149,12 +150,25 @@
                                     "type": "object",
                                     "properties": {
                                         "name": {
-                                            "type": "string",
-                                            "description": "Name of the dependency function or rubric."
+                                          "type": "string",
+                                          "description": "Name of the dependency function or rubric."
                                         },
                                         "type": {
                                           "type": "string",
                                           "description": "One of 'function' or 'rubric' indicating the type of the dependency."
+                                        },
+                                        "kwargs": {
+                                          "type": "object",
+                                          "description": "The keyword arguments for the dependency. If provided, used to match which evaluation this dependency is for, so must match the keyword args given for some evaluation.",
+                                          "additionalProperties": true
+                                        },
+                                        "context_only": {
+                                          "type": "boolean",
+                                          "description": "The context_only value for the dependency. If provided, used to match which evaluation this dependency is for."
+                                        },
+                                        "last_turn_only": {
+                                            "type": "boolean",
+                                            "description": "The last_turn_only value for the dependency. If provided, used to match which evaluation this dependency is for."
                                         },
                                         "metric_name": {
                                             "type": "string",
@@ -169,17 +183,9 @@
                                             "type": "number",
                                             "description": "Maximum value of the dependency to consider it as satisfied.",
                                             "default": 1e20
-                                        },
-                                        "context_only": {
-                                            "type": "boolean",
-                                            "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn."
-                                        },
-                                        "last_turn_only": {
-                                            "type": "boolean",
-                                            "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion."
                                         }
                                     },
-                                    "additionalProperties": true
+                                    "additionalProperties": false
                                 },
                                 "required": ["name"]
                             }

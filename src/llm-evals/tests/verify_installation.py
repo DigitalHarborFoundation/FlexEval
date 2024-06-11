@@ -7,6 +7,7 @@ import dotenv
 import networkx as nx
 import helpers
 import json
+import jsonschema
 
 dotenv.load_dotenv()
 
@@ -114,6 +115,18 @@ class TestConfiguration(unittest.TestCase):
     def test_metric_dependencies_are_a_dag(self):
         # Error checking will happen in create_metrics_graph function
         helpers.create_metrics_graph(json.dumps(self.user_evals[self.eval_suite_name].get("metrics", [])))
+
+    def test_eval_json_matches_schema(self):
+        '''Compare the provided user_evals to the json schema eval_schema.json
+        '''
+        data = {}
+        data["evaluation_suite"] = self.user_evals[self.eval_suite_name]
+
+        # Define the schema
+        with open("eval_schema.json", "r") as infile: #TODO: Should this path be somewhere else?
+            schema = json.load(infile)
+        # Validate against schema
+        jsonschema.validate(instance=data, schema=schema)
        
 
 
