@@ -7,6 +7,7 @@ completion_functions: '../../configuration/completion_functions.py'
 evals_path: '../../configuration/evals.yaml'
 env_file: '.env' #in same location as main.py
 logs_path: '../../logs/'
+eval_schema_path: 'eval_schema.json'
 
 database_path: ../../data/results/results.db
 

@@ -123,7 +123,7 @@ class TestConfiguration(unittest.TestCase):
         data["evaluation_suite"] = self.user_evals[self.eval_suite_name]
 
         # Define the schema
-        with open("eval_schema.json", "r") as infile: #TODO: Should this path be somewhere else?
+        with open(self.config["eval_schema_path"], "r") as infile: #TODO: Should this path be somewhere else?
             schema = json.load(infile)
         # Validate against schema
         jsonschema.validate(instance=data, schema=schema)
