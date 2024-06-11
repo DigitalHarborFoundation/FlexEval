@@ -91,13 +91,11 @@
                                 },
                                 "context_only": {
                                     "type": "boolean",
-                                    "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn.",
-                                    "default": false
+                                    "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn."
                                 },
                                 "last_turn_only": {
                                     "type": "boolean",
-                                    "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion.",
-                                    "default": false
+                                    "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion."
                                 }
                               },
                               "additionalProperties": false
@@ -174,13 +172,11 @@
                                         },
                                         "context_only": {
                                             "type": "boolean",
-                                            "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn.",
-                                            "default": false
+                                            "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn."
                                         },
                                         "last_turn_only": {
                                             "type": "boolean",
-                                            "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion.",
-                                            "default": false
+                                            "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion."
                                         }
                                     },
                                     "additionalProperties": true
