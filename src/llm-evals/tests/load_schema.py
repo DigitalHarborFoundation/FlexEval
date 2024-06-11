@@ -5,11 +5,11 @@ import yaml
 import os
 
 # Define the schema
-with open("eval_schema.json", "r") as infile:
+with open("../eval_schema.json", "r") as infile:
     schema = json.load(infile)
 
 # Sample data
-with open("../../configuration/evals.yaml", "r") as infile:
+with open("../../../configuration/evals.yaml", "r") as infile:
     temp = yaml.safe_load(infile)
 data = {}
 data["evaluation_suite"] = temp["evaluation"]

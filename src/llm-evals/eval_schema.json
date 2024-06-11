@@ -51,7 +51,7 @@
                             "type": "string",
                             "description": "The name of the metric. Will be the function_name unless another value is specified."
                           },
-                          "function_name": {
+                          "name": {
                             "type": "string",
                             "description": "The function to call to compute this metric."
                           },
@@ -67,24 +67,24 @@
                             "items": {
                               "type": "object",
                               "properties": {
-                                "function_name": {
+                                "name": {
                                   "type": "string",
-                                  "description": "Name of the dependency function."
+                                  "description": "Name of the dependency function or rubric."
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "description": "One of 'function' or 'rubric' indicating the type of the dependency."
                                 },
                                 "metric_name": {
                                   "type": "string",
                                   "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key."
                                 },
-                                "rubric_name": {
-                                    "type": "string",
-                                    "description": "Name of the rubric dependency."
-                                  },
-                                "min_value": {
+                                "metric_min_value": {
                                   "type": "number",
                                   "description": "Minimum value of the dependency to consider it as satisfied.",
                                   "default": -1e20
                                 },
-                                "max_value": {
+                                "metric_max_value": {
                                   "type": "number",
                                   "description": "Maximum value of the dependency to consider it as satisfied.",
                                   "default": 1e20
@@ -101,7 +101,8 @@
                                 }
                               },
                               "additionalProperties": false
-                            }
+                            },
+                            "required": ["name"]
                           },
                           "context_only": {
                             "type": "boolean",
@@ -114,7 +115,7 @@
                             "default": false
                           }
                         },
-                        "required": ["function_name"]
+                        "required": ["name"]
                       }
                 },
                 "rubric":{
@@ -149,20 +150,24 @@
                                 "items": {
                                     "type": "object",
                                     "properties": {
-                                        "function_name": {
+                                        "name": {
                                             "type": "string",
-                                            "description": "Name of the dependency function."
+                                            "description": "Name of the dependency function or rubric."
+                                        },
+                                        "type": {
+                                          "type": "string",
+                                          "description": "One of 'function' or 'rubric' indicating the type of the dependency."
                                         },
                                         "metric_name": {
                                             "type": "string",
                                             "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key."
                                         },
-                                        "min_value": {
+                                        "metric_min_value": {
                                             "type": "number",
                                             "description": "Minimum value of the dependency to consider it as satisfied.",
                                             "default": -1e20
                                         },
-                                        "max_value": {
+                                        "metric_max_value": {
                                             "type": "number",
                                             "description": "Maximum value of the dependency to consider it as satisfied.",
                                             "default": 1e20
@@ -179,10 +184,11 @@
                                         }
                                     },
                                     "additionalProperties": true
-                                }
+                                },
+                                "required": ["name"]
                             }
                         },
-                        "required": ["rubric_name"]
+                        "required": ["name"]
                         }
                 }
             }
