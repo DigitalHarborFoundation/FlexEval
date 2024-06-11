@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 import sys
 import sqlite3
+import json
+import jsonschema
 
 
 from classes.EvalSetRun import EvalSetRun
@@ -24,10 +26,11 @@ class EvalRunner(Model):
     database: SqliteDatabase
     eval_name: str
 
-    def __init__(self, eval_name: str, config_filename: str):
+    def __init__(self, eval_name: str, config_filename: str, evals_path: str = None):
 
         self.eval_name = eval_name
         self.config_filename = config_filename
+        self.evals_path = evals_path
 
         self.initialize_logger()
         self.load_configuration()
@@ -142,6 +145,21 @@ class EvalRunner(Model):
                 if k in self.configuration:
                     self.logger.info(f"Updating configuration setting: {k}={v}")
                     self.configuration[k] = v
+        if self.evals_path is not None:
+            self.logger.info(
+                f"Updating configuration setting: evals_path={self.evals_path}"
+            )
+            self.configuration["evals_path"] = self.evals_path
+
+        # Validate that the schema meets the required structure
+        with open(self.configuration["eval_schema_path"], "r") as infile:
+            target_schema = json.load(infile)
+        # has already been validated - probably don't need to do this
+        jsonschema.validate(schema=target_schema, instance=self.eval)
+
+        # apply defaults to the schema
+        self.eval = apply_defaults(schema=target_schema, data=self.eval)
+        # eval suite looks ok here...
 
     def validate_dataset(self, filename, rows):
         for ix, row in enumerate(rows):
@@ -168,3 +186,55 @@ class EvalRunner(Model):
 
     # TODO - assert that 'ideals' is a dict
     # TODO - assert that each key in ideals is an eval we'll be running
+
+
+def apply_defaults(schema, data, path=None):
+    # Initialize path as an empty list if None. This will store the navigation path in the schema.
+    if path is None:
+        path = []
+
+    if data is None:
+        # If data is None and defaults are specified, apply them
+        return schema.get("default")
+
+    if isinstance(data, dict):
+        # Process dictionaries
+        if "properties" in schema:
+            # Loop over each schema property
+            for key, subschema in schema["properties"].items():
+                # Update path with current property
+                new_path = path + [key]
+                if key in data:
+                    # Recursively apply defaults, pass the path along
+                    data[key] = apply_defaults(subschema, data[key], new_path)
+                elif "default" in subschema:
+                    # Apply default if the key is not in the data
+                    data[key] = subschema["default"]
+                    print("setting", path, key, subschema["default"])
+        elif "items" in schema:
+            if "properties" in schema["items"]:
+                # Loop over each schema property
+                for key, subschema in schema["items"]["properties"].items():
+                    # Update path with current property
+                    new_path = path + [key]
+                    if key in data:
+                        # Recursively apply defaults, pass the path along
+                        data[key] = apply_defaults(subschema, data[key], new_path)
+                    elif "default" in subschema:
+                        # Apply default if the key is not in the data
+                        data[key] = subschema["default"]
+
+        # Apply special rule only within the "function" list of the "metrics"
+        if path == ["evaluation_suite", "metrics", "function"]:
+            if "function_name" in data and "metric_name" not in data:
+                data["metric_name"] = data["function_name"]
+
+        return data
+
+    if isinstance(data, list) and "items" in schema:
+        # Process lists by applying defaults to each item
+        item_schema = schema["items"]
+        # Apply defaults to each item in the list, passing along the path
+        return [apply_defaults(item_schema, item, path) for item in data]
+
+    return data

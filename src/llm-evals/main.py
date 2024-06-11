@@ -11,13 +11,9 @@ from classes.Turn import Turn
 from classes.TurnMetric import TurnMetric
 import dotenv
 
-dotenv.load_dotenv(".env")
 
 # Features to add:
-# - compute metrics for LAGGED inputs
 # - allow comparison with 'ideal' responses
-# - collect costs for evaluations (and perhaps estimate them??)
-# -
 
 
 def run(args):
@@ -28,11 +24,18 @@ def run(args):
     TODO - for webapp, config should be an argument here ^
     """
     # TODO - make evals.yaml file path configurable
-    runner = EvalRunner(eval_name=args.eval_name, config_filename=args.config_filename)
+    runner = EvalRunner(
+        eval_name=args.eval_name,
+        config_filename=args.config_filename,
+        evals_path=args.evals_path,
+    )
+    dotenv.load_dotenv(runner.configuration["env_file"])
+
     with open(runner.configuration["rubric_metrics_path"]) as file:
         rubrics = yaml.safe_load(file)
     try:
         runner.logger.info("Creating EvalSetRun")
+        print(runner.eval.get("metrics"))
         evalsetrun = EvalSetRun.create(
             name=runner.eval.get("name", ""),
             notes=runner.eval.get("notes", ""),
@@ -220,7 +223,7 @@ def run(args):
             # this means I can associate a sequence of metrics within each turn
             # but then have the turns execute them in parallel
             # each turn will keep track of its own set of metrics
-            for metric_instance in json.loads(evalsetrun.metric_graph):
+            for metric_instance in evalsetrun.metric_graph:
                 turn.metrics_to_evaluate.append(metric_instance)
                 if metric_instance.get("type") == "rubric":
                     rubric_count += 1
@@ -307,10 +310,9 @@ if __name__ == "__main__":
         help="Which eval set in evals.yaml you want to run",
     )
     parser.add_argument(
-        "--eval_file_path",
+        "--evals_path",
         type=str,
-        defualt=".",
-        help="Path to the evaluation evals.yaml file you want to run.",
+        help="Path to the evaluation file evals.yaml you want to run. Deafult is configuration/evals.yaml.",
     )
     parser.add_argument(
         "--config_filename",

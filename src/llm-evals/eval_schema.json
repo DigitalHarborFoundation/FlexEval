@@ -2,247 +2,244 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
-      "evaluation_suite": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "List of absolute or relative paths to data files. Each file must be in *.jsonl format, with one conversation per line."
-          },
-          "do_completion": {
-            "type": "boolean",
-            "description": "Flag to determine if completions should be done for each conversation. Set to 'true' if you are testing a new API and want to evaluate the API responses. Set to 'false' (default) if you are evaluating past conversations and do not need to generate new completions.",
-            "default": false
-          },
-          "name": {
-            "type": "string",
-            "description": "Name of the test suite. Used as metadata only. Does not need to match the key of the entry in the evals.yaml file.",
-            "default": ""
-          },
-          "notes": {
-            "type": "string",
-            "description": "Additional notes regarding the configuration. Used as metadata only.",
-            "default": ""
-          },
-          "config": {
-            "type": "object",
-            "properties": {
-              "max_workers": {
-                "type": "integer",
-                "description": "The maximum number of worker threads allowed when computing metrics."
-              }
-            },
-            "description": "Specific configuration settings that may override default settings. Look in `src/llm-evals/config.yaml` for other fun things to put here.",
-            "additionalProperties": true
-          },
-          "metrics": {
-            "type": "object",
-            "properties":{
-                "function":{
-                    "type": "array",
-                    "description": "List of function-based metrics to be evaluated.",
-                    "items": {
+    "data": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of absolute or relative paths to data files. Each file must be in *.jsonl format, with one conversation per line.",
+      "default":[]
+    },
+    "do_completion": {
+      "type": "boolean",
+      "description": "Flag to determine if completions should be done for each conversation. Set to 'true' if you are testing a new API and want to evaluate the API responses. Set to 'false' (default) if you are evaluating past conversations and do not need to generate new completions.",
+      "default": false
+    },
+    "name": {
+      "type": "string",
+      "description": "Name of the test suite. Used as metadata only. Does not need to match the key of the entry in the evals.yaml file.",
+      "default": ""
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes regarding the configuration. Used as metadata only.",
+      "default": ""
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "max_workers": {
+          "type": "integer",
+          "description": "The maximum number of worker threads allowed when computing metrics."
+        }
+      },
+      "description": "Specific configuration settings that may override default settings. Look in `src/llm-evals/config.yaml` for other fun things to put here.",
+      "additionalProperties": true
+    },
+    "metrics": {
+      "type": "object",
+      "properties":{
+          "function":{
+              "type": "array",
+              "description": "List of function-based metrics to be evaluated.",
+              "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "The function to call to compute this metric."
+                    },
+                    "kwargs": {
+                      "type": "object",
+                      "description": "Keyword arguments for the function. Each key must correspond to an argument in the function as implemented in `function_metrics.py`. Extra keys will cause an error.",
+                      "additionalProperties": true,
+                      "default": {}
+                    },
+                    "depends_on": {
+                      "type": "array",
+                      "default": [],
+                      "description": "List of dependencies that must be satisfied for this metric to be computed.",
+                      "items": {
                         "type": "object",
                         "properties": {
                           "name": {
                             "type": "string",
-                            "description": "The function to call to compute this metric."
+                            "description": "Name of the dependency function or rubric."
+                          },
+                          "type": {
+                            "type": "string",
+                            "description": "One of 'function' or 'rubric' indicating the type of the dependency."
                           },
                           "kwargs": {
                             "type": "object",
-                            "description": "Keyword arguments for the function. Each key must correspond to an argument in the function as implemented in `function_metrics.py`. Extra keys will cause an error.",
-                            "additionalProperties": true,
-                            "default": {}
-                          },
-                          "depends_on": {
-                            "type": "array",
-                            "description": "List of dependencies that must be satisfied for this metric to be computed.",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "name": {
-                                  "type": "string",
-                                  "description": "Name of the dependency function or rubric."
-                                },
-                                "type": {
-                                  "type": "string",
-                                  "description": "One of 'function' or 'rubric' indicating the type of the dependency."
-                                },
-                                "kwargs": {
-                                  "type": "object",
-                                  "description": "The keyword arguments for the dependency. If provided, used to match which evaluation this dependency is for, so must match the keyword args given for some evaluation.",
-                                  "additionalProperties": true
-                                },
-                                "context_only": {
-                                  "type": "boolean",
-                                  "description": "The context_only value for the dependency. If provided, used to match which evaluation this dependency is for."
-                                },
-                                "last_turn_only": {
-                                    "type": "boolean",
-                                    "description": "The last_turn_only value for the dependency. If provided, used to match which evaluation this dependency is for."
-                                },
-                                "metric_name": {
-                                  "type": "string",
-                                  "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key."
-                                },
-                                "metric_min_value": {
-                                  "type": "number",
-                                  "description": "Minimum value of the dependency to consider it as satisfied.",
-                                  "default": -1e20
-                                },
-                                "metric_max_value": {
-                                  "type": "number",
-                                  "description": "Maximum value of the dependency to consider it as satisfied.",
-                                  "default": 1e20
-                                }
-                              },
-                              "additionalProperties": false
-                            },
-                            "required": ["name"]
+                            "description": "The keyword arguments for the dependency. If provided, used to match which evaluation this dependency is for, so must match the keyword args given for some evaluation.",
+                            "additionalProperties": true
                           },
                           "context_only": {
                             "type": "boolean",
-                            "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn.",
-                            "default": false
+                            "description": "The context_only value for the dependency. If provided, used to match which evaluation this dependency is for."
                           },
                           "last_turn_only": {
-                            "type": "boolean",
-                            "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion.",
-                            "default": false
+                              "type": "boolean",
+                              "description": "The last_turn_only value for the dependency. If provided, used to match which evaluation this dependency is for."
+                          },
+                          "metric_name": {
+                            "type": "string",
+                            "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key."
+                          },
+                          "metric_min_value": {
+                            "type": "number",
+                            "description": "Minimum value of the dependency to consider it as satisfied.",
+                            "default": -1e20
+                          },
+                          "metric_max_value": {
+                            "type": "number",
+                            "description": "Maximum value of the dependency to consider it as satisfied.",
+                            "default": 1e20
                           }
                         },
-                        "required": ["name"]
-                      }
-                },
-                "rubric":{
-                    "type": "array",
-                    "description": "List of rubrics to be evaluated",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "name": {
-                                "type": "string",
-                                "description": "The rubric to use to evaluate this metric."
-                            },
-                            "kwargs": {
-                                "type": "object",
-                                "description": "Keyword arguments for the function. Each key must correspond to an argument in the function as implemented in `function_metrics.py`. Extra keys will cause an error.",
-                                "additionalProperties": true
-                            },
-                            "context_only": {
-                                "type": "boolean",
-                                "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn.",
-                                "default": false
-                            },
-                            "last_turn_only": {
-                                "type": "boolean",
-                                "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion.",
-                                "default": false
-                            },
-                            "depends_on": {
-                                "type": "array",
-                                "description": "List of dependencies that must be satisfied for this metric to be computed.",
-                                "default":[],
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "name": {
-                                          "type": "string",
-                                          "description": "Name of the dependency function or rubric."
-                                        },
-                                        "type": {
-                                          "type": "string",
-                                          "description": "One of 'function' or 'rubric' indicating the type of the dependency."
-                                        },
-                                        "kwargs": {
-                                          "type": "object",
-                                          "description": "The keyword arguments for the dependency. If provided, used to match which evaluation this dependency is for, so must match the keyword args given for some evaluation.",
-                                          "additionalProperties": true
-                                        },
-                                        "context_only": {
-                                          "type": "boolean",
-                                          "description": "The context_only value for the dependency. If provided, used to match which evaluation this dependency is for."
-                                        },
-                                        "last_turn_only": {
-                                            "type": "boolean",
-                                            "description": "The last_turn_only value for the dependency. If provided, used to match which evaluation this dependency is for."
-                                        },
-                                        "metric_name": {
-                                            "type": "string",
-                                            "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key."
-                                        },
-                                        "metric_min_value": {
-                                            "type": "number",
-                                            "description": "Minimum value of the dependency to consider it as satisfied.",
-                                            "default": -1e20
-                                        },
-                                        "metric_max_value": {
-                                            "type": "number",
-                                            "description": "Maximum value of the dependency to consider it as satisfied.",
-                                            "default": 1e20
-                                        }
-                                    },
-                                    "additionalProperties": false
-                                },
-                                "required": ["name"]
-                            }
-                        },
-                        "required": ["name"]
-                        }
+                        "additionalProperties": false
+                      },
+                      "required": ["name"]
+                    },
+                    "context_only": {
+                      "type": "boolean",
+                      "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn.",
+                      "default": false
+                    },
+                    "last_turn_only": {
+                      "type": "boolean",
+                      "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion.",
+                      "default": false
+                    }
+                  },
+                  "required": ["name"]
                 }
-            }
           },
-          "completion_llm": {
-            "type": "object",
-            "default":{},
-            "description":"Specification of the LLM or API used to perform new completions. Must be defined if `do_completions: true` is set.",
-            "properties": {
-              "function_name": {
-                "type": "string",
-                "description": "Completion function defined in `completion_functions.py`. Must be specified."
-              },
-              "include_system_prompt": {
-                "type": "boolean",
-                "default": false
-              },
-              "kwargs": {
-                "type": "object",
-                "description": "Additional arguments that will be passed to the completion function. Must correspond to arguments in tne named function.",
-                "default": {},
-                "additionalProperties": true
-              }
-            },
-            "required": ["function_name"],
-            "additionalProperties": false
-          },
-          "grader_llm": {
-            "type": "object",
-            "description":"Specification of the LLM or API used to grade rubrics. Must be defined if any rubric_metrics are specified.",
-            "default":{},
-            "properties": {
-              "function_name": {
-                "type": "string",
-                "description": "Function defined in `completion_functions.py`. We're not really completing a conversation, but we ARE asking an LLM to provide a response to an input - in this case, the rubric."
-              },
-              "kwargs": {
-                "type": "object",
-                "description": "Additional arguments that will be passed to the completion function. Must correspond to arguments in tne named function.",
-                "default": {},
-                "additionalProperties": true
-              }
-            },
-            "required": ["function_name"],
-            "optional": ["kwargs"],
-            "additionalProperties": false
+          "rubric":{
+              "type": "array",
+              "description": "List of rubrics to be evaluated",
+              "items": {
+                  "type": "object",
+                  "properties": {
+                      "name": {
+                          "type": "string",
+                          "description": "The rubric to use to evaluate this metric."
+                      },
+                      "kwargs": {
+                          "type": "object",
+                          "description": "Keyword arguments for the function. Each key must correspond to an argument in the function as implemented in `function_metrics.py`. Extra keys will cause an error.",
+                          "additionalProperties": true
+                      },
+                      "context_only": {
+                          "type": "boolean",
+                          "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn.",
+                          "default": false
+                      },
+                      "last_turn_only": {
+                          "type": "boolean",
+                          "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion.",
+                          "default": false
+                      },
+                      "depends_on": {
+                          "type": "array",
+                          "description": "List of dependencies that must be satisfied for this metric to be computed.",
+                          "default":[],
+                          "items": {
+                              "type": "object",
+                              "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "description": "Name of the dependency function or rubric."
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "description": "One of 'function' or 'rubric' indicating the type of the dependency."
+                                  },
+                                  "kwargs": {
+                                    "type": "object",
+                                    "description": "The keyword arguments for the dependency. If provided, used to match which evaluation this dependency is for, so must match the keyword args given for some evaluation.",
+                                    "additionalProperties": true
+                                  },
+                                  "context_only": {
+                                    "type": "boolean",
+                                    "description": "The context_only value for the dependency. If provided, used to match which evaluation this dependency is for."
+                                  },
+                                  "last_turn_only": {
+                                      "type": "boolean",
+                                      "description": "The last_turn_only value for the dependency. If provided, used to match which evaluation this dependency is for."
+                                  },
+                                  "metric_name": {
+                                      "type": "string",
+                                      "description": "Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key."
+                                  },
+                                  "metric_min_value": {
+                                      "type": "number",
+                                      "description": "Minimum value of the dependency to consider it as satisfied.",
+                                      "default": -1e20
+                                  },
+                                  "metric_max_value": {
+                                      "type": "number",
+                                      "description": "Maximum value of the dependency to consider it as satisfied.",
+                                      "default": 1e20
+                                  }
+                              },
+                              "additionalProperties": false
+                          },
+                          "required": ["name"]
+                      }
+                  },
+                  "required": ["name"]
+                  }
           }
-        },
-        "required": ["data", "config", "metrics"],
-        "additionalProperties": true
       }
     },
-    "required": ["evaluation_suite"]
-  }
+    "completion_llm": {
+      "type": "object",
+      "default":{},
+      "description":"Specification of the LLM or API used to perform new completions. Must be defined if `do_completions: true` is set.",
+      "properties": {
+        "function_name": {
+          "type": "string",
+          "description": "Completion function defined in `completion_functions.py`. Must be specified."
+        },
+        "include_system_prompt": {
+          "type": "boolean",
+          "default": false
+        },
+        "kwargs": {
+          "type": "object",
+          "description": "Additional arguments that will be passed to the completion function. Must correspond to arguments in tne named function.",
+          "default": {},
+          "additionalProperties": true
+        }
+      },
+      "required": ["function_name"],
+      "additionalProperties": false
+    },
+    "grader_llm": {
+      "type": "object",
+      "description":"Specification of the LLM or API used to grade rubrics. Must be defined if any rubric_metrics are specified.",
+      "default":{},
+      "properties": {
+        "function_name": {
+          "type": "string",
+          "description": "Function defined in `completion_functions.py`. We're not really completing a conversation, but we ARE asking an LLM to provide a response to an input - in this case, the rubric."
+        },
+        "kwargs": {
+          "type": "object",
+          "description": "Additional arguments that will be passed to the completion function. Must correspond to arguments in tne named function.",
+          "default": {},
+          "additionalProperties": true
+        }
+      },
+      "required": ["function_name"],
+      "optional": ["kwargs"],
+      "additionalProperties": false
+    }
+    
+  },
+  "required": ["data", "metrics"],
+  "additionalProperties": true
+}
   

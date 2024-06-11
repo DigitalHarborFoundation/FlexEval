@@ -11,6 +11,7 @@ from classes.Dataset import Dataset
 from classes.DatasetRow import DatasetRow
 from playhouse.shortcuts import model_to_dict
 import copy
+import helpers
 
 from configuration import function_metrics
 from configuration import completion_functions
@@ -138,42 +139,40 @@ class Turn(BaseModel):
             'depends_on': []
         }
         """
-        # there should be ONE entry per metric_name
-        assert len(set([i["name"] for i in self.metrics_to_evaluate])) == len(
-            self.metrics_to_evaluate
-        ), "Metric names in `self.metrics_to_evaluate` are not unique! They must be."
         # we'll keep the results in a list
         # for each new metric, if it has dependencies, we'll need to make sure they're met - otherwise we won't run it
         evaluated_metrics = []
+
         for metric_to_evaluate in self.metrics_to_evaluate:
             # see if there's a dependency
             dependencies_are_all_met = True
-            if metric_to_evaluate.get("depends_on", None) is not None:
+            # If there are no dependencies, this loop won't execute
+            # and the metric will be evaluated
+            if len(metric_to_evaluate.get("depends_on")) > 0:
 
-                # if so, see if it's in the list of evaluated_metrics
-                # it could concievably be missing if one of ITS dependencies was not met and it was not computed
-                # if this is the case, we'll treat it as not being met
+                # here, we want to see which metric that's ALREADY been run
+                # matches ALL of the criteria
+                # for a metric to run, theres hould be AT LEAST one
+                # metric that matches the criteria for EACH depends_on entry
 
-                # If there are no dependencies, this loop won't execute
                 # if there are depenencies, ALL of them must be met
                 # so not meeting ANY of them will short-circuit the loop and cause the eval to not evaluate
                 # check all dependencies
-                for dependency in metric_to_evaluate.get("depends_on", []):
+                for dependency in metric_to_evaluate.get("depends_on"):
 
                     # for each dependency, assume it's not met
                     # if it's in the list AND its values meet the criteria, it's met
                     dependency_is_met = False
                     for em in evaluated_metrics:
-                        if em["name"] == dependency["name"]:
-                            # if they are none, set to extreme values
-                            max_value_criteria = dependency.get("min_value", -1e20)
-                            min_value_criteria = dependency.get("max_value", 1e20)
-                            # TODO - maybe don't do this comparison if neither min or max are set
-                            if not (
-                                em["value"] >= min_value_criteria
-                                and em["value"] <= max_value_criteria
-                            ):
-                                dependency_is_met = True
+                        if (
+                            em["evaluation_name"] == dependency["evaluation_name"]
+                            and em["metric_value"] >= dependency["metric_min_value"]
+                            and em["metric_value"] <= dependency["metric_max_value"]
+                            and em["last_turn_only"] == dependency[""]
+                            and em["context_only"] == dependency["context_only"]
+                        ):
+                            dependency_is_met = True
+                            break
                     if not dependency_is_met:
                         dependencies_are_all_met = False
                         # if even one dependency is not met - don't do the evaluation
@@ -184,21 +183,37 @@ class Turn(BaseModel):
                 # TODO - maybe in the future we'll want to add the computed value from
                 # the dependency through as an argument here
                 evaluated_metrics += compute_metric(turn=self, **metric_to_evaluate)
-
+        print("EXITING")
+        sys.exit()
         return evaluated_metrics
 
 
 def compute_metric(
-    name: str, kwargs: dict, turn: Turn, type: str, depends_on: list = None
+    evaluation_name: str,
+    evaluation_type: str,
+    context_only: bool,
+    last_turn_only: bool,
+    kwargs: dict,
+    turn: Turn,
+    depends_on: list = None,
 ) -> list:
-
-    if type == "function":
+    if evaluation_type == "function":
         metrics = compute_function_metric(
-            metric_name=name, metric_kwargs=kwargs, turn=turn, depends_on=depends_on
+            function_name=evaluation_name,
+            metric_kwargs=kwargs,
+            context_only=context_only,
+            last_turn_only=last_turn_only,
+            turn=turn,
+            depends_on=depends_on,
         )
-    elif type == "rubric":
+    elif evaluation_type == "rubric":
         metrics = compute_rubric_metric(
-            rubric_name=name, metric_kwargs=kwargs, turn=turn, depends_on=depends_on
+            rubric_name=evaluation_name,
+            metric_kwargs=kwargs,
+            context_only=context_only,
+            last_turn_only=last_turn_only,
+            turn=turn,
+            depends_on=depends_on,
         )
     else:
         raise Exception(
@@ -207,8 +222,14 @@ def compute_metric(
     return metrics
 
 
+### TODO - implement context_only and last_turn_only conditions
 def compute_function_metric(
-    metric_name: str, metric_kwargs: dict, turn: Turn, depends_on: list = None
+    function_name: str,
+    metric_kwargs: dict,
+    turn: Turn,
+    context_only: bool,
+    last_turn_only: bool,
+    depends_on: list = None,
 ):
     # this is NOT a method - it's a function b/c we want it to be able to return multiple metrics, if more than one is returned
     # they share most of the same information though so it's convenient to have them constructed similarly
@@ -216,10 +237,10 @@ def compute_function_metric(
 
     # Check if the function name exists in the global namespace and call it
 
-    if hasattr(function_metrics, metric_name) and callable(
-        getattr(function_metrics, metric_name, None)
+    if hasattr(function_metrics, function_name) and callable(
+        getattr(function_metrics, function_name, None)
     ):
-        metric_function = getattr(function_metrics, metric_name, None)
+        metric_function = getattr(function_metrics, function_name, None)
         metric_source = inspect.getsource(metric_function)
 
         # This gets the type of the first argument of the function
@@ -236,12 +257,12 @@ def compute_function_metric(
             metrics_result = metric_function(json.loads(turn.turn), **metric_kwargs)
         else:
             raise Exception(
-                f"Result type {input_type} is not supported in metric function {metric_name}"
+                f"Result type {input_type} is not supported in metric function {function_name}"
             )
 
         base_result = {
             "turn": turn,
-            "function_name": metric_name,
+            "evaluation_name": function_name,
             "kwargs": metric_kwargs,
             "source": metric_source,
             "type": "function",
@@ -250,7 +271,7 @@ def compute_function_metric(
         # now deal with output
         if isinstance(metrics_result, float) or isinstance(metrics_result, int):
             result = copy.deepcopy(base_result)
-            result["metric_name"] = metric_name
+            result["metric_name"] = function_name
             result["metric_value"] = metrics_result
             return [result]
         elif isinstance(metrics_result, dict):
@@ -275,12 +296,18 @@ def compute_function_metric(
             )
     else:
         raise Exception(
-            f"Metric with name `{metric_name}` was not found in function_metrics.py"
+            f"Metric function with name `{function_name}` was not found in function_metrics.py"
         )
 
 
+### TODO - implement context_only and last_turn_only conditions
 def compute_rubric_metric(
-    rubric_name: str, metric_kwargs: dict, turn: Turn, depends_on: list
+    rubric_name: str,
+    metric_kwargs: dict,
+    turn: Turn,
+    context_only: bool,
+    last_turn_only: bool,
+    depends_on: list,
 ):
 
     # load metrics
