@@ -8,6 +8,12 @@ import networkx as nx
 import helpers
 import json
 import jsonschema
+import importlib
+import inspect
+from typing import List, Dict, Any, Union, AnyStr, get_origin
+
+
+from configuration import function_metrics
 
 dotenv.load_dotenv()
 
@@ -125,10 +131,33 @@ class TestConfiguration(unittest.TestCase):
         # Define the schema
         with open(
             self.config["eval_schema_path"], "r"
-        ) as infile:  # TODO: Should this path be somewhere else?
+        ) as infile:  
             schema = json.load(infile)
         # Validate against schema
         jsonschema.validate(instance=data, schema=schema)
+
+    def test_function_metrics_exist(self):
+        for function_metric in self.user_evals[self.eval_suite_name].get("metrics").get("function", []):
+            name = function_metric["name"]
+            assert hasattr(function_metrics, name) and callable(
+                getattr(function_metrics, name, None)
+            ), f"No function named {name} exists in `{self.config['function_metrics_path']}`"
+
+            metric_function = getattr(function_metrics, name, None)
+
+            # This gets the type of the first argument of the function
+            input_type = next(
+                iter(inspect.signature(metric_function).parameters.values())
+            ).annotation
+
+            # Type of first argument must be string or list
+            assert (input_type is str or input_type is list or get_origin(input_type) is list
+            ),f"Input to metric function {name} must be a string or list but it was {input_type}"
+            
+            # TODO: check that keyword args exist
+            # TODO: check that type is an allowed type
+            
+
 
 
 # def test_evals_has_required_components(self):
