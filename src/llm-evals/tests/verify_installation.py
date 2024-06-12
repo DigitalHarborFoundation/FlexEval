@@ -145,18 +145,27 @@ class TestConfiguration(unittest.TestCase):
 
             metric_function = getattr(function_metrics, name, None)
 
-            # This gets the type of the first argument of the function
-            input_type = next(
-                iter(inspect.signature(metric_function).parameters.values())
-            ).annotation
+            # Access a named tuple with the argument information
+            arg_spec = inspect.getfullargspec(metric_function)
+
+            # Make sure there's at least one argument and it's the right type
+            assert (len(arg_spec.args) > 0
+            ), f"Function metrics must take at least one input, but {name} does not have any parameters."
 
             # Type of first argument must be string or list
-            assert (input_type is str or input_type is list or get_origin(input_type) is list
-            ),f"Input to metric function {name} must be a string or list but it was {input_type}"
+            first_arg = arg_spec.args[0]
+            first_arg_type = arg_spec.annotations[first_arg]
+            assert (first_arg_type is str or first_arg_type is list or get_origin(first_arg_type) is list
+            ), f"Input to metric function {name} must be a string or list but it was {first_arg_type}"
             
-            # TODO: check that keyword args exist
-            # TODO: check that type is an allowed type
-            
+            # Check that keyword arguments exist
+            if 'kwargs' in function_metric:
+                print("found kwargs")
+                for kwarg in function_metric['kwargs']:
+                    assert (kwarg in arg_spec.args
+                    ), f"Keyword argument `{kwarg}` specified in json for function `{name}`, but no argument with that name found in function signature."
+
+
 
 
 
