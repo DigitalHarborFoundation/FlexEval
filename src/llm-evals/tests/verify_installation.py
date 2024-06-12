@@ -160,7 +160,6 @@ class TestConfiguration(unittest.TestCase):
             
             # Check that keyword arguments exist
             if 'kwargs' in function_metric:
-                print("found kwargs")
                 for kwarg in function_metric['kwargs']:
                     assert (kwarg in arg_spec.args
                     ), f"Keyword argument `{kwarg}` specified in json for function `{name}`, but no argument with that name found in function signature."
