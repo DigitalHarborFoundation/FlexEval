@@ -129,7 +129,8 @@
                       "kwargs": {
                           "type": "object",
                           "description": "Keyword arguments for the function. Each key must correspond to an argument in the function as implemented in `function_metrics.py`. Extra keys will cause an error.",
-                          "additionalProperties": true
+                          "additionalProperties": true,
+                          "default":{}
                       },
                       "context_only": {
                           "type": "boolean",

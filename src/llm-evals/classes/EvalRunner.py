@@ -9,13 +9,14 @@ import sys
 import sqlite3
 import json
 import jsonschema
-
+import helpers
 
 from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
 from classes.DatasetRow import DatasetRow
 from classes.Turn import Turn
 from classes.TurnMetric import TurnMetric
+from helpers import apply_defaults
 
 
 class EvalRunner(Model):
@@ -132,6 +133,10 @@ class EvalRunner(Model):
     #     return SqliteDatabase(os.environ["DATABASE_PATH"])
 
     def load_evaluation_settings(self):
+        """This function parses our eval suite and puts it in the data structure we'll need
+        for easy use at run-time
+        """
+
         with open(self.configuration["evals_path"]) as file:
             self.all_evaluations = yaml.safe_load(file)
             assert (
@@ -159,82 +164,8 @@ class EvalRunner(Model):
 
         # apply defaults to the schema
         self.eval = apply_defaults(schema=target_schema, data=self.eval)
-        # eval suite looks ok here...
-
-    def validate_dataset(self, filename, rows):
-        for ix, row in enumerate(rows):
-            assert (
-                "input" in row
-            ), f"Dataset {filename}, row {ix+1} does not contain an input key!"
-            assert isinstance(
-                row["input"], list
-            ), f"The `input` key for dataset {filename}, row {ix+1} does not map to a list!"
-
-            for entry_ix, entry in enumerate(row["input"]):
-                assert (
-                    "role" in entry
-                ), f"Entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} does not contain a `role` key!"
-                assert (
-                    "content" in entry
-                ), f"Entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} does not contain a `content` key!"
-                assert entry["role"] in [
-                    "user",
-                    "assistant",
-                    "tool",
-                    "system",
-                ], f"`user` key in entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} must be one of `tool`,`user`,`assistant`! You have `{entry['role']}`."
-
-    # TODO - assert that 'ideals' is a dict
-    # TODO - assert that each key in ideals is an eval we'll be running
-
-
-def apply_defaults(schema, data, path=None):
-    # Initialize path as an empty list if None. This will store the navigation path in the schema.
-    if path is None:
-        path = []
-
-    if data is None:
-        # If data is None and defaults are specified, apply them
-        return schema.get("default")
-
-    if isinstance(data, dict):
-        # Process dictionaries
-        if "properties" in schema:
-            # Loop over each schema property
-            for key, subschema in schema["properties"].items():
-                # Update path with current property
-                new_path = path + [key]
-                if key in data:
-                    # Recursively apply defaults, pass the path along
-                    data[key] = apply_defaults(subschema, data[key], new_path)
-                elif "default" in subschema:
-                    # Apply default if the key is not in the data
-                    data[key] = subschema["default"]
-                    print("setting", path, key, subschema["default"])
-        elif "items" in schema:
-            if "properties" in schema["items"]:
-                # Loop over each schema property
-                for key, subschema in schema["items"]["properties"].items():
-                    # Update path with current property
-                    new_path = path + [key]
-                    if key in data:
-                        # Recursively apply defaults, pass the path along
-                        data[key] = apply_defaults(subschema, data[key], new_path)
-                    elif "default" in subschema:
-                        # Apply default if the key is not in the data
-                        data[key] = subschema["default"]
-
-        # Apply special rule only within the "function" list of the "metrics"
-        if path == ["evaluation_suite", "metrics", "function"]:
-            if "function_name" in data and "metric_name" not in data:
-                data["metric_name"] = data["function_name"]
-
-        return data
-
-    if isinstance(data, list) and "items" in schema:
-        # Process lists by applying defaults to each item
-        item_schema = schema["items"]
-        # Apply defaults to each item in the list, passing along the path
-        return [apply_defaults(item_schema, item, path) for item in data]
-
-    return data
+        print(self.eval)
+        # convert into graph structure
+        self.metrics_graph_ordered_list = helpers.create_metrics_graph(
+            self.eval["metrics"]
+        )

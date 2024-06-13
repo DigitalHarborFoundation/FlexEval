@@ -30,8 +30,11 @@ class TurnMetric(BaseModel):
     metric_name = pw.TextField()
     metric_value = pw.FloatField(null=True)  # necessary if rubric result is INVALID
     kwargs = pw.TextField()
-    # source = pw.TextField() #TODO - make another table for this
+    source = (
+        pw.TextField()
+    )  # TODO - make another table for this? But maybe not, because this also contains filled-in rubrics
     depends_on = pw.TextField()
+    rubric_prompt = pw.TextField(null=True)
     rubric_completion = pw.TextField(null=True)
     rubric_model = pw.TextField(null=True)
     rubric_completion_tokens = pw.IntegerField(null=True)

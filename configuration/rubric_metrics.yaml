@@ -137,7 +137,7 @@ is_student_acting_as_tutor:
     "YES": 1
     "NO": 0
 
-is_plot_pedagogically_appropriate:
+is_pedagogically_appropriate_plot:
   notes: |-
 
   prompt: |-

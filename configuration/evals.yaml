@@ -10,7 +10,7 @@ evaluation:
 
   #anything in here will overwrite entries in src/llm-evals/config.yaml
   config:
-    max_workers: 1
+    max_workers: 8
 
   metrics:
 
@@ -73,7 +73,7 @@ evaluation:
       - name: is_student_acting_as_tutor
         last_turn_only: true
       
-      - name: is_pedagocally_appropriate_plot
+      - name: is_pedagogically_appropriate_plot
         depends_on:
         - name: is_role
           kwargs:

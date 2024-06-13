@@ -16,7 +16,7 @@ import dotenv
 # - allow comparison with 'ideal' responses
 
 
-def run(args):
+def run(eval_name: str, config_filename: str, evals_path: str):
     """Runs the evaluations.
     We want this to be callable by both the CLI and the webapp
     That means it needs to do argument parsing BEFORE this is called
@@ -25,9 +25,9 @@ def run(args):
     """
     # TODO - make evals.yaml file path configurable
     runner = EvalRunner(
-        eval_name=args.eval_name,
-        config_filename=args.config_filename,
-        evals_path=args.evals_path,
+        eval_name=eval_name,
+        config_filename=config_filename,
+        evals_path=evals_path,
     )
     dotenv.load_dotenv(runner.configuration["env_file"])
 
@@ -35,11 +35,14 @@ def run(args):
         rubrics = yaml.safe_load(file)
     try:
         runner.logger.info("Creating EvalSetRun")
-        print(runner.eval.get("metrics"))
+        # (runner.eval.get("metrics"))
+        # TODO instead of raw 'metrics', pass in graph created when setting up the runner
+
         evalsetrun = EvalSetRun.create(
             name=runner.eval.get("name", ""),
             notes=runner.eval.get("notes", ""),
             metrics=json.dumps(runner.eval.get("metrics", "")),
+            metrics_graph_ordered_list=json.dumps(runner.metrics_graph_ordered_list),
             dataset_files=json.dumps(runner.eval.get("data", "")),
             do_completion=runner.eval.get("do_completion", False),
             completion_llm=json.dumps(runner.eval.get("completion_llm", None)),
@@ -49,8 +52,7 @@ def run(args):
             grader_llm=json.dumps(runner.eval.get("grader_llm", None)),
             rubrics=json.dumps(rubrics),
         )
-        evalsetrun.create_metrics_graph()
-        runner.logger.info(evalsetrun.metric_graph)
+        runner.logger.info(evalsetrun.metrics_graph_ordered_list)
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)
         raise e
@@ -76,7 +78,6 @@ def run(args):
             runner.logger.debug(f"Parsing data file {dataset.filename}")
 
             rows = dataset.get_rows()
-            runner.validate_dataset(dataset.filename, rows)
             for row in rows:
                 DatasetRow.create(
                     dataset=dataset,
@@ -223,9 +224,9 @@ def run(args):
             # this means I can associate a sequence of metrics within each turn
             # but then have the turns execute them in parallel
             # each turn will keep track of its own set of metrics
-            for metric_instance in evalsetrun.metric_graph:
+            for metric_instance in json.loads(evalsetrun.metrics_graph_ordered_list):
                 turn.metrics_to_evaluate.append(metric_instance)
-                if metric_instance.get("type") == "rubric":
+                if metric_instance.get("evaluation_type") == "rubric":
                     rubric_count += 1
 
         runner.logger.info(
@@ -242,9 +243,9 @@ def run(args):
                         runner.logger.exception(
                             f"Metric {m} does not have a value for the key `type`."
                         )
-                    if m.get("value", None) is None:
+                    if m.get("metric_value", None) is None:
                         runner.logger.exception(
-                            f"Metric {m} does not have a value for the key `value`."
+                            f"Metric {m} does not have a value for the key `metric_value`."
                         )
                 metrics += turn_metrics
         else:
@@ -274,13 +275,14 @@ def run(args):
                 evalsetrun=metric["turn"].evalsetrun,
                 dataset=metric["turn"].dataset,
                 datasetrow=metric["turn"].datasetrow,
-                function_name=metric["function_name"],
-                name=metric["name"],
-                type=metric["type"],
-                value=metric["value"],
+                evaluation_name=metric["evaluation_name"],
+                evaluation_type=metric["evaluation_type"],
+                metric_name=metric["metric_name"],
+                metric_value=metric["metric_value"],
                 kwargs=metric["kwargs"],
                 depends_on=json.dumps(metric["depends_on"]),
                 source=metric["source"],
+                rubric_prompt=metric.get("rubric_prompt", None),
                 rubric_completion=metric.get("rubric_completion", None),
                 rubric_model=metric.get("rubric_model", None),
                 rubric_completion_tokens=metric.get("rubric_completion_tokens", None),
@@ -323,4 +325,15 @@ if __name__ == "__main__":
     # Parse the argument
     args = parser.parse_args()
 
-    run(args)
+    run(**vars(args))
+
+
+def test_run_1(self):
+
+    from main import run
+
+    run(
+        eval_name="test_suite_1",
+        config_filename="config-tests.yaml",
+        evals_path="tests/evals.yaml",
+    )
