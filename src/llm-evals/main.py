@@ -105,12 +105,17 @@ def run(eval_name: str, evals_path: str, config_path: str):
                     for i in turn["turn"]:
                         c = i.get("content", "")
                         if isinstance(c, str):
-                            content += f"\n{c}"
+                            if len(content) > 0:
+                                # because we're concatenating lines together
+                                content += "\n"
+                            content += c
                         elif isinstance(c, list):
                             for entry in c:
                                 c2 = entry.get("content", "")
-                                if isinstance(c, str):
-                                    content += f"\n{c2}"
+                                if isinstance(c2, str):
+                                    if len(content) > 0:
+                                        content += "\n"
+                                    content += c2
 
                     Turn.create(
                         evalsetrun=row.evalsetrun,
