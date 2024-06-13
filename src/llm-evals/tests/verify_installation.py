@@ -121,7 +121,7 @@ class TestConfiguration(unittest.TestCase):
     def test_metric_dependencies_are_a_dag(self):
         # Error checking will happen in create_metrics_graph function
         helpers.create_metrics_graph(
-            json.dumps(self.user_evals[self.eval_suite_name].get("metrics", []))
+            self.user_evals[self.eval_suite_name].get("metrics")
         )
 
     def test_eval_json_matches_schema(self):
@@ -129,9 +129,7 @@ class TestConfiguration(unittest.TestCase):
         data = self.user_evals[self.eval_suite_name]
 
         # Define the schema
-        with open(
-            self.config["eval_schema_path"], "r"
-        ) as infile:  
+        with open(self.config["eval_schema_path"], "r") as infile:
             schema = json.load(infile)
         # Validate against schema
         jsonschema.validate(instance=data, schema=schema)
@@ -148,6 +146,7 @@ class TestConfiguration(unittest.TestCase):
             ), f"No function named {name} exists in `{self.config['function_metrics_path']}`"
 
             metric_function = getattr(function_metrics, name, None)
+
 
             # Go through arguments and make sure that the first argument has the right type and that 
             # all later arguments are filled by keyword arguments
@@ -180,10 +179,99 @@ class TestConfiguration(unittest.TestCase):
                     assert (kwarg in arg_names
                     ), f"Keyword argument `{kwarg}` specified in json for function `{name}`, but no argument with that name found in function signature."
 
-           
+    def test_metric_templates_are_valid(self):
+        for rubric_metric in (
+            self.user_evals[self.eval_suite_name].get("metrics").get("rubric", [])
+        ):
+            rubric_name = rubric_metric["name"]
+            assert (
+                rubric_name in self.rubric_metrics.keys()
+            ), f"You specified a rubric called `{rubric_name}` in the configuration, but only these rubrics are available: {list(self.rubric_metrics.keys())}."
+            prompt = self.rubric_metrics[rubric_name]
+            # The prompts will have three types
+            # {context} -- everything BEFORE the last entry
+            # {completion} -- new completion or last entry
+            # {turn} -- just the current turn -- cannot be used with the other two
 
+            options = [("{turn}",), ("{context}", "{completion}"), ("{conversation}",)]
+            for option1 in options:
+                for option2 in options:
+                    if all([o in prompt for o in option1]):
+                        if option2 != option1:
+                            for o2 in option2:
+                                assert (
+                                    o2 not in prompt
+                                ), f"Your rubric {rubric_name} is has the template `{','.join([i  for i in option1]) }` and cannot also contain the template option `{o2}`."
 
+            if (
+                rubric_metric.get("context_only", False)  # default is False
+                and "{{context}}" in prompt
+                and "{{completion}}" in prompt
+            ):
+                raise Exception(
+                    f"You set `context_only` for the rubric `{rubric_name}`, but that rubric has both {{context}} and {{completion}} entries. This does not make sense! If you want the context only, create a rubric with only {{turn}} or only {{conversation}}."
+                )
 
+    def test_function_metrics_have_valid_signatures(self):
+        for function_metric in (
+            self.user_evals[self.eval_suite_name].get("metrics").get("function", [])
+        ):
+            name = function_metric["name"]
+            assert hasattr(function_metrics, name) and callable(
+                getattr(function_metrics, name, None)
+            ), f"No function named {name} exists in `{self.config['function_metrics_path']}`"
+
+            metric_function = getattr(function_metrics, name, None)
+
+            first_argument_type = next(
+                iter(inspect.signature(metric_function).parameters.values())
+            ).annotation
+            assert first_argument_type in [
+                str,
+                list,
+            ], f"The first argument of function {name} has input type {first_argument_type}. The first argument must be of type `str` or `list`."
+
+            return_type = inspect.signature(metric_function).return_annotation
+            assert return_type in [
+                float,
+                int,
+                dict,
+                list,
+            ], f"The return type of function {name} has type {first_argument_type}. The return type must be one of `int`, `float`, `dict`, or `list`."
+
+    def validate_dataset(self, filename, rows):
+        filenames = self.user_evals[self.eval_suite_name].get("data", [])
+        assert (
+            len(filenames) > 0
+        ), f"You specified no datafiles in your input. The `data` entry of your eval `{self.eval_suite_name}` must be a list of filenames."
+
+        for filename in filenames:
+            assert os.path.exists(
+                filename
+            ), f"The data file {filename} you specified in your eval `{self.eval_suite_name}` was not found."
+
+        with open(filename, "r") as rows:
+            for ix, row in enumerate(rows):
+                assert (
+                    "input" in row
+                ), f"Dataset {filename}, row {ix+1} does not contain an input key!"
+                assert isinstance(
+                    row["input"], list
+                ), f"The `input` key for dataset {filename}, row {ix+1} does not map to a list!"
+
+                for entry_ix, entry in enumerate(row["input"]):
+                    assert (
+                        "role" in entry
+                    ), f"Entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} does not contain a `role` key!"
+                    assert (
+                        "content" in entry
+                    ), f"Entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} does not contain a `content` key!"
+                    assert entry["role"] in [
+                        "user",
+                        "assistant",
+                        "tool",
+                        "system",
+                    ], f"`user` key in entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} must be one of `tool`,`user`,`assistant`! You have `{entry['role']}`."
 
 
 # def test_evals_has_required_components(self):

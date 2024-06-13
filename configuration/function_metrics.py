@@ -2,25 +2,18 @@ import textstat
 import openai
 import os
 import re
-from typing import List, Dict, Any, Union, AnyStr
 import json
+from typing import Union
 
-# A metric is a function that
-# - accepts a conversation or conversational turn as input
-# - produces a number or dictionary of numbers as output
-
-# If your metric accepts a LIST as input, we'll assume it's per-conversation
-#
-
-## TODO - add very thorough evaluation to these functions
-## to make sure input types and output types (and keys) are compatible
+##TODO - make a bunch of good examples of this
+## and some bad ones...
 
 
-def is_role(turn: list, role: str) -> int:
-    return int(len([i for i in turn if i["role"] == role]) > 0)
+def is_role(turn: list, role: str) -> dict:
+    return {role: len([i for i in turn if i["role"] == role])}
 
 
-def count_tool_calls(turn: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def count_tool_calls(turn: list) -> list:
     """
     Calculate the number of calls to a tool, aggregated by name, in the turn.
 
@@ -36,11 +29,11 @@ def count_tool_calls(turn: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "content": [list of tool call info]
     }
     Args:
-        conversation (List[Dict[str, Any]]): A list of dictionaries representing conversational turns.
+        conversation list: A list of dictionaries representing conversational turns.
                                              Each dictionary should have a 'role' key indicating the role of the participant.
 
     Returns:
-        int: The number of conversational turns in the conversation.
+        list: The number of conversational turns in the conversation, as a list of dicts with name/value keys
     """
     # Count number of tool calls by name
     counter = {}
@@ -55,9 +48,7 @@ def count_tool_calls(turn: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return results
 
 
-def value_counts_by_tool_name(
-    turn: List[Dict[str, Any]], json_key: str
-) -> List[Dict[str, Any]]:
+def value_counts_by_tool_name(turn: list, json_key: str) -> list:
     """
     Counts the occurrences of particular values in the text content of tool call in the conversation.
     Assumes the roll will be tool, and that kwargs contains the argument json_key. values associated with
@@ -94,8 +85,8 @@ def value_counts_by_tool_name(
 
 
 def count_role_entries_in_turn(
-    turn: List[Dict[str, Any]],
-) -> Dict[int, float]:
+    turn: list,
+) -> list:
     """
     Calculate the number of conversational turns for each role. Excludes the system prompt.
 
@@ -179,7 +170,7 @@ def count_emojis(turn: str) -> Union[int, float]:
 #     return len(emoji_pattern.findall(turn))
 
 
-def string_length(turn: str) -> Union[int, float]:
+def string_length(turn: str) -> int:
     """
     Calculate the length of the input string.
 
@@ -194,7 +185,7 @@ def string_length(turn: str) -> Union[int, float]:
     return len(turn)
 
 
-def flesch_reading_ease(turn: str) -> Union[int, float]:
+def flesch_reading_ease(turn: str) -> float:
     """
     Calculate the Flesch Reading Ease score for a given text string.
 
@@ -206,12 +197,12 @@ def flesch_reading_ease(turn: str) -> Union[int, float]:
         turn (str): The input text string to be evaluated.
 
     Returns:
-        Union[int, float]: The Flesch Reading Ease score of the input text.
+        float: The Flesch Reading Ease score of the input text.
     """
     return textstat.flesch_reading_ease(turn)
 
 
-def flesch_kincaid_grade(turn: str) -> Union[int, float]:
+def flesch_kincaid_grade(turn: str) -> float:
     """
     Calculate the Flesch-Kincaid Grade Level score for a given text string.
 
@@ -223,12 +214,12 @@ def flesch_kincaid_grade(turn: str) -> Union[int, float]:
         turn (str): The input text string to be evaluated.
 
     Returns:
-        Union[int, float]: The Flesch-Kincaid Grade Level score of the input text.
+        float: The Flesch-Kincaid Grade Level score of the input text.
     """
     return textstat.flesch_kincaid_grade(turn)
 
 
-def openai_moderation_api(turn: str, **kwargs: Any) -> Dict[str, float]:
+def openai_moderation_api(turn: str, **kwargs) -> dict:
     """
     Calls the OpenAI Moderation API to analyze the given conversational turn for content moderation.
     Since the input is a string, it'll concatenate all the "content" together and pass it in
@@ -245,7 +236,7 @@ def openai_moderation_api(turn: str, **kwargs: Any) -> Dict[str, float]:
     return response.results[0].model_dump(exclude_unset=True)["category_scores"]
 
 
-def function_has_error(turn: list):
+def function_has_error(turn: list) -> int:
     """Returns the number of rendering errors if the turn is a function call
     or None otherwise
     """

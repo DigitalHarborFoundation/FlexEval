@@ -142,37 +142,63 @@ class Turn(BaseModel):
         # we'll keep the results in a list
         # for each new metric, if it has dependencies, we'll need to make sure they're met - otherwise we won't run it
         evaluated_metrics = []
-
+        # METRICS IN ORDER
+        # print(self.metrics_to_evaluate)
         for metric_to_evaluate in self.metrics_to_evaluate:
+            # print("\nEVAL")
+            # print(evaluated_metrics)
             # see if there's a dependency
             dependencies_are_all_met = True
             # If there are no dependencies, this loop won't execute
             # and the metric will be evaluated
             if len(metric_to_evaluate.get("depends_on")) > 0:
 
-                # here, we want to see which metric that's ALREADY been run
-                # matches ALL of the criteria
-                # for a metric to run, theres hould be AT LEAST one
-                # metric that matches the criteria for EACH depends_on entry
+                # here, we have a metric with 1+ dependencies
+                # ALL of these dependencies must be satisfied
 
-                # if there are depenencies, ALL of them must be met
-                # so not meeting ANY of them will short-circuit the loop and cause the eval to not evaluate
+                # we determine whether a given metric is a match if it matches
+                # 1 - the id
+                # 2 - the metric_name
+                # 3 - the metric_min_value
+                # 4 - the metric_max_value
+                # not meeting ANY of them will short-circuit the loop and cause the eval to not evaluate
                 # check all dependencies
                 for dependency in metric_to_evaluate.get("depends_on"):
 
                     # for each dependency, assume it's not met
                     # if it's in the list AND its values meet the criteria, it's met
                     dependency_is_met = False
-                    for em in evaluated_metrics:
-                        if (
-                            em["evaluation_name"] == dependency["evaluation_name"]
-                            and em["metric_value"] >= dependency["metric_min_value"]
-                            and em["metric_value"] <= dependency["metric_max_value"]
-                            and em["last_turn_only"] == dependency[""]
-                            and em["context_only"] == dependency["context_only"]
-                        ):
-                            dependency_is_met = True
-                            break
+                    # if a specific metric_name was specified, you need to match exactly:
+                    if "metric_name" in dependency:
+                        for em in evaluated_metrics:
+                            # print("em", em)
+                            # print("dependency", dependency)
+                            # I think the 'depends_on' should have all fields populated at this point
+                            if (
+                                em["id"] == dependency["parent_id"]
+                                and em["metric_name"] == dependency["metric_name"]
+                                and em["metric_value"] >= dependency["metric_min_value"]
+                                and em["metric_value"] <= dependency["metric_max_value"]
+                            ):
+                                # this specific dependency was met - can quit looking
+                                dependency_is_met = True
+                                break
+                    else:
+                        # if no specific metric_name was specified, you just need to match ANY metric_name
+                        # on the other criteria
+                        for em in evaluated_metrics:
+                            # print("em", em)
+                            # print("dependency", dependency)
+                            # I think the 'depends_on' should have all fields populated at this point
+                            if (
+                                em["id"] == dependency["parent_id"]
+                                # and em["metric_name"] == dependency["metric_name"]
+                                and em["metric_value"] >= dependency["metric_min_value"]
+                                and em["metric_value"] <= dependency["metric_max_value"]
+                            ):
+                                # this specific dependency was met - can quit looking
+                                dependency_is_met = True
+                                break
                     if not dependency_is_met:
                         dependencies_are_all_met = False
                         # if even one dependency is not met - don't do the evaluation
@@ -183,6 +209,10 @@ class Turn(BaseModel):
                 # TODO - maybe in the future we'll want to add the computed value from
                 # the dependency through as an argument here
                 evaluated_metrics += compute_metric(turn=self, **metric_to_evaluate)
+            else:
+                pass
+                # print(f"\nNot runing metric because dependency was not met:")
+                # print(metric_to_evaluate)
         return evaluated_metrics
 
 
@@ -194,6 +224,7 @@ def compute_metric(
     kwargs: dict,
     turn: Turn,
     depends_on: list = None,
+    id: int = None,
 ) -> list:
     if evaluation_type == "function":
         metrics = compute_function_metric(
@@ -203,6 +234,7 @@ def compute_metric(
             last_turn_only=last_turn_only,
             turn=turn,
             depends_on=depends_on,
+            id=id,
         )
     elif evaluation_type == "rubric":
         metrics = compute_rubric_metric(
@@ -212,6 +244,7 @@ def compute_metric(
             last_turn_only=last_turn_only,
             turn=turn,
             depends_on=depends_on,
+            id=id,
         )
     else:
         raise Exception(
@@ -220,21 +253,24 @@ def compute_metric(
     return metrics
 
 
-### TODO - implement context_only and last_turn_only conditions
 def compute_function_metric(
     function_name: str,
     metric_kwargs: dict,
     turn: Turn,
     context_only: bool,
     last_turn_only: bool,
-    depends_on: list = None,
+    depends_on: list,
+    id: int,
 ):
     # this is NOT a method - it's a function b/c we want it to be able to return multiple metrics, if more than one is returned
     # they share most of the same information though so it's convenient to have them constructed similarly
     # will return a list of dictionaries
 
-    # Check if the function name exists in the global namespace and call it
+    # if this is set, exit unless the criteria are met
+    if last_turn_only and not (turn.is_completion or turn.is_final_turn_in_input):
+        return []
 
+    # Check if the function name exists in the global namespace and call it
     if hasattr(function_metrics, function_name) and callable(
         getattr(function_metrics, function_name, None)
     ):
@@ -246,25 +282,70 @@ def compute_function_metric(
             iter(inspect.signature(metric_function).parameters.values())
         ).annotation
 
+        # TODO - this logic needs testing!!!
+        # figure out how many previous adjacent turns have a role DIFFERENT than yours
+        # together, they are 'context'
+        # usually, up_to_x will just be -1
+        previous_turns = turn.get_formatted_prompt()
+        up_to_ix = -1
+        # Suppose your role was A
+        # and the context was AABBABB
+        # first we reverse it BBABBAA
+        # then we fid the first time it matches yours
+        # which is index 2
+        # then we want to slice off the last TWO items as context, i.e. X[-2:]
+        # so we make the index negative and use it in a slicing operation below
+        for i, pt in enumerate(reversed(previous_turns)):
+            # if it matches, record the index and break the loop
+            if pt["role"] == turn.role:
+                # if e.g. the second entry
+                up_to_ix = i
+                up_to_ix *= -1
+                break
+
         # conditional depending on the type
         if input_type is str:
             # just pass in the content
-            metrics_result = metric_function(turn.content, **metric_kwargs)
+            if context_only:
+                # previous turn only
+                # join together the string contents of the previous turn
+                metrics_result = metric_function(
+                    "\n".join(
+                        [
+                            i["content"]
+                            for i in turn.get_formatted_prompt()[up_to_ix:]
+                            if isinstance(i["content"], str)
+                        ]
+                    ),
+                    **metric_kwargs,
+                )
+            else:
+                # current turn only
+                metrics_result = metric_function(turn.content, **metric_kwargs)
         elif input_type is list:
-            # this is on a single turn - pass in the parsed list
-            metrics_result = metric_function(json.loads(turn.turn), **metric_kwargs)
+            if context_only:
+                # use the list of adjacent previous entries with roles different to yours
+                metrics_result = metric_function(
+                    turn.get_formatted_prompt()[up_to_ix:], **metric_kwargs
+                )
+            else:
+                # this is on a single turn - pass in the parsed list
+                metrics_result = metric_function(json.loads(turn.turn), **metric_kwargs)
         else:
             raise Exception(
-                f"Result type {input_type} is not supported in metric function {function_name}"
+                f"Input type {input_type} is not supported in metric function {function_name}"
             )
 
         base_result = {
             "turn": turn,
             "evaluation_name": function_name,
+            "evaluation_type": "function",
             "kwargs": metric_kwargs,
-            "source": metric_source,
-            "type": "function",
+            "source": metric_source,  # TODO - put this back?
+            "context_only": context_only,
+            "last_turn_only": last_turn_only,
             "depends_on": depends_on,
+            "id": id,
         }
         # now deal with output
         if isinstance(metrics_result, float) or isinstance(metrics_result, int):
@@ -282,10 +363,12 @@ def compute_function_metric(
             return result_list
         elif isinstance(metrics_result, list):
             result_list = []
+
             for entry in metrics_result:
+                # print(function_name, entry)
                 result = copy.deepcopy(base_result)
-                result["metric_name"] = entry.get("metric_name", None)
-                result["metric_value"] = float(entry.get("metric_value", None))
+                result["metric_name"] = entry.get("name", None)
+                result["metric_value"] = float(entry.get("value", None))
                 result_list.append(result)
             return result_list
         else:
@@ -298,7 +381,6 @@ def compute_function_metric(
         )
 
 
-### TODO - implement context_only and last_turn_only conditions
 def compute_rubric_metric(
     rubric_name: str,
     metric_kwargs: dict,
@@ -306,7 +388,12 @@ def compute_rubric_metric(
     context_only: bool,
     last_turn_only: bool,
     depends_on: list,
+    id: int,
 ):
+
+    # exit unless the criteria are met
+    if last_turn_only and not (turn.is_completion or turn.is_final_turn_in_input):
+        return []
 
     # load metrics
     rubrics = json.loads(turn.evalsetrun.rubrics)
@@ -324,23 +411,21 @@ def compute_rubric_metric(
     # {completion} -- new completion or last entry
     # {turn} -- just the current turn -- cannot be used with the other two
 
-    # TODO - put these in the verification
-    options = [("{turn}",), ("{context}", "{completion}"), ("{conversation}",)]
-    for option1 in options:
-        for option2 in options:
-            if all([o in prompt for o in option1]):
-                if option2 != option1:
-                    for o2 in option2:
-                        assert (
-                            o2 not in prompt
-                        ), f"Your rubric {rubric_name} is has the template `{','.join([i  for i in option1]) }` and cannot also contain the template option `{o2}`."
-
+    # TODO - think through this and make sure this is the logic we want
     if "{turn}" in prompt:
-        # single turn - do this for every turn
-        populated_prompt = prompt.format(
-            turn=completion
-        )  # just use the entire conversation
+        # TODO - maybe make this JUST the previous turn???
+        if context_only:
+            populated_prompt = prompt.format(context)
+        else:
+            # single turn - do this for every turn
+            populated_prompt = prompt.format(
+                turn=completion
+            )  # just use the entire conversation
     elif "{completion}" in prompt and "{context}" in prompt:
+        if context_only:
+            raise Exception(
+                f"You set `context_only` for the rubric `{rubric_name}`, but that rubric has both {{context}} and {{completion}} entries. This does not make sense!"
+            )
         # if 'do_completion', only evaluate completions
         if turn.evalsetrun.do_completion and turn.is_completion:
             populated_prompt = prompt.format(context=context, completion=completion)
@@ -363,7 +448,6 @@ def compute_rubric_metric(
 
     choice_scores = rubrics.get(rubric_name).get("choice_scores")
     # get rubric grader
-    # TODO - this would be the rubric LLM
     grader_completion_function = json.loads(turn.evalsetrun.grader_llm)
     grader_completion_fn_name = grader_completion_function.get("function_name", None)
     grader_completion_fn_kwargs = grader_completion_function.get("kwargs", {})
@@ -418,11 +502,15 @@ Reasoning:""".strip()
             "turn": turn,
             "metric_name": rubric_name,
             "evaluation_name": rubric_name,
+            "evaluation_type": "rubric",
+            "id": id,
             "kwargs": metric_kwargs,
             "depends_on": depends_on,
             "source": populated_prompt,
+            "context_only": context_only,
+            "last_turn_only": last_turn_only,
             "metric_value": choice_scores[score],
-            "type": "rubric",
+            "rubric_prompt": populated_prompt,
             "rubric_completion": completion["choices"][0]["message"]["content"],
             "rubric_model": completion.get("model", None),
             "rubric_completion_tokens": completion.get("usage", {}).get(
