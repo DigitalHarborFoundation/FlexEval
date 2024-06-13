@@ -81,7 +81,7 @@ class TestSuite02(unittest.TestCase):
         )
         cls.database_path = os.environ["DATABASE_PATH"]
 
-    def test_tables_exist(self):
+    def test_simple_condition_is_met_once(self):
         # for the first dataset
         # the only readability score should be for the second entry
         with sqlite3.connect(self.database_path) as connection:
@@ -97,6 +97,70 @@ class TestSuite02(unittest.TestCase):
         self.assertEqual(len(metric), 1, "More than one row was returned!")
         self.assertAlmostEqual(metric[0][0], 2)
 
+    def test_simple_condition_is_always_met(self):
+        # STEP 1 - find all cases where string_length >= 15
+        # STEP 2 - every single one of those cases should also have a flesch_reading_ease entry for the same turn
+
+        # STEP 1
+        with sqlite3.connect(self.database_path) as connection:
+            long_enough_strings = connection.execute(
+                """select evalsetrun_id, dataset_id, datasetrow_id, turn_id from turnmetric 
+                where 1=1
+                and evalsetrun_id=1 
+                and dataset_id=1 --first file
+                and datasetrow_id=1 --first row
+                and evaluation_name = 'string_length'
+                and metric_value >= 15
+                """
+            ).fetchall()
+            # STEP 2
+            # for every row in this, there should ALSO be a single entry for reading ease
+            for row in long_enough_strings:
+                with self.subTest():
+                    reading_ease = connection.execute(
+                        f"""select evalsetrun_id, dataset_id, datasetrow_id, turn_id from turnmetric 
+                        where 1=1
+                        and evalsetrun_id={row[0]}
+                        and dataset_id={row[1]} --first file
+                        and datasetrow_id={row[2]} --first row
+                        and turn_id={row[3]}
+                        and evaluation_name = 'flesch_reading_ease'
+                        and metric_value IS NOT NULL
+                        """
+                    ).fetchall()
+                    # there's exactly ONE row for each turn that has long enough string length
+                    self.assertEqual(len(reading_ease), 1)
+
+        # now let's look at the converse
+        with sqlite3.connect(self.database_path) as connection:
+            long_enough_strings = connection.execute(
+                """select evalsetrun_id, dataset_id, datasetrow_id, turn_id from turnmetric 
+                where 1=1
+                and evalsetrun_id=1 
+                and dataset_id=1 --first file
+                and datasetrow_id=1 --first row
+                and evaluation_name = 'string_length'
+                and metric_value < 15
+                """
+            ).fetchall()
+            # STEP 2
+            # for every row in this, there should be ZERO rows that measure
+            for row in long_enough_strings:
+                with self.subTest():
+                    reading_ease = connection.execute(
+                        f"""select evalsetrun_id, dataset_id, datasetrow_id, turn_id from turnmetric 
+                        where 1=1
+                        and evalsetrun_id={row[0]}
+                        and dataset_id={row[1]} --first file
+                        and datasetrow_id={row[2]} --first row
+                        and turn_id={row[3]}
+                        and evaluation_name = 'flesch_reading_ease'
+                        and metric_value IS NOT NULL
+                        """
+                    ).fetchall()
+                    # there's exactly ONE row for each turn that has long enough string length
+                    self.assertEqual(len(reading_ease), 0)
+
 
 # other tests
 
@@ -106,6 +170,8 @@ class TestSuite02(unittest.TestCase):
 # every (jsonl/row) get an entry in DatasetRow
 # also, every (jsonl/row/turn) gets an entry in Turn
 # for function_metric with no dependency, every (jsonl/row/turn/metric) combo gets a row in TurnMetrics
+
+# for EVERY turn where the string_length is >= 15, the same turn ALSO has a flesch_reading_ease entry
 
 # for 'multiturn', there should be 3 turns for the evaluation and not 4
 
