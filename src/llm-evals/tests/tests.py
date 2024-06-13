@@ -19,6 +19,9 @@
 
 import unittest
 
+import os
+from run import run
+
 
 class FunctionalTest(unittest.TestCase):
     @classmethod
@@ -34,4 +37,8 @@ class FunctionalTest(unittest.TestCase):
 
     def test_abc(self):
         # write assertions here
-        pass
+        run(
+            eval_name="test01",
+            config_filename="config-tests.yaml",
+            evals_path="tests/tests.py",
+        )
