@@ -13,7 +13,7 @@ import unittest
 import os
 import sys
 import sqlite3
-import pandas
+import pandas as pd
 
 from main import run
 
@@ -63,10 +63,50 @@ class TestSuite01(unittest.TestCase):
         self.assertEqual(len(metric), 1, "More than one row was returned!")
         self.assertAlmostEqual(metric[0][0], 12)
 
+    def test_tables_have_right_rows(self):
+        #this suite has one jsonl, simple.jsonl, which has 2 rows.
+        #the first row has 3 turns. the second row also has 3 turns.
+        helper_test_tables_have_right_rows(self, ((3,3),))
+
     def test_abc(self):
         # write assertions here
         pass
 
+def helper_test_tables_have_right_rows(test_instance: unittest.TestCase, 
+                                       expected_num_turns: tuple):
+    '''
+    Check row counts on various tables:
+    - evalsetrun should always have one row
+    - dataset should have one row per jsonl file
+    - datasetrow should have one row for every row in every jsonl file
+    - turn show have one row for every turn in every jsonl file
+    expected_num_turns is a tuple that has one entry per jsonl file, and each of those
+    entries is a tuple with one entry per row in the corresponding jsonl file. The entry
+    for each row is an int indicating the number of turns in that row.
+    '''
+    num_jsonl_files = len(expected_num_turns)
+    expected_num_rows = [len(rows_in_file) for rows_in_file in expected_num_turns]
+    table_and_row_counts = {
+        'evalsetrun': 1, 
+        'dataset': num_jsonl_files, 
+        'datasetrow': sum(expected_num_rows), 
+        'turn': sum([sum(turns_per_row) for turns_per_row in expected_num_turns])}  
+    with sqlite3.connect(test_instance.database_path) as connection:
+        for table in table_and_row_counts:
+            data = pd.read_sql_query(f"select * from {table}", connection)
+            # First, check that we have the right number of rows based on the dictionary above
+            test_instance.assertEqual(data.shape[0], table_and_row_counts[table], 
+                                      f"Table {table} should have {table_and_row_counts[table]} rows but has {data.shape[0]} rows")
+            # Then do table-specific logic to make sure the evalsetrun_id, dataset_id, datasetrow_id, 
+            # and turn_number ids are set up and have the right length  
+            if table == 'datasetrow':
+                test_instance.assertEqual(set(data["dataset_id"].value_counts().values),
+                                          set([len(turns_per_row) for turns_per_row in expected_num_turns]),
+                                          f"{table} table does not have correct counts for the dataset ids")
+            elif table == 'turn':
+                test_instance.assertEqual(set(data["dataset_id"].value_counts().values),
+                                          set([sum(turns_per_row) for turns_per_row in expected_num_turns]),
+                                          f"{table} table does not have correct counts for the dataset ids")
 
 class TestSuite02(unittest.TestCase):
 
@@ -160,6 +200,28 @@ class TestSuite02(unittest.TestCase):
                     ).fetchall()
                     # there's exactly ONE row for each turn that has long enough string length
                     self.assertEqual(len(reading_ease), 0)
+        
+
+class TestSuite03(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # run code that needs to run before ANY of the tests
+        # in this case, we'd run the evals here using subprocess or something, or maybe main.py
+        run(
+            eval_name="test_suite_03",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
+        cls.database_path = os.environ["DATABASE_PATH"]
+
+    def test_tables_have_right_rows(self):
+        #this suite has two jsonls, simple.jsonl and multiturn.jsonl, 
+        # simple.json  has 2 rows.
+        #the first row has 3 turns. the second row also has 3 turns.
+        # multiturn.jsonl has 3 rows.
+        # the first row has 3 turns, the second row has 3 turns, and the third row has four turns
+        helper_test_tables_have_right_rows(self, ((3,3),(3, 3, 4)))
 
 
 # other tests
@@ -180,3 +242,15 @@ class TestSuite02(unittest.TestCase):
 # everything that has evaluation_type=function has null for EVERY column that starts with 'rubric'
 
 # some tests associated with rubrics...
+
+
+# def suite():
+#     suite = unittest.TestSuite()
+#     # Add test classes in the desired order
+#     suite.addTest(unittest.makeSuite(TestSuite01))
+#     suite.addTest(unittest.makeSuite(TestSuite02))
+#     return suite
+
+# if __name__ == "__main__":
+#     runner = unittest.TextTestRunner()
+#     runner.run(suite())

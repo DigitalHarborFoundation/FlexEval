@@ -22,3 +22,13 @@ test_suite_02:
         depends_on:
         - name: string_length
           metric_min_value: 15
+
+
+test_suite_03:
+  data:
+    - tests/data/simple.jsonl
+    - tests/data/multiturn.jsonl
+
+  metrics:
+    function:
+      - name: string_length
