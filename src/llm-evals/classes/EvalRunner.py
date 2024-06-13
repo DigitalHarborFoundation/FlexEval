@@ -27,10 +27,10 @@ class EvalRunner(Model):
     database: SqliteDatabase
     eval_name: str
 
-    def __init__(self, eval_name: str, config_filename: str, evals_path: str = None):
+    def __init__(self, eval_name: str, config_path: str, evals_path: str = None):
 
         self.eval_name = eval_name
-        self.config_filename = config_filename
+        self.config_path = config_path
         self.evals_path = evals_path
 
         self.initialize_logger()
@@ -84,7 +84,7 @@ class EvalRunner(Model):
         """
 
         # Load configs
-        with open(self.config_filename) as file:
+        with open(self.config_path) as file:
             self.configuration = yaml.safe_load(file)
 
     def validate_settings(self):
@@ -95,10 +95,12 @@ class EvalRunner(Model):
             "tests/", pattern="verify_installation.py"
         )
         # set args
-        os.environ["CONFIG_FILENAME"] = self.config_filename
+
+        os.environ["CONFIG_FILENAME"] = self.config_path
+        os.environ["EVALUATION_NAME"] = self.eval_name
         # Run the tests and capture the results
+        os.getenv("CONFIG_FILENAME")
         result = unittest.TextTestRunner().run(suite)
-        print(result)
         # Check if there were any failures or errors
         test_failed = not result.wasSuccessful()
         if test_failed:
@@ -164,7 +166,6 @@ class EvalRunner(Model):
 
         # apply defaults to the schema
         self.eval = apply_defaults(schema=target_schema, data=self.eval)
-        print(self.eval)
         # convert into graph structure
         self.metrics_graph_ordered_list = helpers.create_metrics_graph(
             self.eval["metrics"]

@@ -16,7 +16,7 @@ import dotenv
 # - allow comparison with 'ideal' responses
 
 
-def run(eval_name: str, config_filename: str, evals_path: str):
+def run(eval_name: str, evals_path: str, config_path: str):
     """Runs the evaluations.
     We want this to be callable by both the CLI and the webapp
     That means it needs to do argument parsing BEFORE this is called
@@ -26,7 +26,7 @@ def run(eval_name: str, config_filename: str, evals_path: str):
     # TODO - make evals.yaml file path configurable
     runner = EvalRunner(
         eval_name=eval_name,
-        config_filename=config_filename,
+        config_path=config_path,
         evals_path=evals_path,
     )
     dotenv.load_dotenv(runner.configuration["env_file"])
@@ -239,7 +239,7 @@ def run(eval_name: str, config_filename: str, evals_path: str):
                 turn_metrics = turn.compute_metrics()
                 # metric = compute_metric(**arg)
                 for m in turn_metrics:
-                    if m.get("type", None) is None:
+                    if m.get("evaluation_type", None) is None:
                         runner.logger.exception(
                             f"Metric {m} does not have a value for the key `type`."
                         )

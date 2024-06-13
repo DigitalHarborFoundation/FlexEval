@@ -9,7 +9,7 @@ env_file: .env #in same location as main.py
 logs_path: tests/logs/
 eval_schema_path: 'eval_schema.json'
 
-database_path: tests/data/results-test.db
+database_path: tests/data/results.db
 
 max_workers: 1
 
