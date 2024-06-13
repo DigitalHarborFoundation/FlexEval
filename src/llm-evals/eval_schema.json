@@ -68,7 +68,8 @@
                           },
                           "type": {
                             "type": "string",
-                            "description": "One of 'function' or 'rubric' indicating the type of the dependency."
+                            "description": "One of 'function' or 'rubric' indicating the type of the dependency.",
+                            "pattern": "^((function)|(rubric))$"
                           },
                           "kwargs": {
                             "type": "object",
@@ -155,7 +156,8 @@
                                   },
                                   "type": {
                                     "type": "string",
-                                    "description": "One of 'function' or 'rubric' indicating the type of the dependency."
+                                    "description": "One of 'function' or 'rubric' indicating the type of the dependency.",
+                                    "pattern": "^((function)|(rubric))$"
                                   },
                                   "kwargs": {
                                     "type": "object",

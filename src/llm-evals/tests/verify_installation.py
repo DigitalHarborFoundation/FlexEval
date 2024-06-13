@@ -135,9 +135,11 @@ class TestConfiguration(unittest.TestCase):
         jsonschema.validate(instance=data, schema=schema)
 
     def test_function_metrics_exist(self):
-        for function_metric in (
-            self.user_evals[self.eval_suite_name].get("metrics").get("function", [])
-        ):
+        '''
+        Test that all function metrics specified in eval config in fact exist and are called with appropriate
+        arguments.
+        '''
+        for function_metric in self.user_evals[self.eval_suite_name].get("metrics").get("function", []):
             name = function_metric["name"]
             assert hasattr(function_metrics, name) and callable(
                 getattr(function_metrics, name, None)
@@ -145,20 +147,37 @@ class TestConfiguration(unittest.TestCase):
 
             metric_function = getattr(function_metrics, name, None)
 
-            # This gets the type of the first argument of the function
-            input_type = next(
-                iter(inspect.signature(metric_function).parameters.values())
-            ).annotation
 
-            # Type of first argument must be string or list
-            assert (
-                input_type is str
-                or input_type is list
-                or get_origin(input_type) is list
-            ), f"Input to metric function {name} must be a string or list but it was {input_type}"
+            # Go through arguments and make sure that the first argument has the right type and that 
+            # all later arguments are filled by keyword arguments
+            arg_found = False
+            var_keyword_arg_found = False
+            arg_names = []
+            params = inspect.signature(metric_function).parameters
+            for arg_tuple in iter(params.items()):
+                if not arg_found:
+                    # First arg
+                    arg_found = True
+                    first_arg_type = arg_tuple[1].annotation
+                    assert (first_arg_type is str or first_arg_type is list or get_origin(first_arg_type) is list
+                    ), f"Input to metric function {name} must be a string or list but it was {first_arg_type}"
+                else:
+                    # Later arguments - need to be filled by kwargs, have defaults, or be variable length keyword args
+                    arg_names.append(arg_tuple[0])
+                    assert (
+                        arg_tuple[1].default is not inspect.Parameter.empty or
+                        arg_tuple[0] in function_metric.get('kwargs',{}) or
+                        arg_tuple[1].kind is inspect.Parameter.VAR_KEYWORD
+                    ), f"Argument `{arg_tuple[0]}` in function `{name}` must have a default value or the value must be specified in `kwargs` in the eval configuration"
+                    var_keyword_arg_found = var_keyword_arg_found or arg_tuple[1].kind is inspect.Parameter.VAR_KEYWORD
 
-            # TODO: check that keyword args exist
-            # TODO: check that type is an allowed type
+            assert arg_found, f"Function metrics must take at least one input, but {name} does not have any arguments."
+            # Check that there are no extra keyword arguments that don't match the function. If the function allows
+            # variable length keyword arguments, then extra keyword arguments are allowed.
+            if 'kwargs' in function_metric and not var_keyword_arg_found:
+                for kwarg in function_metric['kwargs']:
+                    assert (kwarg in arg_names
+                    ), f"Keyword argument `{kwarg}` specified in json for function `{name}`, but no argument with that name found in function signature."
 
     def test_metric_templates_are_valid(self):
         for rubric_metric in (
