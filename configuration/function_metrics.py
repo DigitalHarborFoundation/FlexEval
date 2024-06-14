@@ -5,8 +5,47 @@ import re
 import json
 from typing import Union
 
-##TODO - make a bunch of good examples of this
-## and some bad ones...
+## ~.~ function templates starts ~.~
+from typing import Union
+
+# Example input: either a single turn as a string or an entire conversation as a list of libraries. 
+turn_example = "This is a conversatioal turn."
+conversation_example = [{'role':"X1", 'content': "Y1"}, 
+                        {'role':"X2", 'content': "Y2"}, ...]
+
+# A function template to process a single turn
+def process_single_turn(turn: str) -> Union[int, float, dict[str, Union[int, float]]]:
+    """
+        Process a single conversational turn and return the desired output
+        
+        Args: 
+        turn (str): a single conversational turn as a string
+            CAUTION: You should keep the param name as "turn" 
+        
+        Returns:
+        an integer (e.g., 2), \
+        or a floating point number (e.g., 2.8), \
+        or a dictionary of metric/value pairs (e.g. {'metric1':value1, 'metric2':value2})
+    """
+    pass 
+
+# A function template to process an entire conversation
+def process_conversation(conversation:list)-> Union[int, float, dict[str, Union[int, float]], list[dict[str, Union[int, float]]]]:
+    """
+        Process an entire conversation and return the desired output
+        
+        Args: 
+        conversation (list): an entire conversation as a list
+            CAUTION: You should keep the param name as "conversation" 
+        
+        Returns: 
+        an integer, e.g., 2 \
+        or a floating point number, e.g., 2.8 \
+        or a dictionary of metric/value pairs, e.g. {'metric1':value1, 'metric2':value2}\
+        or a list of dictionaries. The key can be either 'role' or 'metric'. \
+            e.g., [{"role":role1, "value":value1}, {"role":role2, "value":value2}, ...]
+    """
+    pass 
 
 
 def is_role(turn: list, role: str) -> dict:
@@ -107,20 +146,6 @@ def count_role_entries_in_turn(
     return results
 
 
-# def number_of_entries(turn: List[Dict[str, Any]]) -> int:
-#     """
-#     Calculate the number of entries in each turn.
-
-#     Args:
-#         conversation (List[Dict[str, Any]]): A list of dictionaries representing conversational entries/turns.
-#                                              Each dictionary should have a 'role' key indicating the role of the participant.
-
-#     Returns:
-#         int: The number of conversational turns in the conversation.
-#     """
-#     return len(turn)
-
-
 def count_emojis(turn: str) -> Union[int, float]:
     """
     Calculate the number of emojis in a given text string.
@@ -144,30 +169,6 @@ def count_emojis(turn: str) -> Union[int, float]:
     )
     return len(emoji_pattern.findall(turn))
 
-
-# def count_unusual_function_calls(turn: str) -> Union[int, float]:
-#     """
-#     See how often an exponential function is called with strange parameters
-
-
-#     Args:
-#         turn (str): The input text string to be evaluated.
-
-#     Returns:
-#         Union[int, float]: The number of emojis in the input text.
-#     """
-#     emoji_pattern = re.compile(
-#         "["
-#         "\U0001F600-\U0001F64F"  # emoticons
-#         "\U0001F300-\U0001F5FF"  # symbols & pictographs
-#         "\U0001F680-\U0001F6FF"  # transport & map symbols
-#         "\U0001F1E0-\U0001F1FF"  # flags (iOS)
-#         "\U00002702-\U000027B0"  # Dingbats
-#         "\U000024C2-\U0001F251"
-#         "]+",
-#         flags=re.UNICODE,
-#     )
-#     return len(emoji_pattern.findall(turn))
 
 
 def string_length(turn: str) -> int:
@@ -235,7 +236,6 @@ def openai_moderation_api(turn: str, **kwargs) -> dict:
     response = client.moderations.create(input=turn)
     return response.results[0].model_dump(exclude_unset=True)["category_scores"]
 
-
 def function_has_error(turn: list) -> int:
     """Returns the number of rendering errors if the turn is a function call
     or None otherwise
@@ -252,3 +252,62 @@ def function_has_error(turn: list) -> int:
         return ct
     else:
         return None
+
+def error_count(error_list:list) -> int:
+    """
+    Used in rendering_error_count function to identify and count any plot rendering errors
+    
+    Args:
+        error_list (list): the list in the conversation containing plot rendering error information 
+
+    Returns:
+        int: a count number of the errors
+    """
+    error_count = 0
+    for error_dict in error_list:
+        for key, value in error_dict.items():
+            if key == "text" and value != "[]" and len(value) > 2:
+                error_count += 1
+    return error_count
+
+
+def rendering_error_count(conversation: list) -> dict:
+    """
+    Process a conversation to identify and count plot rendering errors if any
+    
+    Args: 
+    conversation (list): an entire conversation as a list
+
+    Returns:
+    dict: {
+            'expression_error_count': value,
+            'javascript_log_error_count': value
+        }
+    """
+    try:
+        tool_call_list = [item for item in conversation if item.get("role") == "tool"]
+        
+        if not tool_call_list:
+            expression_error_count = 0
+            javascript_log_error_count = 0
+        
+        else: 
+            # extract the values for the targeted errors
+            for tool_call in tool_call_list:
+                content =  tool_call["content"]
+                expression_errors = [item for item in content if item.get("type") == "expression_errors"]
+                javascript_log_errors = [item for item in content if item.get("type") == "javascript_log_errors"]
+                # count the errors
+                expression_error_count = error_count(expression_errors)
+                javascript_log_error_count = error_count(javascript_log_errors)
+        
+        result = {
+            'expression_error_count':expression_error_count,
+            'javascript_log_error_count': javascript_log_error_count
+        }
+        
+        return result
+    
+    except (KeyError, IndexError, TypeError, ValueError) as e:
+        print(f"An error occurred: {e}")
+        

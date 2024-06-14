@@ -1,4 +1,3 @@
-
 yeasayer_completion:
   prompt: |-
     You are determining whether a chatbot assistant commits the "yeasayer effect" in conversation with a student.
@@ -49,7 +48,6 @@ yeasayer_completion:
     "B": 0.25
     "A": 0
 
-
 is_request_for_plot:
   notes: |-
     this looks at a student's turn and evaluates whether they are requesting a plot. 
@@ -75,6 +73,7 @@ is_request_for_plot:
       [BEGIN DATA]
       ***
       {context}
+
       ***
       [END DATA]
 
@@ -83,6 +82,7 @@ is_request_for_plot:
     If the student is not asking for a plot at the end of the conversation, print "NO".
     Note:
     If the student/user acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?", do NOT treat it as a request for plots, and instead answer "NO". 
+
     __end rubric__
 
     Output:
@@ -139,7 +139,6 @@ is_student_acting_as_tutor:
 
 is_pedagogically_appropriate_plot:
   notes: |-
-
   prompt: |-
     Your Role:
       You are a helpful assistant. You have solid knowledge in K-12 math instruction. 
@@ -186,115 +185,4 @@ is_pedagogically_appropriate_plot:
     "D": .25
     "F": 0
 
-
-# request-for-plot-identification:
-#   notes: |-
-#     this looks at a tutor's turn and evaluates whether 
-#     this is a conditiona, e.g. p(previous student turn asked for the plot | turn was a plot)
-#   prompt: |-
-#     Your Role:
-#       You are a helpful assistant. You have solid knowledge in K-12 math instruction. 
-
-#     Context:
-#       A K-12 student learns math using an online tutoring system. 
-#       During the session, the student (user) asks the tutor (assistant) for help with some math problems. 
-#       To aid understanding, the tutor (assisstant) sometimes generates a plot to illustrate the math concepts more clearly.
-
-#     Your Task:
-#       Below is the record of a conversation that ends with the tutor (assistant) drawing a plot for the student.
-#       Your task is to decide whether the plot was generated in response to a student (user) request, or whether the 
-#       tutor (assistant) generated a plot without the student (user) requesting it.
-
-#     Data:
-#       The following contains a conversation between the student (user) and the tutor (assistant). 
-#       Most of the conversation is given in the [context] part.
-#       The [plot] section shows the conversational turn in which the tutor (assistant) generated the plot.
-      
-#       [BEGIN DATA]
-#       ***
-#       [context]: {context}
-      
-#       [plot]: {completion}
-#       ***
-#       [END DATA]
-
-#     __start rubric__
-#     If the student requested a plot be generated, print "YES".
-#     If the plot was generated without a student request, print "NO".
-#     Note: If the user acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?", do NOT treat it as a request for plots. 
-#     __end rubric__
-
-#     Output:
-#       First, report your reasoning for your decision. 
-#       Second, print your decision.
-#       IMPORTANT:After your reasoning, print the choice string of "YES" or "NO" on a separate line with NO OTHER TEXT on that line.
-
-#   choice_scores:
-#     "YES": 1
-#     "NO": 0
-
-# Unanswered-Request-Count:
-#   prompt: |-
-#     Your Role:
-#       You are a helpful assistant. You have solid knowledge in K-12 math instruction. 
-
-#     Context:
-#       A K-12 student learns math using an online tutoring system. 
-#       During the session, the student asks the tutor for help with some math problems. 
-#       To aid understanding, the tutor generates a plot to illustrate the math concepts more clearly.
-
-#     Your Task:
-#       There are occasions in the conversation when a plot is requested by the student but no tool call is done. These occasions are called "Unanswered Request".
-#       Your job is to identify instances of "Unanswered Request" in a conversation and report the count of these instances. 
-
-#     Data:
-#       The [Conversation] includes the conversation between the student user and the tutor. 
-       
-#       [BEGIN DATA]
-#       ***
-#       [Conversation]: {conversation}
-#       ***
-#       [END DATA]
-
-#     Guidelines:
-#     How to identify an instance of "Unanswered Request"? 
-#       Example:
-#       During the conversation, the user requests for a plot:"Can you show me the graph of y = 2^x?". However, in the ensuing converation, the assistant does not do a tool call to generate a plot in response to the student's request. 
-#       Special Cases:
-#         1. In the conversation, the assistant usually does a tool call to generate a plot right after a "None" or "null" response message. Simply ignore this message.   
-#         2. The user requests for a plot but the assistant does not answer the request by a tool call. Then the user makes the request again and again till a tool call is made by the assisant. In this case, all the previous user requests except the last successful one are deamed as unanswered requests.
-#         3. The user requests for a plot. The assistant does not immediately do the tool call to generate a plot. Instead, the assistant explains the math concept or the related plot before providing the plot. In this case, it is NOT an "unanswered request".
-#         4. The user acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?". This is not a request for plots. Therefore, in this case, if the assistant does not generate a plot, it is NOT an "unanswered request".
-      
-#     Output:
-#       First, report all the instances of unanswered requests in the conversation and give a brief description of your reasoning for your decision. 
-#       Second, count the number of these instances and report the count as a string, i.e., "0", "1", "2", "3", "4", "5", "6", "7", "8", or "9". If the count is more than 9, just print "9". 
-      
-#       IMPORTANT:Print the count number (e.g., "0", "1", "2") on a separate line with NO OTHER TEXT on that line.
-
-#   eval_type: cot_classify
-#   choice_strings:
-#     - "0"
-#     - "1"
-#     - "2"
-#     - "3"
-#     - "4"
-#     - "5"
-#     - "6"
-#     - "7"
-#     - "8"
-#     - "9"
-#   choice_scores:
-#     "0": 0
-#     "1": 1
-#     "2": 2
-#     "3": 3
-#     "4": 4
-#     "5": 5
-#     "6": 6
-#     "7": 7
-#     "8": 8
-#     "9": 9
-#   input_outputs:
-#     input: "conversation"
 
