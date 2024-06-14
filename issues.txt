@@ -1,2 +1,6 @@
-* need to have OPENAI_API_KEY in environment of main.py for some reason
-* get MPS to work
+- maybe min_value and max_value are both optional because perhaps downstream calculation just dependencies
+on the value itself (or the metric being run), rather than some threshold? 
+- add some kind of conditional to say that the rubric should only be run on the FULL (not necessarily 'completed' conversation)
+- allow relative or absolute paths in data
+
+

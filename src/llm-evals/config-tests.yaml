@@ -4,12 +4,12 @@
 function_metrics_path: '../../configuration/function_metrics.py'
 rubric_metrics_path: '../../configuration/rubric_metrics.yaml'
 completion_functions: '../../configuration/completion_functions.py'
-evals_path: '../../configuration/evals.yaml'
-env_file: '.env' #in same location as main.py
-logs_path: '../../logs/'
+evals_path: tests/evals.yaml
+env_file: .env #in same location as main.py
+logs_path: tests/logs/
 eval_schema_path: 'eval_schema.json'
 
-database_path: ../../data/results/results.db
+database_path: tests/data/results.db
 
 max_workers: 1
 

@@ -171,4 +171,5 @@ temp/
 test-cases/
 src/llm-evals/evals_sync/
 *.db
+*.db-*
 .*

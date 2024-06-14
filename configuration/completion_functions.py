@@ -52,9 +52,11 @@ def open_ai_completion(
         Dict[str, Any]: The response from the OpenAI API with unset fields excluded.
     """
     client = OpenAI(api_key=os.getenv(api_key_name))
+
     raw_response = client.chat.completions.create(
         model=model_name, messages=conversation_history, n=int(n), **kwargs
     )
+
     return raw_response.model_dump(exclude_unset=True)
 
 

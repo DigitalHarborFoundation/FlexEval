@@ -1,61 +1,101 @@
-#Instructions for running: 
-#docker-compose run llm-evals python main.py EVAL_SUITE_NAME
-#docker-compose up metabase
 
-# example:
-#   data:
-#     path: data/test-cases/example.jsonl
-#   function_metrics:
-#     - name: string_length
-#       score: all_by_role #aggregates across roles
-#     - name: string_length
-#       score: completion #string length of just completions
-
-#   rubric_metrics:
-#     - name: yeasayer-completion
-
-#   grader_llm:
-#     function_name: open_ai_completion # can be empty if not used, but don't delete the key
-#     model_name: gpt-3.5-turbo
-#     api_key_name: OPENAI_API_KEY #set in .env
-#     n: 1
-
-#   completion:
-#     #this example uses a local instance of Jan (jan.ai) 
-#     #hosting the mistral 7B model
-#     function_name: open_ai_completion # can be empty if not used, but don't delete the key
-#     model_name: gpt-3.5-turbo
-#     api_key_name: OPENAI_API_KEY #set in .env
-#     #function_name: jan_completion # defined in completion_functions.py
-#     #endpoint: http://host.docker.internal:1337/v1/ #equivalent to localhost:1234/v1/
-#     #model_name: mistral-ins-7b-q4
-#     n: 2
-
-
-example:
+evaluation:
   data:
-    path: ../../data/test-cases/example.jsonl
+    - ../../data/test-cases/dependency_example_test.jsonl
 
-  function_metrics:
-    - name: string_length
-      completion: false
-    # - name: number_of_turns
-    # - name: number_of_turns_per_role
-    # - name: openai_moderation_api
-    #   completion: true
+  do_completion: False
 
-  rubric_metrics:
-    - name: yeasayer-completion
-      completion: true
-  
+  name: dependency example
+  notes: my notes
+
+  #anything in here will overwrite entries in src/llm-evals/config.yaml
+  config:
+    max_workers: 8
+
+  metrics:
+
+    function:
+      - name: string_length
+      
+      - name: is_role
+        kwargs:
+          role: assistant
+      
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: value_counts_by_tool_name
+        kwargs:
+          json_key: latex
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: count_role_entries_in_turn
+      
+      - name: openai_moderation_api #run for every turn by default
+        context_only: false #this is the default
+      
+      - name: openai_moderation_api
+        context_only: true
+      
+      - name: flesch_kincaid_grade
+      
+    rubric:
+      - name: yeasayer_completion
+        depends_on:
+          - name: openai_moderation_api
+            context_only: true
+            metric_min_value: 0.1
+      
+      - name: is_request_for_plot
+        context_only: true
+        depends_on: 
+          - name: is_role
+            type: function
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: is_student_acting_as_tutor
+        last_turn_only: true
+      
+      - name: is_pedagogically_appropriate_plot
+        depends_on:
+        - name: is_role
+          kwargs:
+            role: assistant
+          metric_name: assistant
+          metric_min_value: 1
+        - name: count_tool_calls
+          metric_min_value: 1 #TODO - sum of the 'value' for all rows where function_name is 'count_tool_calls' should be >= 1
+      
   completion_llm:
     function_name: open_ai_completion
-    model_name: gpt-4o
-    api_key_name: OPENAI_API_KEY
+    include_system_prompt: False
+    kwargs:
+      model_name: gpt-3.5-turbo
+      api_key_name: OPENAI_API_KEY
+      n: 2
+    
   
   grader_llm:
     function_name: open_ai_completion
-    model_name: gpt-4o
-    api_key_name: OPENAI_API_KEY
+    kwargs:
+      model_name: gpt-4o
+      api_key_name: OPENAI_API_KEY
   
 

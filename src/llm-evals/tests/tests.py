@@ -1,16 +1,44 @@
-# TODO - make tests here
+# want to make sure the code works
 
-# Make a sample dataset then run different types of evals on it
-# and make sure they have the correct value and/or form
-# in the database output
+# functionally, that means we want to run an evaluation on a KNOWN eval suite and an KNOWN dataset
+# and we want the correct results to show up in the database
 
-# string_length by role
-# turns by conversation
-# strength_length by completion -- where completion function is a dummy that always returns "hi"
-# make sure completions work
+# that means that we need to write a test suite that uses an existing eval suite and dataset
+# runs it, and then checks the database to make sure the output looks as expected
 
-# test -- evals still works when functions have arguments
-# test -- evals still works when functions do NOT have arguments
-# test -- evals works when using OpenAI completion function
-# test -- evals works when using rubric metric
-# test -- evals BREAK when rubric template is incorrectly written  <-- expected failure
+# we can vary this for different test suites, with different dependencies
+
+# we should also create test suites that DO NOT work, and make sure they fail - this is called an "expected failure"
+
+# what kinds of things would we check in the database?
+# - if I run a function metric, results show up in the database for each input conversation
+# - if there is a dependency, it's met
+# - if I use kwargs, they get used and saved
+# - if I try to use a function that doesn't exist, it fails but gives a useful error message
+
+
+import unittest
+
+import os
+from run import run
+
+
+class FunctionalTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # run code that needs to run before ANY of the tests
+        # in this case, we'd run the evals here using subprocess or something, or maybe main.py
+        pass
+
+    @classmethod
+    def tearDownClass(cls):
+        # here, we'd delete the database?
+        pass
+
+    def test_abc(self):
+        # write assertions here
+        run(
+            eval_name="test01",
+            config_filename="config-tests.yaml",
+            evals_path="tests/tests.py",
+        )

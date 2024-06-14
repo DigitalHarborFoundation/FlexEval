@@ -13,3 +13,9 @@ textstat
 
 # for database building and management
 flatten_json
+
+#for ORM
+peewee
+#for metric dependencies
+networkx
+jsonschema
