@@ -15,6 +15,9 @@ import sys
 import sqlite3
 import pandas as pd
 
+sys.path.append("../")
+sys.path.append("../../")
+
 from main import run
 
 
@@ -67,7 +70,7 @@ class TestSuite01(unittest.TestCase):
         #this suite has one jsonl, simple.jsonl, which has 2 rows.
         #the first row has 3 turns. the second row also has 3 turns.
         helper_test_tables_have_right_rows(self, ((3,3),))
-
+    
     def test_abc(self):
         # write assertions here
         pass
@@ -200,7 +203,59 @@ class TestSuite02(unittest.TestCase):
                     ).fetchall()
                     # there's exactly ONE row for each turn that has long enough string length
                     self.assertEqual(len(reading_ease), 0)
-        
+                    
+    def test_multirow_dependency(self):
+        # test for EVERY turn where the string_length is >= 15, \
+        # the same turn ALSO has a flesch_reading_ease entry
+        with sqlite3.connect(self.database_path) as connection:
+            long_string_no_readingease = connection.execute(
+                """
+                SELECT 
+                    evalsetrun_id, dataset_id, datasetrow_id, turn_id
+                FROM 
+                    turnmetric t1
+                WHERE 
+                    evaluation_name = 'string_length' AND metric_value >= 15
+                AND NOT EXISTS 
+                    (
+                    SELECT 1
+                    FROM turnmetric t2
+                    WHERE t2.evalsetrun_id = t1.evalsetrun_id 
+                        AND t2.dataset_id = t1.dataset_id
+                        AND t2.datasetrow_id = t1.datasetrow_id
+                        AND t2.turn_id = t1.turn_id
+                        AND t2.evaluation_name = 'flesch_reading_ease'
+                    ); 
+                """         
+            ).fetchall()
+        self.assertEqual(len(long_string_no_readingease), 0, "For some rows with string length >= 15, no flesch_reading_ease score is reported")
+    
+    def test_type_contradiction(self):
+        # test: everything that has evaluation_type=function has null for EVERY column that starts with 'rubric'
+        with sqlite3.connect(self.database_path) as connection:
+            function_type = connection.execute(
+                """
+                SELECT 
+                    evaluation_type, rubric_prompt, rubric_completion, rubric_model, rubric_completion_tokens, rubric_score
+                FROM 
+                    turnmetric
+                WHERE 
+                    evaluation_type = 'function' 
+                    AND rubric_prompt IS NOT NULL
+                    AND rubric_completion IS NOT NULL
+                    AND rubric_model IS NOT NULL
+                    AND rubric_completion_tokens IS NOT NULL
+                    AND rubric_score IS NOT NULL
+                """         
+            ).fetchall()
+        self.assertEqual(len(function_type), 0, "Contradiction: function type rows with rubric-associated values")
+            
+## some tests associated with rubrics...
+# if type is rubric, all the rubric_related columns should not be null
+
+# the type of the value should match the expectations
+ 
+
 
 class TestSuite03(unittest.TestCase):
 
@@ -223,8 +278,62 @@ class TestSuite03(unittest.TestCase):
         # the first row has 3 turns, the second row has 3 turns, and the third row has four turns
         helper_test_tables_have_right_rows(self, ((3,3),(3, 3, 4)))
 
+    def test_one_row_per_metric_without_dependency(self):
+        # test for function_metric with no dependency, 
+        # every (jsonl/row/turn/metric) combo should get just one row in TurnMetrics
+        with sqlite3.connect(self.database_path) as connection:
+            duplicated_metric = connection.execute(
+                """
+                SELECT 
+                    evalsetrun_id, dataset_id, datasetrow_id, turn_id, evaluation_name, COUNT(*) as count 
+                FROM 
+                    turnmetric 
+                GROUP BY 
+                    evalsetrun_id, dataset_id, datasetrow_id, turn_id, evaluation_name
+                HAVING
+                    COUNT(*) > 1
+                """
+            ).fetchall()
+        self.assertEqual(len(duplicated_metric), 0, "Duplicated rows!") 
 
 # other tests
+
+class TestSuite04(unittest.TestCase):
+    # rubric associated tests 
+    @classmethod
+    def setUpClass(cls):
+        # run code that needs to run before ANY of the tests
+        # in this case, we'd run the evals here using subprocess or something, or maybe main.py
+        run(
+            eval_name="test_suite_04",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
+        cls.database_path = os.environ["DATABASE_PATH"]
+        
+    def test_rubric_metric_value(self):
+        # test if the rurbric output expected values 
+        with sqlite3.connect(self.database_path) as connection:
+            rubric_metric = connection.execute(
+                """
+                SELECT 
+                    turn_id, metric_value 
+                FROM 
+                    turnmetric 
+                WHERE 1=1
+                    AND evaluation_type = 'rubric'
+                """
+            ).fetchall()
+        expected_values = [0.0, 1.0]
+        for row in rubric_metric:
+            with self.subTest():
+                self.assertIn(row[1], expected_values, f"Output value is not expected for row {row[0]}")
+
+
+
+
+
+
 
 ## basic - are the table rows being populated
 # there shoulld be exactly one row in EvalSetRun

@@ -1,8 +1,6 @@
 #these are our eval suites for tests
 
-
 test_suite_01:
-
   data:
     - tests/data/simple.jsonl
 
@@ -20,9 +18,8 @@ test_suite_02:
 
       - name: flesch_reading_ease
         depends_on:
-        - name: string_length
-          metric_min_value: 15
-
+          - name: string_length
+            metric_min_value: 15
 
 test_suite_03:
   data:
@@ -32,3 +29,49 @@ test_suite_03:
   metrics:
     function:
       - name: string_length
+
+test_suite_04:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  do_completion: False
+
+  name: rubric & dependency example
+  notes: testing rubric metrics
+
+  #anything in here will overwrite entries in src/llm-evals/config.yaml
+  config:
+    max_workers: 8
+
+  metrics:
+    function:
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
+    rubric:
+      - name: is_student_acting_as_tutor
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: user
+            metric_name: user
+            metric_min_value: 1
+
+  completion_llm:
+    function_name: open_ai_completion
+    include_system_prompt: False
+    kwargs:
+      model_name: gpt-3.5-turbo
+      api_key_name: OPENAI_API_KEY
+      n: 2
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: gpt-3.5-turbo
+      api_key_name: OPENAI_API_KEY
