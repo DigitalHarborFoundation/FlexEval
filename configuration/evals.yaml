@@ -28,7 +28,6 @@ evaluation:
       - name: count_tool_calls
         depends_on:
           - name: is_role
-            type: function
             kwargs:
               role: assistant
             metric_name: assistant
@@ -60,6 +59,7 @@ evaluation:
           - name: openai_moderation_api
             context_only: true
             metric_min_value: 0.1
+      
       - name: is_request_for_plot
         context_only: true
         depends_on: 

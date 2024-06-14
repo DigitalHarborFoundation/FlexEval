@@ -64,17 +64,27 @@ class TestSuite01(unittest.TestCase):
         self.assertAlmostEqual(metric[0][0], 12)
 
     def test_tables_have_right_rows(self):
-        #this suite has one jsonl, simple.jsonl, which has 2 rows.
-        #the first row has 3 turns. the second row also has 3 turns.
-        helper_test_tables_have_right_rows(self, ((3,3),))
+        # this suite has one jsonl, simple.jsonl, which has 2 rows.
+        # the first row has 3 turns. the second row also has 3 turns.
+        helper_test_tables_have_right_rows(self, ((3, 3),))
 
-    def test_abc(self):
-        # write assertions here
-        pass
+    def test_string_length_has_function_label(self):
 
-def helper_test_tables_have_right_rows(test_instance: unittest.TestCase, 
-                                       expected_num_turns: tuple):
-    '''
+        with sqlite3.connect(self.database_path) as connection:
+            result = connection.execute(
+                """select evaluation_type from turnmetric 
+                where 1=1
+                and evaluation_name = 'string_length'
+                """
+            ).fetchall()
+            self.assertGreater(len(result), 0)
+            self.assertTrue(all([i[0] == "function" for i in result]))
+
+
+def helper_test_tables_have_right_rows(
+    test_instance: unittest.TestCase, expected_num_turns: tuple
+):
+    """
     Check row counts on various tables:
     - evalsetrun should always have one row
     - dataset should have one row per jsonl file
@@ -83,30 +93,39 @@ def helper_test_tables_have_right_rows(test_instance: unittest.TestCase,
     expected_num_turns is a tuple that has one entry per jsonl file, and each of those
     entries is a tuple with one entry per row in the corresponding jsonl file. The entry
     for each row is an int indicating the number of turns in that row.
-    '''
+    """
     num_jsonl_files = len(expected_num_turns)
     expected_num_rows = [len(rows_in_file) for rows_in_file in expected_num_turns]
     table_and_row_counts = {
-        'evalsetrun': 1, 
-        'dataset': num_jsonl_files, 
-        'datasetrow': sum(expected_num_rows), 
-        'turn': sum([sum(turns_per_row) for turns_per_row in expected_num_turns])}  
+        "evalsetrun": 1,
+        "dataset": num_jsonl_files,
+        "datasetrow": sum(expected_num_rows),
+        "turn": sum([sum(turns_per_row) for turns_per_row in expected_num_turns]),
+    }
     with sqlite3.connect(test_instance.database_path) as connection:
         for table in table_and_row_counts:
             data = pd.read_sql_query(f"select * from {table}", connection)
             # First, check that we have the right number of rows based on the dictionary above
-            test_instance.assertEqual(data.shape[0], table_and_row_counts[table], 
-                                      f"Table {table} should have {table_and_row_counts[table]} rows but has {data.shape[0]} rows")
-            # Then do table-specific logic to make sure the evalsetrun_id, dataset_id, datasetrow_id, 
-            # and turn_number ids are set up and have the right length  
-            if table == 'datasetrow':
-                test_instance.assertEqual(set(data["dataset_id"].value_counts().values),
-                                          set([len(turns_per_row) for turns_per_row in expected_num_turns]),
-                                          f"{table} table does not have correct counts for the dataset ids")
-            elif table == 'turn':
-                test_instance.assertEqual(set(data["dataset_id"].value_counts().values),
-                                          set([sum(turns_per_row) for turns_per_row in expected_num_turns]),
-                                          f"{table} table does not have correct counts for the dataset ids")
+            test_instance.assertEqual(
+                data.shape[0],
+                table_and_row_counts[table],
+                f"Table {table} should have {table_and_row_counts[table]} rows but has {data.shape[0]} rows",
+            )
+            # Then do table-specific logic to make sure the evalsetrun_id, dataset_id, datasetrow_id,
+            # and turn_number ids are set up and have the right length
+            if table == "datasetrow":
+                test_instance.assertEqual(
+                    set(data["dataset_id"].value_counts().values),
+                    set([len(turns_per_row) for turns_per_row in expected_num_turns]),
+                    f"{table} table does not have correct counts for the dataset ids",
+                )
+            elif table == "turn":
+                test_instance.assertEqual(
+                    set(data["dataset_id"].value_counts().values),
+                    set([sum(turns_per_row) for turns_per_row in expected_num_turns]),
+                    f"{table} table does not have correct counts for the dataset ids",
+                )
+
 
 class TestSuite02(unittest.TestCase):
 
@@ -153,6 +172,7 @@ class TestSuite02(unittest.TestCase):
                 and metric_value >= 15
                 """
             ).fetchall()
+            self.assertGreater(len(long_enough_strings), 0)
             # STEP 2
             # for every row in this, there should ALSO be a single entry for reading ease
             for row in long_enough_strings:
@@ -183,6 +203,7 @@ class TestSuite02(unittest.TestCase):
                 and metric_value < 15
                 """
             ).fetchall()
+            self.assertGreater(len(long_enough_strings), 0)
             # STEP 2
             # for every row in this, there should be ZERO rows that measure
             for row in long_enough_strings:
@@ -200,7 +221,7 @@ class TestSuite02(unittest.TestCase):
                     ).fetchall()
                     # there's exactly ONE row for each turn that has long enough string length
                     self.assertEqual(len(reading_ease), 0)
-        
+
 
 class TestSuite03(unittest.TestCase):
 
@@ -216,12 +237,124 @@ class TestSuite03(unittest.TestCase):
         cls.database_path = os.environ["DATABASE_PATH"]
 
     def test_tables_have_right_rows(self):
-        #this suite has two jsonls, simple.jsonl and multiturn.jsonl, 
+        # this suite has two jsonls, simple.jsonl and multiturn.jsonl,
         # simple.json  has 2 rows.
-        #the first row has 3 turns. the second row also has 3 turns.
+        # the first row has 3 turns. the second row also has 3 turns.
         # multiturn.jsonl has 3 rows.
         # the first row has 3 turns, the second row has 3 turns, and the third row has four turns
-        helper_test_tables_have_right_rows(self, ((3,3),(3, 3, 4)))
+        helper_test_tables_have_right_rows(self, ((3, 3), (3, 3, 4)))
+
+
+class TestPlots01(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        run(
+            eval_name="test_plots_01",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
+        cls.database_path = os.environ["DATABASE_PATH"]
+
+    def test_is_role(self):
+        with sqlite3.connect(self.database_path) as connection:
+            result = connection.execute(
+                """select 
+                    turnmetric.evaluation_name
+                    , turn.role
+                    , turnmetric.kwargs
+                    , metric_name
+                    , metric_value
+                from turnmetric
+                inner join turn on turnmetric.turn_id = turn.id
+                where 1=1
+                and turnmetric.evalsetrun_id=1 
+                and turnmetric.dataset_id=1 --first file
+                and turnmetric.datasetrow_id=1 --first row
+                and turnmetric.evaluation_name = 'is_role'
+                """
+            ).fetchall()
+        self.assertGreater(len(result), 0)
+        for row in result:
+
+            with self.subTest():
+                self.assertEqual(row[0], "is_role")
+
+            with self.subTest():
+                self.assertIn(row[3], ["assistant", "user"])
+
+            if row[1] == "user" and row[3] == "user":
+                with self.subTest():
+                    self.assertEqual(row[4], 1.0)  # only one user
+            if row[1] == "user" and row[3] == "assistant":
+                with self.subTest():
+                    self.assertEqual(row[4], 0.0)
+            if row[1] == "assistant" and row[3] == "assistant":
+                with self.subTest():
+                    self.assertGreaterEqual(row[4], 1.0)  # at least one assistant
+            if row[1] == "assistant" and row[3] == "user":
+                with self.subTest():
+                    self.assertEqual(row[4], 0.0)
+
+    def test_count_tool_calls(self):
+        # 1, 3, 1
+        with sqlite3.connect(self.database_path) as connection:
+            result = pd.read_sql_query(
+                """
+                select 
+                    turnmetric.evaluation_name
+                    , turn.role
+                    , turnmetric.datasetrow_id
+                    , turnmetric.kwargs
+                    , metric_name
+                    , metric_value
+                from turnmetric
+                inner join turn on turnmetric.turn_id = turn.id
+                where 1=1
+                and turnmetric.evalsetrun_id=1 
+                and turnmetric.dataset_id=1 --first file
+                and turnmetric.evaluation_name = 'count_tool_calls'
+                """,
+                connection,
+            )
+            self.assertGreater(result.shape[0], 0)
+            # no user should have a tool call
+            with self.subTest():
+                self.assertFalse(any(result["role"].apply(lambda x: x == "user")))
+
+            # correct number of plots are identified
+            with self.subTest():
+                self.assertTrue(result.query("datasetrow_id == 1").shape[0] == 1)
+            with self.subTest():
+                self.assertTrue(result.query("datasetrow_id == 2").shape[0] == 3)
+            with self.subTest():
+                self.assertTrue(result.query("datasetrow_id == 3").shape[0] == 1)
+
+            # plot name is detected
+            with self.subTest():
+                self.assertEqual(
+                    result.loc[0, "metric_name"],
+                    "plot_one_or_more_equations_or_inequalities",
+                )
+
+
+class ConfigFailures(unittest.TestCase):
+
+    @unittest.expectedFailure
+    def test_config_failure_01(cls):
+        run(
+            eval_name="config_failure_01",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
+
+    @unittest.expectedFailure
+    def test_config_failure_02(cls):
+        run(
+            eval_name="config_failure_02",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
 
 
 # other tests
