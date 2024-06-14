@@ -261,13 +261,13 @@ class TestSuite03(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests
-        # in this case, we'd run the evals here using subprocess or something, or maybe main.py
-        # run(
-        #     eval_name="test_suite_03",
-        #     config_path="config-tests.yaml",
-        #     evals_path="tests/evals.yaml",
-        # )
+        #run code that needs to run before ANY of the tests
+        #in this case, we'd run the evals here using subprocess or something, or maybe main.py
+        run(
+            eval_name="test_suite_03",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
         cls.database_path = os.environ["DATABASE_PATH"]
 
     def test_tables_have_right_rows(self):
