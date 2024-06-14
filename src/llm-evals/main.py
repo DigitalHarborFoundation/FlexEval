@@ -322,7 +322,7 @@ if __name__ == "__main__":
         help="Path to the evaluation file evals.yaml you want to run. Deafult is configuration/evals.yaml.",
     )
     parser.add_argument(
-        "--config_filename",
+        "--config_path",
         type=str,
         help="Which config file to use",
         default="config.yaml",
@@ -331,14 +331,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run(**vars(args))
-
-
-def test_run_1(self):
-
-    from main import run
-
-    run(
-        eval_name="test_suite_1",
-        config_filename="config-tests.yaml",
-        evals_path="tests/evals.yaml",
-    )
