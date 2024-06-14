@@ -1,37 +1,69 @@
+"""This file contains a list of Python functions that accept conversations as input 
+and produce conversational turns (aka completions) as output.
 
+When writing a new function, the arguments must include, at minimum:
+* conversation_history - list of dictionaries with keys ("role","content"), whose values are strings
+* kwargs - dictionary of optional values that can probably be ignored
+Other arguments can be added, but then must also be specified 
+in the "completion_llm" section of the evals.yaml config. 
 
-# Each function must output a data structure described here:
-# # https://platform.openai.com/docs/guides/text-generation/chat-completions-api
-# completion = {
-#     "choices": [
-#         {
-#             "message":{
-#                 "content": MY_CONTENT_HERE,
-#                 "role":"assistant"
-#             }
-#         }
-#     ]
-# }
-# In addition,each function must have two inputs:
-# 1 - conversation_history
-# 2 - model_name
-
+The outputs must conform to the structure described here:
+https://platform.openai.com/docs/guides/text-generation/chat-completions-api
+with the following format: 
+    completion = {
+        "choices": [
+            {
+                "message":{
+                    "content": MY_CONTENT_HERE,
+                    "role":"assistant"
+                }
+            }
+        ]
+    }
+"""
 
 from openai import OpenAI
 import os
 import json
 import requests
+from typing import List, Dict, Any
+import os
+from openai import OpenAI
+
+
+def open_ai_completion(
+    conversation_history: List[Dict[str, Any]],
+    model_name: str,
+    api_key_name: str,
+    n: int = 1,
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    """
+    Generate a completion for a given conversation history using OpenAI's chat completion API.
+
+    Args:
+        conversation_history (List[Dict[str, Any]]): The conversation history as a list of message dictionaries.
+        model_name (str): The name of the OpenAI model to use for the completion.
+        api_key_name (str): The environment variable name where the API key is stored.
+        n (int, optional): The number of completion choices to generate. Defaults to 1.
+        **kwargs (Any): Additional keyword arguments to pass to the OpenAI API client.
+
+    Returns:
+        Dict[str, Any]: The response from the OpenAI API with unset fields excluded.
+    """
+    client = OpenAI(api_key=os.getenv(api_key_name))
+    raw_response = client.chat.completions.create(
+        model=model_name, messages=conversation_history, n=int(n), **kwargs
+    )
+    return raw_response.model_dump(exclude_unset=True)
 
 
 def jan_completion(conversation_history, model_name, endpoint, **kwargs):
     # Example: reuse your existing OpenAI setup
 
     client = OpenAI(base_url=endpoint, api_key="not-needed")
-
     raw_response = client.chat.completions.create(
-        model=model_name,
-        messages=conversation_history,
-        temperature=0.7,
+        model=model_name, messages=conversation_history, temperature=0.7, **kwargs
     )
     return raw_response.model_dump(exclude_unset=True)
 
@@ -45,15 +77,6 @@ def lm_studio_completion(conversation_history, model_name, endpoint, **kwargs):
         model=model_name,
         messages=conversation_history,
         temperature=0.7,
-    )
-    return raw_response.model_dump(exclude_unset=True)
-
-
-def open_ai_completion(conversation_history, model_name, api_key_name, **kwargs):
-    client = OpenAI(api_key=os.getenv(api_key_name))
-    raw_response = client.chat.completions.create(
-        model=model_name,
-        messages=conversation_history,
     )
     return raw_response.model_dump(exclude_unset=True)
 
@@ -107,6 +130,9 @@ def gpt_3p5_turbo(conversation_history, model_name, key_name, **kwargs):
     raw_response = client.chat.completions.create(
         model="gpt-3.5-turbo", messages=conversation_history
     )
-    # print(raw_response.model_dump_json(indent=2, exclude_unset=True))
-    # print(raw_response.choices[0]['message']['content'])
     return raw_response.model_dump(exclude_unset=True)
+
+
+def placeholder_completion(conversation_history, model_name, **kwargs):
+    """This is just for testing -- always returns 'hi'"""
+    return {"choices": [{"message": {"content": "hi", "role": "assistant"}}]}

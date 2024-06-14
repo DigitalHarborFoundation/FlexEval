@@ -167,3 +167,8 @@ data/results/evals-outputs/*
 !data/results/evals-outputs/.gitkeep
 
 .DS_Store
+temp/
+test-cases/
+src/llm-evals/evals_sync/
+*.db
+.*

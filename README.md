@@ -1,8 +1,6 @@
 # FlexEval LLM Evals
 
-Author: Thomas Christie
-
-FlexEval is a wrapper for OpenAI Evals that makes it easier to design custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
+FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
 
 ## Why?
 
@@ -43,9 +41,9 @@ Outputs:
 
 ## How
 
-_FlexEval converts settings into OpenAI Evals configurations_
+_FlexEval evaluates Python functions and machine-graded rubrics on each turn_
 
-FlexEval is an interface for OpenAI Evals to make it simpler to use. It does this in several ways. The common thread is that users can extend OpenAI Evals to meet their needs without needing to understand the directory structure, class structure, or internal logic of OpenAI Evals.
+FlexEval began as an extension to OpenAI Evals, making it easier to use. It is now independent of OpenAI Evals and offers several usability improvements:
 
 1. Whereas OpenAI Evals requires users to write a new class with inheritance to define new completion functions (a generic term to a function that accepts a conversation or prompt and produces a response), FlexEval allows users to define this using a function in `configuration/completion_functions.py`.
 2. Whereas OpenAI Evals requires users to create a new class with inheritance to define a new metric type, FlexEval allows users to do this by writing a function in `configuration/function_metrics.py`.
@@ -57,42 +55,46 @@ $${\color{red}\textsf{WARNING: FlexEval is under early and active development. T
 
 $${\color{red}\textsf{Expect breaking changes. We will establish a versioning system soon.}}$$
 
+
 ## Running
 
 Prior to running, the tool needs to be configured to meet your needs. This includes telling it how to connect to the LLM you want to test, and telling it which tests you want to run.
 
 ### Configuration
 
-Step 0: Installation
-
-- Make sure you have Docker Desktop installed and running.
+Step 0: Clone this repo
 
 Step 1: Environment file
 
 - Copy `.env-example` to make a new file called `.env`.
 
-Step 2: Data
+Step 2: Install the virtual envirionment. Run: 
+    
+    python -m venv venv
+    source venv/bin/activate
 
-- Write your data to the `data/test-cases` directory as a file in `jsonl` format. Each exchange between assistant and user should be one line of the file. The format of each line is JSON, with an `input` key, and a corresponding value that consists of a list of turns like the following:
+Step 3: Data
+
+- Write your data to the `data/test-cases` directory - or elsewhere - as a file in `jsonl` format. Each exchange between assistant and user should be one line of the file. The format of each line is JSON, with an `input` key, and a corresponding value that consists of a list of turns like the following:
 
   `{"input": [{"role": "user", "content": "Hi, Nice to meet you!"}, {"role": "assistant", "content": "Nice to meet you, too! How can I help you today?"}]}`
 
-Step 3a (optional):
+Step 4a (optional):
 
 - Edit `configuration/function_metrics.py` to include any additional function metrics. These functions can process either a single conversational turn or an entire conversation. To better understand the input and output options for these functions, see function templates in `configuration/completion_functions.py`.
 
-Step 3b (optional):
+Step 4b (optional):
 
 - Edit `configuration/rubric_metrics.yaml` as desired. Rubrics in this file will be used to evaluate conversations and completions using COT prompting and will report a numeric score (e.g., 0 or 1) or a choice string (e.g.,"A", "B", "C", or "D"). Check the `The model-graded eval template` section in [Existing templates for evals](https://github.com/openai/evals/blob/d3dc89042ddee879a68a326fdb37716ee518640c/docs/eval-templates.md) for some rubric writing guidelines and templates.
 
-Step 3c (optional):
+Step 4c (optional):
 
 - Edit `configuration/completion_functions.py` as desired. These functions accept a `conversation_history` and `model_name` (at minimum) and return a `completion`, that is, the next turn in the conversation.
 
-Step 4:
+Step 5:
 
 - Define a test suite in `evals.yaml`. A test suite includes:
-- an input dataset in `data/test-cases`
+- an input dataset in `data/test-cases` or another location -- the path should be present in the `data` entry of `evals.yaml`.
 - a list of function metrics to use for scoring (can be blank). These functions must all be defined in `configuration/function_metrics.py`. These have an additional key called `score`, which can have values `completion` or `all_by_role`. The value `completion` will elicit a completion from the LLM specified in the `completions` section of the suite and calculate a metric for that only. The `all_by_role` will calculate a metric value for every existing turn in the conversation, and then the aggregation will be done by role.
 - a list of rubric metrics to use for scoring (can be blank). These must all be defined in `configuration/rubric_metrics.yaml`.
 - an LLM to use for rubric-based grading. Currently only OpenAI models are supported.
@@ -100,22 +102,25 @@ Step 4:
 
 ### Running tests
 
-The scoring service is defined in the `docker-compose.yml` file by `llm-evals`. This runs once per invocation. Build the service by calling:
-`docker-compose build llm-evals`
+FlexEval is a Python program. We will support use via Docker in the future.
 
-Then run by calling:
-`docker-compose run llm-evals python main.py YOUR_TEST_SUITE_NAME`
-where `YOUR_TEST_SUITE_NAME` is the name of a test suite configuration in
+To run, clone this repo and run:
 
-This will run the set of evaluations against the dataset you provided. Results will be stored in two places. First, raw OpenAI Evals outputs will be sent to `data/results/evals-outputs`. Second, data will be saved in table form in the `data/results/results.db` sqlite file. Optionally, results can also be saved to an Elasticsearch database. See below for more information about this option.
+    source venv/bin/activate
+    cd src/llm-evals
+    python main.py YOUR_EVAL_NAME
+
+where `YOUR_EVAL_NAME` is the name of the evaluation suite in `evals.yaml` that you want to run.
+
+This will run the set of evaluations against the dataset you provided. Results will be stored in two places. Data will be saved in table form in the `data/results/results.db` sqlite file.
 
 You can re-run evaluations as needed.
 
 ### Interpreting results
 
-A "run" consists of a single metric calculated on a single dataset. Metrics are calculated for each conversation in that dataset. Individual metrics are saved alongside an aggregate score for the dataset.
+A "run" consists of a single metric calculated on a single dataset. Metrics are calculated for each conversation in that dataset.
 
-Each file in `data/results/evals-outputs` corresponds to a single run. The first line describes metadata for the overall run - which dataset was used, which completion function was used, which metric was calculated, and more. The second line contains the aggregate metrics. All lines below capture individual calculations, called `events`, for the evaluation. These include (where applicable) the text completions (called `samples`) collected from the completion LLM, the text output of the rubric grader, and the score provided by the rubric or metric functions.
+You can query the database in `data/results/results.db` to analyze the evaluation results.
 
 ### Pre-installed functionality
 
@@ -123,24 +128,11 @@ This tool is intended to be somewhat "batteries included". It supports the follo
 
 - scoring historical conversations - useful for monitoring live systems.
 - scoring LLMs:
-- locally hosted and served via the `local-llm-api` service, included in the `docker-compose.yml` file
 - locally hosted and served via an endpoint using something like [LM Studio](https://lmstudio.ai)
 - LLMs accessible by a REST endpoint and accessible via a network call
 - any OpenAI LLM
 - a set of included rubrics
 - a set of included metrics calculated as Python files
-- Metabase for visualizing test outputs (described below)
 
 This list will grow as we add functionality to meet LEVI team needs.
 
-### Running an example
-
-To run the included example evaluation suite, run the following from the terminal:
-
-docker-compose run llm-evals python main.py example
-
-Raw results will be saved in `data/results/evals-outputs/`, and tabular results will be saved in `data/results/results.db` for querying.
-
-```
-
-```
