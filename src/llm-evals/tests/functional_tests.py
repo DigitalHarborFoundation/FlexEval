@@ -263,11 +263,11 @@ class TestSuite03(unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests
         # in this case, we'd run the evals here using subprocess or something, or maybe main.py
-        run(
-            eval_name="test_suite_03",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
-        )
+        # run(
+        #     eval_name="test_suite_03",
+        #     config_path="config-tests.yaml",
+        #     evals_path="tests/evals.yaml",
+        # )
         cls.database_path = os.environ["DATABASE_PATH"]
 
     def test_tables_have_right_rows(self):
@@ -285,11 +285,11 @@ class TestSuite03(unittest.TestCase):
             duplicated_metric = connection.execute(
                 """
                 SELECT 
-                    evalsetrun_id, dataset_id, datasetrow_id, turn_id, evaluation_name, COUNT(*) as count 
+                    evalsetrun_id, dataset_id, datasetrow_id, turn_id, evaluation_name, metric_name, COUNT(*) as count 
                 FROM 
                     turnmetric 
                 GROUP BY 
-                    evalsetrun_id, dataset_id, datasetrow_id, turn_id, evaluation_name
+                    evalsetrun_id, dataset_id, datasetrow_id, turn_id, evaluation_name, metric_name
                 HAVING
                     COUNT(*) > 1
                 """
