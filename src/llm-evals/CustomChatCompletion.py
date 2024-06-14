@@ -48,7 +48,11 @@ class CustomChatCompletionFn(CompletionFnSpec):
         **kwargs,
     ):
         self.completion_function_kwargs = kwargs
-        self.completion_fn_name = kwargs["function_name"]
+        self.completion_fn_name = kwargs.get("function_name", None)
+        if "function_name" in self.completion_function_kwargs:
+            del self.completion_function_kwargs["function_name"]
+        if "registry" in self.completion_function_kwargs:
+            del self.completion_function_kwargs["registry"]
 
     def __call__(
         self,
@@ -90,6 +94,7 @@ class CustomChatCompletionFn(CompletionFnSpec):
                 conversation_history=formatted_prompt, **self.completion_function_kwargs
             )
         else:
+            raise Exception(self.completion_fn_name)
             print(
                 "In CustomChatCompletion.py: No callable function named "
                 + self.completion_fn_name
