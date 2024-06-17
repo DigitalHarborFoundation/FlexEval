@@ -15,6 +15,9 @@ import sys
 import sqlite3
 import pandas as pd
 
+sys.path.append("../")
+sys.path.append("../../")
+
 from main import run
 
 
@@ -342,6 +345,59 @@ class TestSuite04(unittest.TestCase):
         for row in rubric_metric:
             with self.subTest():
                 self.assertIn(row[1], expected_values, f"Output value is not expected for row {row[0]}")
+
+    def test_rubric_not_null(self):
+        # test: every row with evaluation_type=rubric should not contain null for rubric-related columns
+        with sqlite3.connect(self.database_path) as connection:
+            function_type = connection.execute(
+                """
+                SELECT 
+                    evaluation_type, rubric_prompt, rubric_completion, rubric_model, rubric_completion_tokens, rubric_score
+                FROM 
+                    turnmetric
+                WHERE 
+                    evaluation_type = 'rubric' 
+                    AND 
+                        (
+                           rubric_prompt IS NULL
+                        OR rubric_completion IS NULL
+                        OR rubric_model IS NULL
+                        OR rubric_completion_tokens IS NULL
+                        OR rubric_score IS NULL
+                        )
+                """         
+            ).fetchall()
+            
+        self.assertEqual(len(function_type), 0, "Null values found in rows where type = rubric")
+
+    def test_rubric_dependency(self):
+        # test: For EVERY turn where the role is user, \
+        # the same turn ALSO has a is_student_acting_as_actor entry
+        with sqlite3.connect(self.database_path) as connection:
+            user_no_tutor_acting_check = connection.execute(
+                """
+                SELECT 
+                    evalsetrun_id, dataset_id, datasetrow_id, turn_id
+                FROM 
+                    turnmetric t1
+                WHERE 
+                    evaluation_name = 'is_role' 
+                    AND metric_name = 'user'
+                    AND metric_value = 1.0
+                AND NOT EXISTS 
+                    (
+                    SELECT 1
+                    FROM turnmetric t2
+                    WHERE t2.evalsetrun_id = t1.evalsetrun_id 
+                        AND t2.dataset_id = t1.dataset_id
+                        AND t2.datasetrow_id = t1.datasetrow_id
+                        AND t2.turn_id = t1.turn_id
+                        AND t2.evaluation_name = 'is_student_acting_as_tutor'
+                    ); 
+                """         
+            ).fetchall()
+        self.assertEqual(len(user_no_tutor_acting_check), 0, "For some rows where the role is user, no is_student_acting_as_tutor is reported")
+
 
 
 class TestPlots01(unittest.TestCase):
