@@ -128,7 +128,7 @@ class EvalRunner(Model):
             db = cls._meta.database
             db.connect()
             # TODO - remove this once the schema is finalized!!
-            db.drop_tables([cls])
+            # db.drop_tables([cls])
             db.create_tables([cls], safe=False)  # can alter tables if needed
 
     # def connect_to_db(self):
