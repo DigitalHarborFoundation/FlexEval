@@ -196,6 +196,14 @@ config_failure_04:
         kwargs:
           some_other_arg: user
           role: assistant
+  
+config_failure_05:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    rubric:
+      - name: no_such_rubric # rubric name does not exist
 
 
 test_default_kwargs_01:
