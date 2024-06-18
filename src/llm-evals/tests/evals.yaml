@@ -177,3 +177,37 @@ config_failure_02:
         depends_on:
           #here you have a depends_on name that doesn't match anything
           - name: is_role2
+
+config_failure_03:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: is_role # is_role function requires a keyword arg which isn't specified
+
+config_failure_04:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: is_role # is_role function has keyword arg only for role
+        kwargs:
+          some_other_arg: user
+          role: assistant
+
+
+test_default_kwargs_01:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: openai_moderation_api # Allows but doesn't require keyword args, so okay
+
+      - name: openai_moderation_api
+        kwargs:  # Allows kwargs with any names so okay
+          any_kwarg_name_okay: 13
+
+

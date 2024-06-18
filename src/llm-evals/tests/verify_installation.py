@@ -135,8 +135,7 @@ class TestConfiguration(unittest.TestCase):
 
     def test_function_metrics_exist(self):
         """
-        Test that all function metrics specified in eval config in fact exist and are called with appropriate
-        arguments.
+        Test that all function metrics specified in eval config exist and are called with appropriate args.
         """
         for function_metric in (
             self.user_evals[self.eval_suite_name].get("metrics").get("function", [])

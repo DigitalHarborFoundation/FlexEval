@@ -436,6 +436,14 @@ class TestPlots01(unittest.TestCase):
                     "plot_one_or_more_equations_or_inequalities",
                 )
 
+class FunctionMetricValidation(unittest.TestCase):
+    def test_default_kwargs01(self):
+        run(
+            eval_name="test_default_kwargs_01",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
+
 
 class ConfigFailures(unittest.TestCase):
 
@@ -451,6 +459,22 @@ class ConfigFailures(unittest.TestCase):
     def test_config_failure_02(cls):
         run(
             eval_name="config_failure_02",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
+
+    @unittest.expectedFailure
+    def test_config_failure_03(cls):
+        run(
+            eval_name="config_failure_03",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
+
+    @unittest.expectedFailure
+    def test_config_failure_04(cls):
+        run(
+            eval_name="config_failure_04",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
         )
