@@ -53,7 +53,9 @@ class Turn(BaseModel):
             if hasattr(completion_functions, completion_fn_name) and hasattr(
                 completion_functions, completion_fn_name
             ):
-                completion_function = getattr(cf, completion_fn_name, None)
+                completion_function = getattr(
+                    completion_functions, completion_fn_name, None
+                )
                 completion = completion_function(
                     conversation_history=self.get_formatted_prompt(
                         include_system_prompt=False

@@ -8,10 +8,14 @@ from typing import Union
 ## ~.~ function templates starts ~.~
 from typing import Union
 
-# Example input: either a single turn as a string or an entire conversation as a list of libraries. 
+# Example input: either a single turn as a string or an entire conversation as a list of libraries.
 turn_example = "This is a conversatioal turn."
-conversation_example = [{'role':"X1", 'content': "Y1"}, 
-                        {'role':"X2", 'content': "Y2"}, ...]
+conversation_example = [
+    {"role": "X1", "content": "Y1"},
+    {"role": "X2", "content": "Y2"},
+    ...,
+]
+
 
 # A function template to process a single turn
 def process_single_turn(turn: str) -> Union[int, float, dict[str, Union[int, float]]]:
@@ -27,10 +31,15 @@ def process_single_turn(turn: str) -> Union[int, float, dict[str, Union[int, flo
         or a floating point number (e.g., 2.8), \
         or a dictionary of metric/value pairs (e.g. {'metric1':value1, 'metric2':value2})
     """
-    pass 
+    pass
+
 
 # A function template to process an entire conversation
-def process_conversation(conversation:list)-> Union[int, float, dict[str, Union[int, float]], list[dict[str, Union[int, float]]]]:
+def process_conversation(
+    conversation: list,
+) -> Union[
+    int, float, dict[str, Union[int, float]], list[dict[str, Union[int, float]]]
+]:
     """
         Process an entire conversation and return the desired output
         
@@ -45,7 +54,7 @@ def process_conversation(conversation:list)-> Union[int, float, dict[str, Union[
         or a list of dictionaries. The key can be either 'role' or 'metric'. \
             e.g., [{"role":role1, "value":value1}, {"role":role2, "value":value2}, ...]
     """
-    pass 
+    pass
 
 
 def is_role(turn: list, role: str) -> dict:
@@ -113,7 +122,8 @@ def value_counts_by_tool_name(turn: list, json_key: str) -> list:
                     json_content_list = json.loads(content_dict["text"])
                     for json_dict in json_content_list:
                         if json_key in json_dict:
-                            key = entry["name"] + "_" + json_dict[json_key]
+                            # joining with double _ so we can split more easily during post processing
+                            key = entry["name"] + "__" + json_dict[json_key]
                             counter[key] = counter.get(key, 0) + 1
 
     # Convert to list of dictionaries for output
@@ -146,7 +156,7 @@ def count_role_entries_in_turn(
     return results
 
 
-def count_emojis(turn: str) -> Union[int, float]:
+def count_emojis(turn: str) -> int:
     """
     Calculate the number of emojis in a given text string.
 
@@ -168,7 +178,6 @@ def count_emojis(turn: str) -> Union[int, float]:
         flags=re.UNICODE,
     )
     return len(emoji_pattern.findall(turn))
-
 
 
 def string_length(turn: str) -> int:
@@ -236,6 +245,7 @@ def openai_moderation_api(turn: str, **kwargs) -> dict:
     response = client.moderations.create(input=turn)
     return response.results[0].model_dump(exclude_unset=True)["category_scores"]
 
+
 def function_has_error(turn: list) -> int:
     """Returns the number of rendering errors if the turn is a function call
     or None otherwise
@@ -253,12 +263,13 @@ def function_has_error(turn: list) -> int:
     else:
         return None
 
-def error_count(error_list:list) -> int:
+
+def error_count(error_list: list) -> int:
     """
     Used in rendering_error_count function to identify and count any plot rendering errors
-    
+
     Args:
-        error_list (list): the list in the conversation containing plot rendering error information 
+        error_list (list): the list in the conversation containing plot rendering error information
 
     Returns:
         int: a count number of the errors
@@ -274,8 +285,8 @@ def error_count(error_list:list) -> int:
 def rendering_error_count(conversation: list) -> dict:
     """
     Process a conversation to identify and count plot rendering errors if any
-    
-    Args: 
+
+    Args:
     conversation (list): an entire conversation as a list
 
     Returns:
@@ -286,28 +297,33 @@ def rendering_error_count(conversation: list) -> dict:
     """
     try:
         tool_call_list = [item for item in conversation if item.get("role") == "tool"]
-        
+
         if not tool_call_list:
             expression_error_count = 0
             javascript_log_error_count = 0
-        
-        else: 
+
+        else:
             # extract the values for the targeted errors
             for tool_call in tool_call_list:
-                content =  tool_call["content"]
-                expression_errors = [item for item in content if item.get("type") == "expression_errors"]
-                javascript_log_errors = [item for item in content if item.get("type") == "javascript_log_errors"]
+                content = tool_call["content"]
+                expression_errors = [
+                    item for item in content if item.get("type") == "expression_errors"
+                ]
+                javascript_log_errors = [
+                    item
+                    for item in content
+                    if item.get("type") == "javascript_log_errors"
+                ]
                 # count the errors
                 expression_error_count = error_count(expression_errors)
                 javascript_log_error_count = error_count(javascript_log_errors)
-        
+
         result = {
-            'expression_error_count':expression_error_count,
-            'javascript_log_error_count': javascript_log_error_count
+            "expression_error_count": expression_error_count,
+            "javascript_log_error_count": javascript_log_error_count,
         }
-        
+
         return result
-    
+
     except (KeyError, IndexError, TypeError, ValueError) as e:
         print(f"An error occurred: {e}")
-        

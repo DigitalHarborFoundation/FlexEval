@@ -312,7 +312,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Add an argument
     parser.add_argument(
-        "eval_name",
+        "--eval_name",
         type=str,
         help="Which eval set in evals.yaml you want to run",
     )
