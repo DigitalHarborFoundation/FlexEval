@@ -6,8 +6,9 @@ import json
 from classes.EvalRunner import EvalRunner
 from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
-from classes.DatasetRow import DatasetRow
+from classes.Conversation import Conversation
 from classes.Turn import Turn
+from classes.TurnEntry import TurnEntry
 from classes.TurnMetric import TurnMetric
 import dotenv
 
@@ -60,33 +61,23 @@ def run(eval_name: str, evals_path: str, config_path: str):
     try:
         runner.logger.info("Loading data")
         for filename in evalsetrun.get_datasets():
-            runner.logger.debug(f"Loading data file {filename}")
-            with open(filename, "r") as infile:
-                contents = infile.read()
             # these will automatically be saved as a property of evalsetrun
-            Dataset.create(
-                evalsetrun=evalsetrun,
-                filename=filename,
-                contents=contents,
-            )
+            Dataset.create(evalsetrun=evalsetrun, filename=filename)
+
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)
 
     try:
         runner.logger.info("Parsing data files")
         for dataset in evalsetrun.datasets:
-            runner.logger.debug(f"Parsing data file {dataset.filename}")
-
-            rows = dataset.get_rows()
+            runner.logger.debug(f"Loading data from {dataset.filename}")
+            rows = dataset.load_data()
             for row in rows:
-                DatasetRow.create(
+                Conversation.create(
                     dataset=dataset,
                     evalsetrun=dataset.evalsetrun,
                     input=json.dumps(row.get("input", None)),
                     ideals=json.dumps(row.get("ideals", None)),
-                    metadata=json.dumps(
-                        {k: v for k, v in row.items() if k not in ["input", "ideals"]}
-                    ),
                 )
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)
@@ -94,28 +85,47 @@ def run(eval_name: str, evals_path: str, config_path: str):
     try:
         runner.logger.info("Parsing turns")
         for dataset in evalsetrun.datasets:
-            for row in dataset.rows:
-                turns = row.get_turns()
+            for conversation in dataset.conversation:
+                conversation.tally_tokens()
+                # turns is a list of dictionaries
+                turns = conversation.get_turn_components()
                 for turn_ix, turn in enumerate(turns):
                     assert isinstance(turn["turn"], list)
+                    TurnComponent.create(
+                        evalsetrun=row.evalsetrun,
+                        dataset=dataset,
+                        datasetrow=row,
+                        turn_number=turn_ix + 1,
+                        turn=json.dumps(turn["turn"]),
+                        role=turn["role"],
+                        content=content,
+                        tool_used=turn["tool_used"],
+                        system_prompt=turn["system_prompt"],
+                        context=json.dumps(
+                            [item for d in turns[:turn_ix] for item in d["turn"]]
+                        ),  # concatenate all turns except the current
+                        is_final_turn_in_input=turn["is_final_turn_in_input"],
+                        is_completion=False,
+                        prompt_tokens=None,
+                    )
 
-                    # some turns have tool calls, in which case the content
-                    # is actually a list of dicts
-                    content = ""
-                    for i in turn["turn"]:
-                        c = i.get("content", "")
-                        if isinstance(c, str):
-                            if len(content) > 0:
-                                # because we're concatenating lines together
-                                content += "\n"
-                            content += c
-                        elif isinstance(c, list):
-                            for entry in c:
-                                c2 = entry.get("content", "")
-                                if isinstance(c2, str):
-                                    if len(content) > 0:
-                                        content += "\n"
-                                    content += c2
+                    # # some turns have tool calls, in which case the content
+                    # # is actually a list of dicts
+                    # content = ""
+                    # for i in turn["turn"]:
+                    #     c = i.get("content", "")
+                    #     if isinstance(c, str):
+                    #         if len(content) > 0:
+                    #             # because we're concatenating lines together
+                    #             content += "\n"
+                    #         content += c
+                    #     elif isinstance(c, list):
+                    #         for entry in c:
+                    #             c2 = entry.get("content", "")
+                    #             if isinstance(c2, str):
+                    #                 if len(content) > 0:
+                    #                     content += "\n"
+                    #                 content += c2
 
                     Turn.create(
                         evalsetrun=row.evalsetrun,
@@ -312,7 +322,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Add an argument
     parser.add_argument(
-        "eval_name",
+        "--eval_name",
         type=str,
         help="Which eval set in evals.yaml you want to run",
     )

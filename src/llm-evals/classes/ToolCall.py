@@ -8,7 +8,7 @@ import peewee as pw
 from classes.BaseModel import BaseModel
 from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
-from classes.DatasetRow import DatasetRow
+from classes.Conversation import Conversation
 from playhouse.shortcuts import model_to_dict
 import copy
 import helpers
@@ -19,27 +19,33 @@ import inspect
 import string
 
 
-class Turn(BaseModel):
-    """Holds a single turn
-    In a conversational exchange, each 'Turn' holds information
-    from 1 or more outputs from the same source or role in sequence
+class TurnComponent(BaseModel):
+    """Holds a single component of a single turn
+    Corresponds to one output of a node in LangGraph
+    or one Turn in jsonl
     """
 
     id = pw.IntegerField(primary_key=True)
 
-    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="turns")
-    dataset = pw.ForeignKeyField(Dataset, backref="turns")
-    datasetrow = pw.ForeignKeyField(DatasetRow, backref="turns")
+    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="turncomponents")
+    dataset = pw.ForeignKeyField(Dataset, backref="turncomponents")
+    conversation = pw.ForeignKeyField(Conversation, backref="turncomponents")
+
+    thread_id = pw.TextField()
+    thread_ts = pw.TextField()
+    parent_ts = pw.TextField()
+    ts = pw.TextField()
+    invocation_id = pw.TextField(null=True)
 
     turn_number = pw.IntegerField()  # 1-indexed
     role = pw.TextField()  # user or assistant - 'tools' are counted as assistants
     tool_used = pw.TextField(null=True)
-    system_prompt = pw.TextField(null=True)
-    context = pw.TextField(null=True)  # all previous turns + system prompt
-    turn = pw.TextField(null=True)
-    content = pw.TextField(null=True)  # concatenated contents fields
-    is_final_turn_in_input = pw.BooleanField(null=True)
-    is_completion = pw.BooleanField(null=True)
+    system_prompt = pw.TextField()
+    context = pw.TextField()  # all previous turns + system prompt
+    turn = pw.TextField()
+    content = pw.TextField()  # concatenated contents fields
+    is_final_turn_in_input = pw.BooleanField()
+    is_completion = pw.BooleanField()
     prompt_tokens = pw.TextField(null=True)
     completion_tokens = pw.TextField(null=True)
     completion_number = pw.IntegerField(null=True)

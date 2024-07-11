@@ -1,5 +1,8 @@
 
-evaluation:
+
+
+
+example:
   data:
     - ../../data/test-cases/dependency_example_test.jsonl
 
@@ -99,3 +102,116 @@ evaluation:
       api_key_name: OPENAI_API_KEY
   
 
+example-langgraph-no-rubrics:
+  data:
+    - /Users/tom-dhf/git/pedagogical-plots/src/langgraph/checkpoint.db
+
+  do_completion: False
+
+  name: dependency example
+  notes: my notes
+
+  #anything in here will overwrite entries in src/llm-evals/config.yaml
+  config:
+    max_workers: 1
+
+  metrics:
+
+    function:
+      - name: string_length
+      
+      - name: is_role
+        kwargs:
+          role: assistant
+      
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: value_counts_by_tool_name
+        kwargs:
+          json_key: latex
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: count_role_entries_in_turn
+      
+      - name: openai_moderation_api #run for every turn by default
+        context_only: false #this is the default
+      
+      - name: openai_moderation_api
+        context_only: true
+      
+      - name: flesch_kincaid_grade
+      
+
+  
+
+
+
+cl-no-rubrics:
+  data:
+    - ../../data/test-cases/auto-conversations-cl.jsonl
+
+  do_completion: False
+
+  name: my-test
+  notes: analysis on function metrics only, on bot-driven conversations
+
+  #anything in here will overwrite entries in src/llm-evals/config.yaml
+  config:
+    max_workers: 8
+
+  metrics:
+
+    function:
+      - name: string_length
+      
+      - name: count_emojis
+      
+      - name: is_role
+        kwargs:
+          role: assistant
+      
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: value_counts_by_tool_name
+        kwargs:
+          json_key: latex
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: count_role_entries_in_turn
+              
+      - name: error_count
+
+      - name: rendering_error_count
+      
+      - name: flesch_kincaid_grade
+      
