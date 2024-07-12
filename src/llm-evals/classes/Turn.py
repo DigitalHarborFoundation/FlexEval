@@ -8,7 +8,7 @@ import peewee as pw
 from classes.BaseModel import BaseModel
 from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
-from classes.DatasetRow import DatasetRow
+from classes.Thread import Thread
 from playhouse.shortcuts import model_to_dict
 import copy
 import helpers
@@ -29,20 +29,7 @@ class Turn(BaseModel):
 
     evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="turns")
     dataset = pw.ForeignKeyField(Dataset, backref="turns")
-    datasetrow = pw.ForeignKeyField(DatasetRow, backref="turns")
-
-    turn_number = pw.IntegerField()  # 1-indexed
-    role = pw.TextField()  # user or assistant - 'tools' are counted as assistants
-    tool_used = pw.TextField(null=True)
-    system_prompt = pw.TextField(null=True)
-    context = pw.TextField(null=True)  # all previous turns + system prompt
-    turn = pw.TextField(null=True)
-    content = pw.TextField(null=True)  # concatenated contents fields
-    is_final_turn_in_input = pw.BooleanField(null=True)
-    is_completion = pw.BooleanField(null=True)
-    prompt_tokens = pw.TextField(null=True)
-    completion_tokens = pw.TextField(null=True)
-    completion_number = pw.IntegerField(null=True)
+    thread = pw.ForeignKeyField(Thread, backref="turns")
 
     def get_completion(self, include_system_prompt=False):
         # only get a completion if this is the final turn - we probably don't want to branch from mid-conversation

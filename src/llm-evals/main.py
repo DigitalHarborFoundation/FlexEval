@@ -34,6 +34,10 @@ def run(eval_name: str, evals_path: str, config_path: str):
 
     with open(runner.configuration["rubric_metrics_path"]) as file:
         rubrics = yaml.safe_load(file)
+
+    #######################################################
+    ############  Create Test Run  ########################
+    #######################################################
     try:
         runner.logger.info("Creating EvalSetRun")
         # (runner.eval.get("metrics"))
@@ -57,6 +61,10 @@ def run(eval_name: str, evals_path: str, config_path: str):
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)
         raise e
+
+    #######################################################
+    ############  Load and Parse Data  ####################
+    #######################################################
 
     try:
         runner.logger.info("Loading data")
