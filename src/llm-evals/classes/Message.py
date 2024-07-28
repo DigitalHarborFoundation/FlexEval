@@ -7,8 +7,8 @@ import json
 import peewee as pw
 from classes.BaseModel import BaseModel
 from classes.EvalSetRun import EvalSetRun
-from classes.Dataset import Dataset
 from classes.Thread import Thread
+from classes.Dataset import Dataset
 from classes.Turn import Turn
 from playhouse.shortcuts import model_to_dict
 import copy
@@ -31,26 +31,38 @@ class Message(BaseModel):
     evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="messages")
     dataset = pw.ForeignKeyField(Dataset, backref="messages")
     thread = pw.ForeignKeyField(Thread, backref="messages")
-    turn = pw.ForeignKeyField(Turn, backref="messages")
+    # must be null=True because we're adding it after create()
+    turn = pw.ForeignKeyField(Turn, null=True, backref="messages")
 
     role = pw.TextField()  # user or assistant - 'tools' are counted as assistants
-    content = pw.TextField()  # concatenated contents fields
+    content = pw.TextField()
 
-    is_final_turn_in_input = pw.BooleanField()
-    is_completion = pw.BooleanField()
+    # helpers
+    system_prompt = pw.TextField(null=True)
+    is_flexeval_completion = pw.BooleanField(null=True)
+    is_final_turn_in_input = pw.BooleanField(null=True)
+    langgraph_print = pw.TextField(null=True)
 
-    thread_id_langgraph = pw.TextField(null=True)
-    thread_ts = pw.TextField(null=True)
-    parent_ts = pw.TextField(null=True)
-    ts = pw.TextField(null=True)
-    invocation_id = pw.TextField(null=True)
+    # language model stats
+    tool_callslanggraph_print = pw.TextField(null=True)
+    tool_call_ids = pw.TextField(null=True)
+    n_tool_calls = pw.IntegerField(null=True)
+    prompt_tokens = pw.IntegerField(null=True)
+    completion_tokens = pw.IntegerField(null=True)
+    model_name = pw.TextField(null=True)
 
-    tool_used = pw.TextField(null=True)
-    context = pw.TextField(null=True)  # all previous turns + system prompt
-    prompt_tokens = pw.TextField(null=True)
-    completion_tokens = pw.TextField(null=True)
-    completion_number = pw.IntegerField(null=True)
-    metadata = pw.TextField(null=True)
+    # langgraph metadata
+    langgraph_step = pw.IntegerField(null=True)
+    langgraph_checkpoint_ts = pw.TextField(null=True)
+    langgraph_invocation_id = pw.TextField(null=True)
+    langgraph_thread_id = pw.TextField(null=True)
+    langgraph_thread_ts = pw.TextField(null=True)
+    langgraph_parent_ts = pw.TextField(null=True)
+    langgraph_checkpoint = pw.TextField(null=True)
+    langgraph_metadata = pw.TextField(null=True)
+    langgraph_node = pw.TextField(null=True)
+    langgraph_message_type = pw.TextField(null=True)
+    langgraph_type = pw.TextField(null=True)
 
     def get_completion(self, include_system_prompt=False):
         # only get a completion if this is the final turn - we probably don't want to branch from mid-conversation

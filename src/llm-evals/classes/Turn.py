@@ -30,6 +30,7 @@ class Turn(BaseModel):
     evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="turns")
     dataset = pw.ForeignKeyField(Dataset, backref="turns")
     thread = pw.ForeignKeyField(Thread, backref="turns")
+    role = pw.TextField()
 
     def get_completion(self, include_system_prompt=False):
         # only get a completion if this is the final turn - we probably don't want to branch from mid-conversation
@@ -39,7 +40,6 @@ class Turn(BaseModel):
             completion_function_kwargs = completion_config.get("kwargs", None)
 
             # Check if the function name exists in the global namespace and call it
-
             if hasattr(completion_functions, completion_fn_name) and hasattr(
                 completion_functions, completion_fn_name
             ):
@@ -59,7 +59,12 @@ class Turn(BaseModel):
                 completion = None
 
             # "completion" will be the output of an existing completion function
-            # which generally means it'll have a structure like this
+            # We need to make the message object
+            # and probably also a turn object
+
+            # which means it'll have a structure like this
+            # TODO - make this a requirement of the completion functions?
+            #       - make the completion function just return content?
             # {"choices": [{"message": {"content": "hi", "role": "assistant"}}]}
             result = model_to_dict(self, exclude=[self.id])
             result["evalsetrun"] = self.evalsetrun
