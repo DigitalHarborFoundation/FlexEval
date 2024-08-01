@@ -36,6 +36,7 @@ class Message(BaseModel):
 
     role = pw.TextField()  # user or assistant - 'tools' are counted as assistants
     content = pw.TextField()
+    context = pw.TextField(null=True)  # Previous messages
 
     # helpers
     system_prompt = pw.TextField(null=True)

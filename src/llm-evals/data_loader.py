@@ -68,6 +68,9 @@ def load_langgraph_sqlite(dataset, filename):
             cursor.execute(query)
             completion_list = cursor.fetchall()
 
+            # context has to be reset at the start of every thread
+            context = []
+            # tool call variables
             tool_calls_dict = {}
             tool_responses_dict = {}
             for completion_row in completion_list:
@@ -103,19 +106,25 @@ def load_langgraph_sqlite(dataset, filename):
                         raise Exception(
                             f"Unhandled input condition! here is the metadata: {metadata}"
                         )
+                    # Add system prompt as first thing in context if not already present
+                    if len(context) == 0:
+                        context.append({'role' : 'system', 'content' : system_prompt})
+
                     # iterate through nodes - there is probably only 1
                     for node, value in update_dict.items():
                         # iterate through list of message updates
                         if "messages" in value:
                             for message in value["messages"]:
+                                content = message.get("kwargs", {}).get(
+                                        "content", None
+                                    )
                                 Message.create(
                                     evalsetrun=dataset.evalsetrun,
                                     dataset=dataset,
                                     thread=thread,
                                     role=role,
-                                    content=message.get("kwargs", {}).get(
-                                        "content", None
-                                    ),
+                                    content=content,
+                                    context=json.dumps(context),
                                     is_flexeval_completion=False,
                                     system_prompt=system_prompt,
                                     # language model stats
@@ -161,6 +170,10 @@ def load_langgraph_sqlite(dataset, filename):
                                     .get("additional_kwargs", {})
                                     .get("print", False),
                                 )
+
+                                # update the context for the next Message
+                                context.append({'role' : role, 'content' : content})
+
                                 # record tool call info so we can match them up later
                                 if message.get("kwargs", {}).get("type") == "tool":
                                     tool_responses_dict[
@@ -203,7 +216,6 @@ def add_turns(thread: Thread):
         message_roles.append({"id": message.id, "role": message.role})
     turn_dict = get_turns(thread=thread)
     # Step 2 - Create turns, plus a mapping between the placeholder ids and the created ids
-    # NOTE: ANR: I don't quite understand the intention here for the loop - maybe support to be over turn_dict?
     turns = {}
     for placeholder_turn_id, role in turn_dict.items():#turns.items():
         t = Turn.create(
