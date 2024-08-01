@@ -60,7 +60,7 @@ def load_langgraph_sqlite(dataset, filename):
             thread = Thread.create(
                 evalsetrun=dataset.evalsetrun,
                 dataset=dataset,
-                langgraph_thread_id=thread_id,
+                langgraph_thread_id=thread_id[0],
             )
 
             # Create messages
@@ -72,9 +72,9 @@ def load_langgraph_sqlite(dataset, filename):
             tool_responses_dict = {}
             for completion_row in completion_list:
                 # checkpoint is full state history
-                checkpoint = json.loads(completion_row[4])
+                checkpoint = json.loads(completion_row[3])
                 # metadata is the state update for that row
-                metadata = json.loads(completion_row[5])
+                metadata = json.loads(completion_row[4])
                 # IDs from langgraph
 
                 if metadata.get("writes") is None:
@@ -99,7 +99,7 @@ def load_langgraph_sqlite(dataset, filename):
                             f"Unhandled input condition! here is the metadata: {metadata}"
                         )
                     # iterate through nodes - there is probably only 1
-                    for node, value in update_dict:
+                    for node, value in update_dict.items():
                         # iterate through list of message updates
                         if "messages" in value:
                             for message in value["messages"]:
@@ -144,8 +144,8 @@ def load_langgraph_sqlite(dataset, filename):
                                     langgraph_thread_id=completion_row[0],
                                     langgraph_thread_ts=completion_row[1],
                                     langgraph_parent_ts=completion_row[2],
-                                    langgraph_checkpoint=completion_row[4],
-                                    langgraph_metadata=completion_row[5],
+                                    langgraph_checkpoint=completion_row[3],
+                                    langgraph_metadata=completion_row[4],
                                     langgraph_node=node,
                                     langgraph_message_type=message["id"][-1],
                                     langgraph_type=message.get("kwargs", {}).get(
