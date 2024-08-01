@@ -82,8 +82,13 @@ def load_langgraph_sqlite(dataset, filename):
                 else:
                     # user input condition
                     if metadata.get("source") == "input":
+                        #NOTE: I think with the updated logging of HumanMessage with langgraph, we don't need this case
                         update_dict = {}
-                        update_dict["input"] = metadata.get("writes").get("messages")
+                        update_dict["input"] = metadata.get("writes")#.get("messages")
+                        for message in update_dict["input"]["messages"]:
+                            message["id"] = ["HumanMessage"]
+                            message['kwargs'] = {}
+                            message['kwargs']['content'] = message['content']
                         role = "user"
                         system_prompt = None
                     # machine input condition
@@ -196,21 +201,23 @@ def add_turns(thread: Thread):
     message_roles = []
     for message in thread.messages:
         message_roles.append({"id": message.id, "role": message.role})
-    message_list, turn_dict = get_turns(input_list=thread)
+    turn_dict = get_turns(thread=thread)
     # Step 2 - Create turns, plus a mapping between the placeholder ids and the created ids
+    # NOTE: ANR: I don't quite understand the intention here for the loop - maybe support to be over turn_dict?
     turns = {}
-    for placeholder_turn_id, role in turns.items():
+    for placeholder_turn_id, role in turn_dict.items():#turns.items():
         t = Turn.create(
-            evalsetrun=thread.evalsetrun, dataset=thread, thread=thread, role=role
+            evalsetrun=thread.evalsetrun, dataset=thread.dataset, thread=thread, role=role
         )
         # map placeholder id to turn object
         turns[placeholder_turn_id] = t
     # Step 3 - add placeholder ids to messages
     # Can use zip since entries in message_list correspond to thread.messages
-    for ml, message in zip(message_list, thread.messages):
-        # Is this going to work? No idea
-        message.turn = turns[ml["placeholder_turn_id"]]
-        message.is_final_turn_in_input = ml.get("is_final_turn_in_input", False)
+    # NOTE: ANR: I don't follow how the message_list was supposed to work below.
+    # for ml, message in zip(message_list, thread.messages):
+    #     # Is this going to work? No idea
+    #     message.turn = turns[ml["placeholder_turn_id"]]
+    #     message.is_final_turn_in_input = ml.get("is_final_turn_in_input", False)
 
 
 def verify_checkpoints_table_exists(cursor):
@@ -226,7 +233,7 @@ def verify_checkpoints_table_exists(cursor):
     assert result is not None, f"Table 'checkpoints' does not exist in the database."
 
 
-def get_turns(input_list: list):
+def get_turns(thread: Thread):
     """We're defining a turn as a list of 1 or more consequtive outputs
     by the same role, where the role is either 'user', or 'assistant/tool'.
     In other words, we would parse as follows:
@@ -242,37 +249,49 @@ def get_turns(input_list: list):
     # these are all treated as belonging to the same 'turn'
     machine_labels = ["assistant", "ai", "tool"]
 
-    input_list = copy.deepcopy(input_list)
+    #input_list = copy.deepcopy(input_list)
     turn_id = 1
     previous_role = ""
 
-    for turnentry_id, entry in enumerate(input_list):
-        current_role = entry.get("role", None)
-        entry["role"] = current_role
+    for turnentry_id, entry in enumerate(thread.messages):#enumerate(input_list):
+        current_role = entry.role #entry.get("role", None)
+        #entry["role"] = current_role
         # if your role matches a previous, don't increment turn_id
         if (current_role in machine_labels and previous_role in machine_labels) or (
             current_role not in machine_labels and previous_role not in machine_labels
         ):
-            previous_role = current_role
-            entry["placholder_turn_id"] = turn_id
-
+            pass # TODO: clean up the condition to avoid the empty if
+            #previous_role = current_role
+            #entry["placholder_turn_id"] = turn_id
         else:
             turn_id += 1
-            entry["placholder_turn_id"] = turn_id
-            previous_role = current_role
+            #entry["placholder_turn_id"] = turn_id
+            #previous_role = current_role
+        entry.turn_id = turn_id
+        previous_role = current_role
+        entry.save()
 
+    #TODO: ANR: Understand why this was here originally -> seems like this could be optimized - e.g., set all
+    # to false, then do a select query for just the ones where turn_id column is turn_id. That would also
+    # reduce the number of saves to the database.
     # label final entry
-    for entry in input_list:
-        if entry["placholder_turn_id"] == turn_id:
-            entry["is_final_turn_in_input"] = True
-        else:
-            entry["is_final_turn_in_input"] = False
-    assert input_list[-1]["is_final_turn_in_input"] is True
-    for entry in input_list:
-        assert "placholder_turn_id" in entry
-
+    # ANR: moved up the turn_id_roles bit here to avoid iterating twice
     turn_id_roles = {}
-    for entry in input_list:
-        turn_id_roles[entry["placeholder_turn_id"]] = entry["role"]
+    for entry in thread.messages: #input_list:
+        turn_id_roles[entry.turn_id] = entry.role
+        entry.is_final_turn_in_input = entry.turn_id == turn_id
+        entry.save()
+        # if entry["placholder_turn_id"] == turn_id:
+        #     entry["is_final_turn_in_input"] = True
+        # else:
+        #     entry["is_final_turn_in_input"] = False
+    # assert input_list[-1]["is_final_turn_in_input"] is True
+    # for entry in input_list:
+    #     assert "placholder_turn_id" in entry
 
-    return input_list, turn_id_roles
+    # turn_id_roles = {}
+    # for entry in input_list:
+    #     turn_id_roles[entry["placeholder_turn_id"]] = entry["role"]
+    return turn_id_roles
+
+    #return input_list, turn_id_roles

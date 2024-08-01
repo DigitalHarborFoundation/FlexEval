@@ -166,7 +166,7 @@ def run(eval_name: str, evals_path: str, config_path: str):
         turns_to_evaluate = []
         for turn in evalsetrun.turns:
             # only do completions
-            if turn.is_completion and evalsetrun.do_completion:
+            if evalsetrun.do_completion and turn.is_completion: #NOTE: ANR: turn no longer has an is_completion
                 turns_to_evaluate.append(turn)
             # or do all turns
             elif not evalsetrun.do_completion:
