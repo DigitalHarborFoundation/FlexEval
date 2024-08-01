@@ -76,7 +76,7 @@ class Message(BaseModel):
             if hasattr(completion_functions, completion_fn_name) and hasattr(
                 completion_functions, completion_fn_name
             ):
-                completion_function = getattr(cf, completion_fn_name, None)
+                completion_function = getattr(completion_functions, completion_fn_name, None)
                 completion = completion_function(
                     conversation_history=self.get_formatted_prompt(
                         include_system_prompt=False
@@ -397,7 +397,7 @@ def compute_function_metric(
             return result_list
         else:
             raise Exception(
-                f"The metric type returned from `{metric_function}` is not a supported type. It must be one of `list`, `int`, `float`, or `dict`. You supplied `{type(metric_result)}`."
+                f"The metric type returned from `{metric_function}` is not a supported type. It must be one of `list`, `int`, `float`, or `dict`. You supplied `{type(metrics_result)}`."
             )
     else:
         raise Exception(

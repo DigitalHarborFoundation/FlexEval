@@ -227,7 +227,7 @@ def run(eval_name: str, evals_path: str, config_path: str):
         runner.logger.info(f"Saving {len(metrics)} metrics to database.")
         for metric in metrics:
             # TODO - speed this up somehow
-            TurnMetric.create(
+            Metric.create(
                 turn=metric["turn"],
                 evalsetrun=metric["turn"].evalsetrun,
                 dataset=metric["turn"].dataset,
