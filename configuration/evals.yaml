@@ -74,7 +74,7 @@ example:
             metric_min_value: 1
       
       - name: is_student_acting_as_tutor
-        last_turn_only: true
+        last_instance_only: true
       
       - name: is_pedagogically_appropriate_plot
         depends_on:
@@ -104,7 +104,8 @@ example:
 
 example-langgraph-no-rubrics:
   data:
-    - /Users/tom-dhf/git/pedagogical-plots/src/langgraph/checkpoint.db
+    #- /Users/tom-dhf/git/pedagogical-plots/src/langgraph/checkpoint.db
+    - /Users/arafferty/git/pedagogical-plots/src/langgraph/checkpoint.db
 
   do_completion: False
 
@@ -148,11 +149,11 @@ example-langgraph-no-rubrics:
       
       - name: count_role_entries_in_turn
       
-      - name: openai_moderation_api #run for every turn by default
-        context_only: false #this is the default
+      # - name: openai_moderation_api #run for every turn by default
+      #   context_only: false #this is the default
       
-      - name: openai_moderation_api
-        context_only: true
+      # - name: openai_moderation_api
+      #   context_only: true
       
       - name: flesch_kincaid_grade
       

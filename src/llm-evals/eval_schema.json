@@ -103,14 +103,19 @@
                       },
                       "required": ["name"]
                     },
+                    "metric_level": {
+                      "type": "string",
+                      "description": "What level of granularity (ToolCall, Message, Turn, or Thread) this rubric should be applied to",
+                      "default": "Turn"
+                    },
                     "context_only": {
                       "type": "boolean",
-                      "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn.",
+                      "description": "If true, only the context (that is, the previous messages) will be evaluated, not the current object. Cannot be done with only thread",
                       "default": false
                     },
-                    "last_turn_only": {
+                    "last_instance_only": {
                       "type": "boolean",
-                      "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion.",
+                      "description": "If true, the object will only be evaluated if it's the last instance (i.e., turn or message depending on metric_level) in an existing conversation, or if it's a new completion.",
                       "default": false
                     }
                   },
@@ -133,14 +138,19 @@
                           "additionalProperties": true,
                           "default":{}
                       },
+                      "metric_level": {
+                        "type": "string",
+                        "description": "What level of granularity (ToolCall, Message, Turn, or Thread) this rubric should be applied to",
+                        "default": "Turn"
+                      },
                       "context_only": {
                           "type": "boolean",
-                          "description": "If true, only the turn context (that is, the previous turns) will be evaluated, not the current turn.",
+                          "description": "If true, only the context (that is, the previous messages) will be evaluated, not the current object. Cannot be done with only thread",
                           "default": false
                       },
-                      "last_turn_only": {
+                      "last_instance_only": {
                           "type": "boolean",
-                          "description": "If true, the turn will only be evaluated if it's the last turn in an existing conversation, or if it's a new completion.",
+                          "description": "If true, the object will only be evaluated if it's the last instance (i.e., turn or message depending on metric_level) in an existing conversation, or if it's a new completion.",
                           "default": false
                       },
                       "depends_on": {
