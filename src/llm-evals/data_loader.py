@@ -214,7 +214,7 @@ def add_turns(thread: Thread):
     message_roles = []
     for message in thread.messages:
         message_roles.append({"id": message.id, "role": message.role})
-    turn_dict = get_turns(thread=thread)
+    message_placeholder_ids, turn_dict = get_turns(thread=thread)
     # Step 2 - Create turns, plus a mapping between the placeholder ids and the created ids
     turns = {}
     for placeholder_turn_id, role in turn_dict.items():#turns.items():
@@ -226,10 +226,12 @@ def add_turns(thread: Thread):
     # Step 3 - add placeholder ids to messages
     # Can use zip since entries in message_list correspond to thread.messages
     # NOTE: ANR: I don't follow how the message_list was supposed to work below.
-    # for ml, message in zip(message_list, thread.messages):
-    #     # Is this going to work? No idea
-    #     message.turn = turns[ml["placeholder_turn_id"]]
-    #     message.is_final_turn_in_input = ml.get("is_final_turn_in_input", False)
+    for ml, message in zip(message_placeholder_ids, thread.messages):
+        # Is this going to work? No idea
+        message.turn = turns[ml]
+        #message.is_final_turn_in_input = ml.get("is_final_turn_in_input", False)
+        message.save()
+    
 
 
 def verify_checkpoints_table_exists(cursor):
@@ -261,10 +263,10 @@ def get_turns(thread: Thread):
     # these are all treated as belonging to the same 'turn'
     machine_labels = ["assistant", "ai", "tool"]
 
-    #input_list = copy.deepcopy(input_list)
     turn_id = 1
     previous_role = ""
-
+    # TODO: Make a message list here, store the placeholder ids, and update to the real turn ids; save at end
+    message_placeholder_ids = []
     for turnentry_id, entry in enumerate(thread.messages):#enumerate(input_list):
         current_role = entry.role #entry.get("role", None)
         #entry["role"] = current_role
@@ -279,31 +281,21 @@ def get_turns(thread: Thread):
             turn_id += 1
             #entry["placholder_turn_id"] = turn_id
             #previous_role = current_role
-        entry.turn_id = turn_id
+        #entry.turn_id = turn_id
+        message_placeholder_ids.append(turn_id)
         previous_role = current_role
-        entry.save()
+        #entry.save()
 
-    #TODO: ANR: Understand why this was here originally -> seems like this could be optimized - e.g., set all
+    #NOTE: ANR seems like this could be optimized - e.g., set all
     # to false, then do a select query for just the ones where turn_id column is turn_id. That would also
     # reduce the number of saves to the database.
     # label final entry
     # ANR: moved up the turn_id_roles bit here to avoid iterating twice
     turn_id_roles = {}
-    for entry in thread.messages: #input_list:
-        turn_id_roles[entry.turn_id] = entry.role
-        entry.is_final_turn_in_input = entry.turn_id == turn_id
-        entry.save()
-        # if entry["placholder_turn_id"] == turn_id:
-        #     entry["is_final_turn_in_input"] = True
-        # else:
-        #     entry["is_final_turn_in_input"] = False
-    # assert input_list[-1]["is_final_turn_in_input"] is True
-    # for entry in input_list:
-    #     assert "placholder_turn_id" in entry
+    for message_placehold_id, entry in zip(message_placeholder_ids, thread.messages): #input_list:
+        turn_id_roles[message_placehold_id] = entry.role
+        entry.is_final_turn_in_input = message_placehold_id == turn_id
+        entry.save() # Could optimize this to avoid saving twice
 
-    # turn_id_roles = {}
-    # for entry in input_list:
-    #     turn_id_roles[entry["placeholder_turn_id"]] = entry["role"]
-    return turn_id_roles
+    return message_placeholder_ids, turn_id_roles
 
-    #return input_list, turn_id_roles

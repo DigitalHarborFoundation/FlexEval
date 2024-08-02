@@ -100,15 +100,31 @@ class Turn(BaseModel):
         else:
             return None
 
+    def get_context(self):
+        '''
+        Context is the context of the first message in the turn
+        '''
+        context = ""
+        for message in self.messages:
+            context = message.context
+            break
+        return json.loads(context)
+    
+
     def get_formatted_prompt(self, include_system_prompt=False):
         formatted_prompt = []
         if include_system_prompt:
             formatted_prompt.append({"role": "system", "content": self.system_prompt})
-        context = json.loads(self.context)
+        #context = json.loads(self.context)
+        context = self.get_context()
+
         if len(context) > 0:
             formatted_prompt += context  # TODO - we might just want a subset of this
-        for t in json.loads(self.turn):
-            formatted_prompt.append({"role": t["role"], "content": t["content"]})
+        
+        for message in self.messages:
+            formatted_prompt.append({"role": message.role, "content": message.content})
+        # for t in json.loads(self.turn):
+        #     formatted_prompt.append({"role": t["role"], "content": t["content"]})
         return formatted_prompt
 
     def format_input_for_rubric(self):
