@@ -121,11 +121,20 @@ class Turn(BaseModel):
         if len(context) > 0:
             formatted_prompt += context  # TODO - we might just want a subset of this
         
-        for message in self.messages:
-            formatted_prompt.append({"role": message.role, "content": message.content})
+        formatted_prompt += self.get_content()
         # for t in json.loads(self.turn):
         #     formatted_prompt.append({"role": t["role"], "content": t["content"]})
         return formatted_prompt
+    
+    def get_content(self):
+        '''
+        Content is a list of dictionaries where each dictionary contains the role and content of messages
+        in the turn
+        '''
+        content = []
+        for message in self.messages:
+            content.append({"role": message.role, "content": message.content})
+        return content
 
     def format_input_for_rubric(self):
         input = self.get_formatted_prompt()
@@ -332,7 +341,8 @@ def compute_function_metric(
                 )
             else:
                 # current turn only
-                metrics_result = metric_function(turn.content, **metric_kwargs)
+                #metrics_result = metric_function(turn.content, **metric_kwargs)
+                metrics_result = metric_function(turn.get_content(), **metric_kwargs)
         elif input_type is list:
             if context_only:
                 # use the list of adjacent previous entries with roles different to yours
