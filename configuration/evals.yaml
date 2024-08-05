@@ -131,6 +131,10 @@ example-langgraph-no-rubrics:
         kwargs:
           role: user
 
+      - name: string_length
+        metric_level: Message
+
+
       # - name: count_tool_calls
       #   depends_on:
       #     - name: is_role

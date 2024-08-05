@@ -61,6 +61,8 @@ def is_role(turn: Union['Turn','Message'], role: str) -> int:
     return int(turn.role == role)
 
 
+
+
 # def is_role(turn: list, role: str) -> dict:
 #     return {role: len([i for i in turn if i["role"] == role])}
 
@@ -184,9 +186,22 @@ def count_emojis(turn: str) -> Union[int, float]:
 
 
 
-def string_length(turn: str) -> int:
+# def string_length(turn: str) -> int:
+#     """
+#     Calculate the length of the input string.
+
+#     Args:
+#         turn (str): The input text string whose length is to be measured.
+
+#     Returns:
+#         Union[int, float]: The length of the input string as an integer or float.
+#     """
+#     if turn is None:
+#         return 0
+#     return len(turn)
+def string_length(object: Union['Message', 'Turn']) -> int:
     """
-    Calculate the length of the input string.
+    Calculate the length of the content.
 
     Args:
         turn (str): The input text string whose length is to be measured.
@@ -194,9 +209,10 @@ def string_length(turn: str) -> int:
     Returns:
         Union[int, float]: The length of the input string as an integer or float.
     """
-    if turn is None:
+    content = object.get_content()
+    if content is None:
         return 0
-    return len(turn)
+    return len(content)
 
 
 def flesch_reading_ease(turn: str) -> float:

@@ -189,26 +189,17 @@ def run(eval_name: str, evals_path: str, config_path: str):
             metrics_by_level[metric_level].append(metric_instance)
         
         # TODO: Add evaluating of metrics at other levels besides turn!
-        for turn in turns_to_evaluate:
-            turn.metrics_to_evaluate = []
-            # metric dependencies happen WITHIN turns, rather than across
-            # this means I can associate a sequence of metrics within each turn
-            # but then have the turns execute them in parallel
-            # each turn will keep track of its own set of metrics
-            # Keeping this as a loop to do the rubric_count appropriately
-            for metric_instance in metrics_by_level.get('Turn', []):
-            #for metric_instance in json.loads(evalsetrun.metrics_graph_ordered_list):
-                turn.metrics_to_evaluate.append(metric_instance)
-                if metric_instance.get("evaluation_type") == "rubric":
-                    rubric_count += 1
-        # TODO: if we go back to supporting completions, this will likely need to change
+        rubric_count += compute_metrics.add_metrics(turns_to_evaluate, metrics_by_level.get('Turn', []))
+                # TODO: if we go back to supporting completions, this will likely need to change
         messages_to_evaluate = [message for message in evalsetrun.messages]
+        rubric_count += compute_metrics.add_metrics(messages_to_evaluate, metrics_by_level.get('Message', []))
 
         runner.logger.info(
             f"Metrics will include up to {rubric_count} rubric evaluations."
         )
         if n_workers == 1:
             metrics = []
+            # TODO: Reduce duplicated code
             for turn in turns_to_evaluate:
                 # it already knows its arguments
                 turn_metrics = compute_metrics.compute_metrics(turn)
@@ -224,6 +215,19 @@ def run(eval_name: str, evals_path: str, config_path: str):
                             f"Metric {m} does not have a value for the key `metric_value`."
                         )
                 metrics += turn_metrics
+            for message in messages_to_evaluate:
+                # it already knows its arguments
+                message_metrics = compute_metrics.compute_metrics(message)
+                for m in message_metrics:
+                    if m.get("evaluation_type", None) is None:
+                        runner.logger.exception(
+                            f"Metric {m} does not have a value for the key `type`."
+                        )
+                    if m.get("metric_value", None) is None:
+                        runner.logger.exception(
+                            f"Metric {m} does not have a value for the key `metric_value`."
+                        )
+                metrics += message_metrics
         else:
 
             # if we want the dependencies to be obeyed, we must
@@ -232,6 +236,8 @@ def run(eval_name: str, evals_path: str, config_path: str):
                 futures = []
                 for turn in turns_to_evaluate:
                     futures.append(executor.submit(compute_metrics.compute_metrics, turn))#turn.compute_metrics))
+                for message in messages_to_evaluate:
+                    futures.append(executor.submit(compute_metrics.compute_metrics, message))#turn.compute_metrics))
 
                 # Wait for all futures to complete and handle exceptions
                 for future in futures:
@@ -247,10 +253,11 @@ def run(eval_name: str, evals_path: str, config_path: str):
         for metric in metrics:
             # TODO - speed this up somehow
             Metric.create(
-                turn=metric["turn"],
-                evalsetrun=metric["turn"].evalsetrun,
-                dataset=metric["turn"].dataset,
-                thread=metric["turn"].thread,
+                message=metric.get("message",None),
+                turn=metric.get("turn",None),
+                evalsetrun=metric[metric['metric_level'].lower()].evalsetrun, #metric["turn"].evalsetrun,
+                dataset=metric[metric['metric_level'].lower()].dataset, #metric["turn"].dataset,
+                thread=metric[metric['metric_level'].lower()].thread, #metric["turn"].thread,
                 evaluation_name=metric["evaluation_name"],
                 evaluation_type=metric["evaluation_type"],
                 metric_name=metric["metric_name"],

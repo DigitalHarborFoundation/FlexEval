@@ -416,3 +416,19 @@ Reasoning:""".strip()
             "rubric_score": score,
         }
     return [result]
+
+def add_metrics(iterable_of_objects, metrics_for_level):
+    rubric_count = 0
+    for object in iterable_of_objects:
+        object.metrics_to_evaluate = []
+        # metric dependencies happen WITHIN turns, rather than across
+        # this means I can associate a sequence of metrics within each turn
+        # but then have the turns execute them in parallel
+        # each turn will keep track of its own set of metrics
+        # Keeping this as a loop to do the rubric_count appropriately
+        for metric_instance in metrics_for_level:
+        #for metric_instance in json.loads(evalsetrun.metrics_graph_ordered_list):
+            object.metrics_to_evaluate.append(metric_instance)
+            if metric_instance.get("evaluation_type") == "rubric":
+                rubric_count += 1
+    return rubric_count
