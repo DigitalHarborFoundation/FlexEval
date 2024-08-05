@@ -9,6 +9,7 @@ from classes.Dataset import Dataset
 from classes.Turn import Turn
 from classes.Metric import Metric
 import dotenv
+import compute_metrics
 
 # Levels of abstraction -
 # Dataset
@@ -200,6 +201,8 @@ def run(eval_name: str, evals_path: str, config_path: str):
                 turn.metrics_to_evaluate.append(metric_instance)
                 if metric_instance.get("evaluation_type") == "rubric":
                     rubric_count += 1
+        # TODO: if we go back to supporting completions, this will likely need to change
+        messages_to_evaluate = [message for message in evalsetrun.messages]
 
         runner.logger.info(
             f"Metrics will include up to {rubric_count} rubric evaluations."
@@ -208,7 +211,8 @@ def run(eval_name: str, evals_path: str, config_path: str):
             metrics = []
             for turn in turns_to_evaluate:
                 # it already knows its arguments
-                turn_metrics = turn.compute_metrics()
+                turn_metrics = compute_metrics.compute_metrics(turn)
+                #turn_metrics = turn.compute_metrics()
                 # metric = compute_metric(**arg)
                 for m in turn_metrics:
                     if m.get("evaluation_type", None) is None:
@@ -227,7 +231,7 @@ def run(eval_name: str, evals_path: str, config_path: str):
             with ThreadPoolExecutor(max_workers=n_workers) as executor:
                 futures = []
                 for turn in turns_to_evaluate:
-                    futures.append(executor.submit(turn.compute_metrics))
+                    futures.append(executor.submit(compute_metrics.compute_metrics, turn))#turn.compute_metrics))
 
                 # Wait for all futures to complete and handle exceptions
                 for future in futures:
