@@ -175,13 +175,28 @@ def run(eval_name: str, evals_path: str, config_path: str):
         # collect function calls to make
         # here, we'll use the metric ordering established in evalsetrun.metric_graph
         rubric_count = 0
+        # Here, need loops over threads, turns, messages, and tool calls, and then getting the appropriate
+        # metrics to each. Seems like we can still use the same metric_graph (which may have ≥ 4 connected 
+        # components), and enforce in validation step that dependencies are only between metrics defined
+        # at the same granularity.
+        # Create a dictionary for the metrics
+        metrics_by_level = {}
+        for metric_instance in json.loads(evalsetrun.metrics_graph_ordered_list):
+            metric_level = metric_instance['metric_level']
+            if metric_level not in metrics_by_level:
+                metrics_by_level[metric_level] = []
+            metrics_by_level[metric_level].append(metric_instance)
+        
+        # TODO: Add evaluating of metrics at other levels besides turn!
         for turn in turns_to_evaluate:
             turn.metrics_to_evaluate = []
             # metric dependencies happen WITHIN turns, rather than across
             # this means I can associate a sequence of metrics within each turn
             # but then have the turns execute them in parallel
             # each turn will keep track of its own set of metrics
-            for metric_instance in json.loads(evalsetrun.metrics_graph_ordered_list):
+            # Keeping this as a loop to do the rubric_count appropriately
+            for metric_instance in metrics_by_level.get('Turn', []):
+            #for metric_instance in json.loads(evalsetrun.metrics_graph_ordered_list):
                 turn.metrics_to_evaluate.append(metric_instance)
                 if metric_instance.get("evaluation_type") == "rubric":
                     rubric_count += 1
@@ -231,11 +246,12 @@ def run(eval_name: str, evals_path: str, config_path: str):
                 turn=metric["turn"],
                 evalsetrun=metric["turn"].evalsetrun,
                 dataset=metric["turn"].dataset,
-                datasetrow=metric["turn"].datasetrow,
+                thread=metric["turn"].thread,
                 evaluation_name=metric["evaluation_name"],
                 evaluation_type=metric["evaluation_type"],
                 metric_name=metric["metric_name"],
                 metric_value=metric["metric_value"],
+                metric_level=metric["metric_level"],
                 kwargs=metric["kwargs"],
                 depends_on=json.dumps(metric["depends_on"]),
                 source=metric["source"],

@@ -10,8 +10,8 @@ import json
 import jsonschema
 import importlib
 import inspect
-from typing import List, Dict, Any, Union, AnyStr, get_origin
-
+from typing import List, Dict, Any, Union, AnyStr, ForwardRef, get_origin, get_args
+import types
 
 from configuration import function_metrics
 
@@ -158,11 +158,7 @@ class TestConfiguration(unittest.TestCase):
                     # First arg
                     arg_found = True
                     first_arg_type = arg_tuple[1].annotation
-                    assert (
-                        first_arg_type is str
-                        or first_arg_type is list
-                        or get_origin(first_arg_type) is list
-                    ), f"Input to metric function {name} must be a string or list but it was {first_arg_type}"
+                    self.helper_valid_first_function_param(name, first_arg_type)
                 else:
                     # Later arguments - need to be filled by kwargs, have defaults, or be variable length keyword args
                     arg_names.append(arg_tuple[0])
@@ -187,6 +183,27 @@ class TestConfiguration(unittest.TestCase):
                         kwarg in arg_names
                     ), f"Keyword argument `{kwarg}` specified in json for function `{name}`, but no argument with that name found in function signature."
 
+    def helper_valid_first_function_param(self, metric_function_name, first_arg_type):
+        assert (
+                        first_arg_type is str
+                        or first_arg_type is list
+                        or get_origin(first_arg_type) is list
+                        or first_arg_type is ForwardRef('Turn')
+                        or first_arg_type is ForwardRef('Thread')
+                        or first_arg_type is ForwardRef('Message')
+                        or first_arg_type is ForwardRef('ToolCall')
+                        or (
+                            (get_origin(first_arg_type) is Union or 
+                             get_origin(first_arg_type) is types.UnionType
+                            ) and 
+                            (ForwardRef('Turn') in get_args(first_arg_type) or
+                             ForwardRef('Thread') in get_args(first_arg_type) or
+                             ForwardRef('Message') in get_args(first_arg_type) or
+                             ForwardRef('ToolCall') in get_args(first_arg_type)
+                            )
+                        )
+                    ), f"Input to metric function {metric_function_name} must be a string, list, Turn, Thread, Message, or ToolCall but it was {first_arg_type}"
+        
     def test_metric_templates_are_valid(self):
         for rubric_metric in (
             self.user_evals[self.eval_suite_name].get("metrics").get("rubric", [])
@@ -234,10 +251,7 @@ class TestConfiguration(unittest.TestCase):
             first_argument_type = next(
                 iter(inspect.signature(metric_function).parameters.values())
             ).annotation
-            assert first_argument_type in [
-                str,
-                list,
-            ], f"The first argument of function {name} has input type {first_argument_type}. The first argument must be of type `str` or `list`."
+            self.helper_valid_first_function_param(name, first_argument_type)
 
             return_type = inspect.signature(metric_function).return_annotation
             assert return_type in [

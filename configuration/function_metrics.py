@@ -5,6 +5,12 @@ import re
 import json
 from typing import Union
 
+# NOTE: This avoids circular imports ala https://docs.python.org/3/library/typing.html#typing.TYPE_CHECKING
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from classes.Turn import Turn
+    from classes.Message import Message
+
 ## ~.~ function templates starts ~.~
 from typing import Union
 
@@ -47,9 +53,16 @@ def process_conversation(conversation:list)-> Union[int, float, dict[str, Union[
     """
     pass 
 
+def is_role(turn: Union['Turn','Message'], role: str) -> int:
+    '''
+    Return 1 is the role for this Turn or Message matches the passed in role,
+    and 0 otherwise.
+    '''
+    return int(turn.role == role)
 
-def is_role(turn: list, role: str) -> dict:
-    return {role: len([i for i in turn if i["role"] == role])}
+
+# def is_role(turn: list, role: str) -> dict:
+#     return {role: len([i for i in turn if i["role"] == role])}
 
 
 def count_tool_calls(turn: list) -> list:

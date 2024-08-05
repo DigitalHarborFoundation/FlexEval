@@ -119,43 +119,45 @@ example-langgraph-no-rubrics:
   metrics:
 
     function:
-      - name: string_length
+      # - name: string_length
       
       - name: is_role
+        metric_level: Turn
         kwargs:
           role: assistant
       
       - name: is_role
+        metric_level: Message
         kwargs:
           role: user
 
-      - name: count_tool_calls
-        depends_on:
-          - name: is_role
-            kwargs:
-              role: assistant
-            metric_name: assistant
-            metric_min_value: 1
+      # - name: count_tool_calls
+      #   depends_on:
+      #     - name: is_role
+      #       kwargs:
+      #         role: assistant
+      #       metric_name: assistant
+      #       metric_min_value: 1
       
-      - name: value_counts_by_tool_name
-        kwargs:
-          json_key: latex
-        depends_on:
-          - name: is_role
-            kwargs:
-              role: assistant
-            metric_name: assistant
-            metric_min_value: 1
+      # - name: value_counts_by_tool_name
+      #   kwargs:
+      #     json_key: latex
+      #   depends_on:
+      #     - name: is_role
+      #       kwargs:
+      #         role: assistant
+      #       metric_name: assistant
+      #       metric_min_value: 1
       
-      - name: count_role_entries_in_turn
+      # - name: count_role_entries_in_turn
       
-      # - name: openai_moderation_api #run for every turn by default
-      #   context_only: false #this is the default
+      # # - name: openai_moderation_api #run for every turn by default
+      # #   context_only: false #this is the default
       
-      # - name: openai_moderation_api
-      #   context_only: true
+      # # - name: openai_moderation_api
+      # #   context_only: true
       
-      - name: flesch_kincaid_grade
+      # - name: flesch_kincaid_grade
       
 
   

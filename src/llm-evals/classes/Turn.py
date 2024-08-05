@@ -17,6 +17,7 @@ from configuration import function_metrics
 from configuration import completion_functions
 import inspect
 import string
+from typing import ForwardRef, get_args
 
 
 class Turn(BaseModel):
@@ -239,8 +240,9 @@ class Turn(BaseModel):
 def compute_metric(
     evaluation_name: str,
     evaluation_type: str,
+    metric_level: str, # TODO: this is never used here, but is in config
     context_only: bool,
-    last_turn_only: bool,
+    last_instance_only: bool,
     kwargs: dict,
     turn: Turn,
     depends_on: list = None,
@@ -251,7 +253,7 @@ def compute_metric(
             function_name=evaluation_name,
             metric_kwargs=kwargs,
             context_only=context_only,
-            last_turn_only=last_turn_only,
+            last_turn_only=last_instance_only,
             turn=turn,
             depends_on=depends_on,
             id=id,
@@ -261,14 +263,14 @@ def compute_metric(
             rubric_name=evaluation_name,
             metric_kwargs=kwargs,
             context_only=context_only,
-            last_turn_only=last_turn_only,
+            last_turn_only=last_instance_only,
             turn=turn,
             depends_on=depends_on,
             id=id,
         )
     else:
         raise Exception(
-            f"The argument metric_type provided to compute_metric is invalid. Must be one of `function` or `rubric`. You passed `{type}`."
+            f"The argument evaluation_type provided to compute_metric is invalid. Must be one of `function` or `rubric`. You passed `{type}`."
         )
     return metrics
 
@@ -291,6 +293,7 @@ def compute_function_metric(
         return []
 
     # Check if the function name exists in the global namespace and call it
+    # TODO: Confirm that this verification is happening in verify installation instead.
     if hasattr(function_metrics, function_name) and callable(
         getattr(function_metrics, function_name, None)
     ):
@@ -324,7 +327,13 @@ def compute_function_metric(
                 break
 
         # conditional depending on the type
-        if input_type is str:
+        if (
+            input_type is Turn or 
+            input_type is ForwardRef('Turn') or
+            ForwardRef('Turn') in get_args(input_type)
+        ):
+            metrics_result = metric_function(turn, **metric_kwargs)
+        elif input_type is str:
             # just pass in the content
             if context_only:
                 # previous turn only
@@ -351,7 +360,7 @@ def compute_function_metric(
                 )
             else:
                 # this is on a single turn - pass in the parsed list
-                metrics_result = metric_function(json.loads(turn.turn), **metric_kwargs)
+                metrics_result = metric_function(turn.get_content(), **metric_kwargs)
         else:
             raise Exception(
                 f"Input type {input_type} is not supported in metric function {function_name}"
@@ -361,6 +370,7 @@ def compute_function_metric(
             "turn": turn,
             "evaluation_name": function_name,
             "evaluation_type": "function",
+            "metric_level": "Turn",
             "kwargs": metric_kwargs,
             "source": metric_source,  # TODO - put this back?
             "context_only": context_only,
