@@ -14,6 +14,10 @@ from typing import List, Dict, Any, Union, AnyStr, ForwardRef, get_origin, get_a
 import types
 
 from configuration import function_metrics
+from classes.Turn import Turn
+from classes.Message import Message
+from classes.Thread import Thread
+from classes.ToolCall import ToolCall
 
 dotenv.load_dotenv()
 
@@ -192,16 +196,18 @@ class TestConfiguration(unittest.TestCase):
                         or first_arg_type is ForwardRef('Thread')
                         or first_arg_type is ForwardRef('Message')
                         or first_arg_type is ForwardRef('ToolCall')
-                        or (
-                            (get_origin(first_arg_type) is Union or 
-                             get_origin(first_arg_type) is types.UnionType
-                            ) and 
-                            (ForwardRef('Turn') in get_args(first_arg_type) or
-                             ForwardRef('Thread') in get_args(first_arg_type) or
-                             ForwardRef('Message') in get_args(first_arg_type) or
-                             ForwardRef('ToolCall') in get_args(first_arg_type)
-                            )
-                        )
+                        or ForwardRef('Turn') in get_args(first_arg_type) 
+                        or ForwardRef('Thread') in get_args(first_arg_type) 
+                        or ForwardRef('Message') in get_args(first_arg_type) 
+                        or ForwardRef('ToolCall') in get_args(first_arg_type)
+                        or first_arg_type is Turn
+                        or first_arg_type is Thread
+                        or first_arg_type is Message
+                        or first_arg_type is ToolCall
+                        or Turn in get_args(first_arg_type) 
+                        or Thread in get_args(first_arg_type) 
+                        or Message in get_args(first_arg_type) 
+                        or ToolCall in get_args(first_arg_type)
                     ), f"Input to metric function {metric_function_name} must be a string, list, Turn, Thread, Message, or ToolCall but it was {first_arg_type}"
         
     def test_metric_templates_are_valid(self):

@@ -191,8 +191,13 @@ def run(eval_name: str, evals_path: str, config_path: str):
         # TODO: Add evaluating of metrics at other levels besides turn!
         # TODO: if we go back to supporting completions, this will likely need to change
 
+        threads_to_evaluate = [thread for thread in evalsetrun.threads]
         messages_to_evaluate = [message for message in evalsetrun.messages]
-        object_lists_by_level = {'Turn': turns_to_evaluate, 'Message': messages_to_evaluate}
+        toolcalls_to_evaluate = [toolcall for toolcall in evalsetrun.toolcalls]
+        object_lists_by_level = {'Thread': threads_to_evaluate,
+                                 'Turn': turns_to_evaluate, 
+                                 'Message': messages_to_evaluate,
+                                 'ToolCall': toolcalls_to_evaluate}
 
         for level, object_list in object_lists_by_level.items():
             rubric_count += compute_metrics.add_metrics(object_list, metrics_by_level.get(level, []))

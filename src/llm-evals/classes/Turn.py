@@ -13,7 +13,7 @@ from playhouse.shortcuts import model_to_dict
 import copy
 import helpers
 
-from configuration import function_metrics
+# from configuration import function_metrics
 from configuration import completion_functions
 import inspect
 import string

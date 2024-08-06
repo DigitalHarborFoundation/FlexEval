@@ -5,11 +5,11 @@ import re
 import json
 from typing import Union
 
-# NOTE: This avoids circular imports ala https://docs.python.org/3/library/typing.html#typing.TYPE_CHECKING
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from classes.Turn import Turn
-    from classes.Message import Message
+from classes.Turn import Turn
+from classes.Message import Message
+from classes.Thread import Thread
+from classes.ToolCall import ToolCall
+
 
 ## ~.~ function templates starts ~.~
 from typing import Union
@@ -53,12 +53,13 @@ def process_conversation(conversation:list)-> Union[int, float, dict[str, Union[
     """
     pass 
 
-def is_role(turn: Union['Turn','Message'], role: str) -> int:
+def is_role(turn: Union[Turn, Message], role: str) -> int:
     '''
     Return 1 is the role for this Turn or Message matches the passed in role,
     and 0 otherwise.
     '''
     return int(turn.role == role)
+
 
 
 
@@ -137,6 +138,7 @@ def value_counts_by_tool_name(turn: list, json_key: str) -> list:
         results.append({"name": name, "value": val})
     return results
 
+# def param_counts_by_tool_name(toolcall: ToolCal)
 
 def count_role_entries_in_turn(
     turn: list,
@@ -199,7 +201,7 @@ def count_emojis(turn: str) -> Union[int, float]:
 #     if turn is None:
 #         return 0
 #     return len(turn)
-def string_length(object: Union['Message', 'Turn']) -> int:
+def string_length(object: Union[Message, Turn]) -> int:
     """
     Calculate the length of the content.
 
