@@ -189,55 +189,43 @@ def run(eval_name: str, evals_path: str, config_path: str):
             metrics_by_level[metric_level].append(metric_instance)
         
         # TODO: Add evaluating of metrics at other levels besides turn!
-        rubric_count += compute_metrics.add_metrics(turns_to_evaluate, metrics_by_level.get('Turn', []))
-                # TODO: if we go back to supporting completions, this will likely need to change
+        # TODO: if we go back to supporting completions, this will likely need to change
+
         messages_to_evaluate = [message for message in evalsetrun.messages]
-        rubric_count += compute_metrics.add_metrics(messages_to_evaluate, metrics_by_level.get('Message', []))
+        object_lists_by_level = {'Turn': turns_to_evaluate, 'Message': messages_to_evaluate}
+
+        for level, object_list in object_lists_by_level.items():
+            rubric_count += compute_metrics.add_metrics(object_list, metrics_by_level.get(level, []))
 
         runner.logger.info(
             f"Metrics will include up to {rubric_count} rubric evaluations."
         )
         if n_workers == 1:
             metrics = []
-            # TODO: Reduce duplicated code
-            for turn in turns_to_evaluate:
-                # it already knows its arguments
-                turn_metrics = compute_metrics.compute_metrics(turn)
-                #turn_metrics = turn.compute_metrics()
-                # metric = compute_metric(**arg)
-                for m in turn_metrics:
-                    if m.get("evaluation_type", None) is None:
-                        runner.logger.exception(
-                            f"Metric {m} does not have a value for the key `type`."
-                        )
-                    if m.get("metric_value", None) is None:
-                        runner.logger.exception(
-                            f"Metric {m} does not have a value for the key `metric_value`."
-                        )
-                metrics += turn_metrics
-            for message in messages_to_evaluate:
-                # it already knows its arguments
-                message_metrics = compute_metrics.compute_metrics(message)
-                for m in message_metrics:
-                    if m.get("evaluation_type", None) is None:
-                        runner.logger.exception(
-                            f"Metric {m} does not have a value for the key `type`."
-                        )
-                    if m.get("metric_value", None) is None:
-                        runner.logger.exception(
-                            f"Metric {m} does not have a value for the key `metric_value`."
-                        )
-                metrics += message_metrics
+            for level, object_list in object_lists_by_level.items():
+                for object in object_list:
+                    cur_metrics = compute_metrics.compute_metrics(object)
+                    for m in cur_metrics:
+                        if m.get("evaluation_type", None) is None:
+                            runner.logger.exception(
+                                f"Metric {m} does not have a value for the key `type`."
+                            )
+                        if m.get("metric_value", None) is None:
+                            runner.logger.exception(
+                                f"Metric {m} does not have a value for the key `metric_value`."
+                            )
+                    metrics += cur_metrics
+
         else:
 
             # if we want the dependencies to be obeyed, we must
 
             with ThreadPoolExecutor(max_workers=n_workers) as executor:
                 futures = []
-                for turn in turns_to_evaluate:
-                    futures.append(executor.submit(compute_metrics.compute_metrics, turn))#turn.compute_metrics))
-                for message in messages_to_evaluate:
-                    futures.append(executor.submit(compute_metrics.compute_metrics, message))#turn.compute_metrics))
+                for level, object_list in object_lists_by_level.items():
+                    for object in object_list:
+                        futures.append(executor.submit(compute_metrics.compute_metrics, object))
+
 
                 # Wait for all futures to complete and handle exceptions
                 for future in futures:
