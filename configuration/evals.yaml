@@ -135,7 +135,7 @@ example-langgraph-no-rubrics:
         metric_level: Thread
 
       - name: string_length
-        metric_level: Tool
+        metric_level: Turn
 
       - name: string_length
         metric_level: Message

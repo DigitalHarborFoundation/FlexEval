@@ -162,7 +162,7 @@ class TestConfiguration(unittest.TestCase):
                     # First arg
                     arg_found = True
                     first_arg_type = arg_tuple[1].annotation
-                    self.helper_valid_first_function_param(name, first_arg_type)
+                    self.helper_valid_first_function_param(function_metric, first_arg_type)
                 else:
                     # Later arguments - need to be filled by kwargs, have defaults, or be variable length keyword args
                     arg_names.append(arg_tuple[0])
@@ -187,28 +187,51 @@ class TestConfiguration(unittest.TestCase):
                         kwarg in arg_names
                     ), f"Keyword argument `{kwarg}` specified in json for function `{name}`, but no argument with that name found in function signature."
 
-    def helper_valid_first_function_param(self, metric_function_name, first_arg_type):
-        assert (
-                        first_arg_type is str
-                        or first_arg_type is list
-                        or get_origin(first_arg_type) is list
-                        or first_arg_type is ForwardRef('Turn')
-                        or first_arg_type is ForwardRef('Thread')
-                        or first_arg_type is ForwardRef('Message')
-                        or first_arg_type is ForwardRef('ToolCall')
-                        or ForwardRef('Turn') in get_args(first_arg_type) 
-                        or ForwardRef('Thread') in get_args(first_arg_type) 
-                        or ForwardRef('Message') in get_args(first_arg_type) 
-                        or ForwardRef('ToolCall') in get_args(first_arg_type)
-                        or first_arg_type is Turn
-                        or first_arg_type is Thread
-                        or first_arg_type is Message
-                        or first_arg_type is ToolCall
-                        or Turn in get_args(first_arg_type) 
-                        or Thread in get_args(first_arg_type) 
-                        or Message in get_args(first_arg_type) 
-                        or ToolCall in get_args(first_arg_type)
-                    ), f"Input to metric function {metric_function_name} must be a string, list, Turn, Thread, Message, or ToolCall but it was {first_arg_type}"
+    def helper_valid_first_function_param(self, function_metric, first_arg_type):
+        name = function_metric['name']
+        # Needs to be an allowed first argument type and match the metric level
+        metric_level = function_metric['metric_level']
+        if metric_level.lower() == 'thread':
+            assert (
+                first_arg_type is str
+                or first_arg_type is list
+                or first_arg_type is Thread
+                or first_arg_type is ForwardRef('Thread')
+                or Thread in get_args(first_arg_type)
+                or ForwardRef('Thread') in get_args(first_arg_type) 
+            ), f"Input to metric function {name} with metric_level set to {metric_level} must be a string, list, or Thread but it was {first_arg_type}"
+        elif metric_level.lower() == 'turn':
+            assert (
+                first_arg_type is str
+                or first_arg_type is list
+                or first_arg_type is Turn
+                or first_arg_type is ForwardRef('Turn')
+                or Turn in get_args(first_arg_type)
+                or ForwardRef('Turn') in get_args(first_arg_type) 
+            ), f"Input to metric function {name} with metric_level set to {metric_level} must be a string, list, or Turn but it was {first_arg_type}"
+        elif metric_level.lower() == 'message':
+            assert (
+                first_arg_type is str
+                or first_arg_type is list
+                or first_arg_type is Message
+                or first_arg_type is ForwardRef('Message')
+                or Message in get_args(first_arg_type)
+                or ForwardRef('Message') in get_args(first_arg_type) 
+            ), f"Input to metric function {name} with metric_level set to {metric_level} must be a string, list, or Message but it was {first_arg_type}"
+        elif metric_level.lower() == 'toolcall':
+            assert (
+                first_arg_type is str
+                or first_arg_type is list
+                or first_arg_type is ToolCall
+                or first_arg_type is ForwardRef('ToolCall')
+                or ToolCall in get_args(first_arg_type)
+                or ForwardRef('ToolCall') in get_args(first_arg_type) 
+            ), f"Input to metric function {name} with `metric_level` set to {metric_level} must be a string, list, or ToolCall but it was {first_arg_type}"
+        else:
+            raise Exception(
+                    f"You set `metric_level` for the metric function `{name}` to {metric_level}, but `metric_level` must be one of Thread, Turn, Message, or ToolCall."
+            )
+        
         
     def test_metric_templates_are_valid(self):
         for rubric_metric in (
@@ -257,7 +280,7 @@ class TestConfiguration(unittest.TestCase):
             first_argument_type = next(
                 iter(inspect.signature(metric_function).parameters.values())
             ).annotation
-            self.helper_valid_first_function_param(name, first_argument_type)
+            self.helper_valid_first_function_param(function_metric, first_argument_type)
 
             return_type = inspect.signature(metric_function).return_annotation
             assert return_type in [
