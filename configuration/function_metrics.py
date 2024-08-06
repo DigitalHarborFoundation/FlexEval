@@ -15,7 +15,7 @@ from classes.ToolCall import ToolCall
 from typing import Union
 
 # Example input: either a single turn as a string or an entire conversation as a list of libraries. 
-turn_example = "This is a conversatioal turn."
+turn_example = "This is a conversational turn."
 conversation_example = [{'role':"X1", 'content': "Y1"}, 
                         {'role':"X2", 'content': "Y2"}, ...]
 
@@ -138,7 +138,8 @@ def value_counts_by_tool_name(turn: list, json_key: str) -> list:
         results.append({"name": name, "value": val})
     return results
 
-# def param_counts_by_tool_name(toolcall: ToolCal)
+def count_tool_calls_by_name(toolcall: ToolCall) -> list:
+    return [{"name": toolcall.function_name, "value": 1}]
 
 def count_role_entries_in_turn(
     turn: list,
@@ -201,20 +202,27 @@ def count_emojis(turn: str) -> Union[int, float]:
 #     if turn is None:
 #         return 0
 #     return len(turn)
-def string_length(object: Union[Message, Turn]) -> int:
+def string_length(object: Union[Thread, Turn, Message]) -> int:
     """
     Calculate the length of the content.
 
     Args:
-        turn (str): The input text string whose length is to be measured.
+        object (Union[Thread, Turn, Message]): 
 
     Returns:
-        Union[int, float]: The length of the input string as an integer or float.
+        int: The length of the content of the messages (added together for
+            thread and turn that may contain more than one message)
     """
     content = object.get_content()
-    if content is None:
-        return 0
-    return len(content)
+    length = 0
+    if isinstance(content, str):
+        length = len(content)
+    else: # list
+        # Sum up the lengths of the individual contents
+        for role_content_dict in content:
+            length += len(role_content_dict.get('content', ''))
+
+    return length
 
 
 def flesch_reading_ease(turn: str) -> float:

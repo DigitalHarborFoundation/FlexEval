@@ -245,12 +245,16 @@ def run(eval_name: str, evals_path: str, config_path: str):
         runner.logger.info(f"Saving {len(metrics)} metrics to database.")
         for metric in metrics:
             # TODO - speed this up somehow
+            thread = metric.get("thread")
+            if thread is None:
+                thread = metric[metric['metric_level'].lower()].thread
             Metric.create(
                 message=metric.get("message",None),
                 turn=metric.get("turn",None),
+                toolcall=metric.get("toolcall",None),
                 evalsetrun=metric[metric['metric_level'].lower()].evalsetrun, #metric["turn"].evalsetrun,
                 dataset=metric[metric['metric_level'].lower()].dataset, #metric["turn"].dataset,
-                thread=metric[metric['metric_level'].lower()].thread, #metric["turn"].thread,
+                thread=thread,
                 evaluation_name=metric["evaluation_name"],
                 evaluation_type=metric["evaluation_type"],
                 metric_name=metric["metric_name"],

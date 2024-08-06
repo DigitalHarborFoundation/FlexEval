@@ -198,7 +198,7 @@ def load_langgraph_sqlite(dataset, filename):
                         m for m in thread.messages if tool_call_id in m.tool_call_ids
                     ][0],
                     function_name=tool_call_vals.get("name"),
-                    args=tool_call_vals.get("args"),
+                    args=json.dumps(tool_call_vals.get("args")),
                     tool_call_id=tool_call_id,
                     response_content=tool_responses_dict.get(tool_call_id),
                 )

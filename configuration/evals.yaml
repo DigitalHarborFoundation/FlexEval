@@ -132,7 +132,16 @@ example-langgraph-no-rubrics:
           role: user
 
       - name: string_length
+        metric_level: Thread
+
+      - name: string_length
+        metric_level: Tool
+
+      - name: string_length
         metric_level: Message
+
+      - name: count_tool_calls_by_name
+        metric_level: ToolCall
 
 
       # - name: count_tool_calls

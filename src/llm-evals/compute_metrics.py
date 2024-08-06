@@ -1,5 +1,8 @@
 from classes.Turn import Turn
 from classes.Message import Message
+from classes.ToolCall import ToolCall
+from classes.Thread import Thread
+
 from configuration import function_metrics
 from configuration import completion_functions
 import inspect
@@ -8,7 +11,7 @@ from typing import Union, ForwardRef, get_args
 import copy
 import json
 
-def compute_metrics(object : Union[Turn, Message]):
+def compute_metrics(object : Union[Thread, Turn, Message, ToolCall]):
         """we've defined a variable called metrics_to_evaluate
         it's a list we need to loop through
         each entry looks like this
@@ -97,7 +100,7 @@ def compute_metrics(object : Union[Turn, Message]):
 
 
 def compute_metric(
-    object: Union[Turn, Message],
+    object: Union[Thread, Turn, Message, ToolCall],
     evaluation_name: str,
     evaluation_type: str,
     metric_level: str, 
@@ -139,7 +142,7 @@ def compute_metric(
 def compute_function_metric(
     function_name: str,
     metric_kwargs: dict,
-    object: Union[Turn, Message],
+    object: Union[Thread, Turn, Message, ToolCall],
     metric_level: str,
     context_only: bool,
     last_turn_only: bool,
@@ -278,7 +281,7 @@ def compute_function_metric(
 def compute_rubric_metric(
     rubric_name: str,
     metric_kwargs: dict,
-    object: Union[Turn, Message],
+    object: Union[Thread, Turn, Message],
     metric_level: str,
     context_only: bool,
     last_turn_only: bool,
