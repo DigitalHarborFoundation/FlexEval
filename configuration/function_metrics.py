@@ -138,8 +138,30 @@ def value_counts_by_tool_name(turn: list, json_key: str) -> list:
         results.append({"name": name, "value": val})
     return results
 
-def count_tool_calls_by_name(toolcall: ToolCall) -> list:
-    return [{"name": toolcall.function_name, "value": 1}]
+def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> list:
+    # Extract ToolCall objects based on the type of object being passed in
+    toolcalls = []
+    if isinstance(object, (Thread, Turn)):
+        for message in object.messages:
+            toolcalls += [toolcall for toolcall in message.toolcalls]
+    elif isinstance(object, Message):
+        toolcalls += [toolcall for toolcall in object.toolcalls]
+    else: # Must be just a tool call
+        toolcalls.append(object)
+    
+    # Count the toolcalls
+    toolcall_counts = {}
+    for toolcall in toolcalls:
+        if toolcall.function_name not in toolcall_counts:
+            toolcall_counts[toolcall.function_name] = 0
+        toolcall_counts[toolcall.function_name] = toolcall_counts[toolcall.function_name] + 1
+    
+    # Convert to a list of name: value dictionaries
+    results = []
+    for toolcall_name, toolcall_count in toolcall_counts.items():
+        results.append({"name": toolcall_name, "value": toolcall_count})
+    return results
+
 
 def count_role_entries_in_turn(
     turn: list,

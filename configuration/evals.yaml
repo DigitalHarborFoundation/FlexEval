@@ -143,6 +143,14 @@ example-langgraph-no-rubrics:
       - name: count_tool_calls_by_name
         metric_level: ToolCall
 
+      - name: count_tool_calls_by_name
+        metric_level: Thread
+      
+      - name: count_tool_calls_by_name
+        metric_level: Message
+
+      - name: count_tool_calls_by_name
+        metric_level: Turn
 
       # - name: count_tool_calls
       #   depends_on:
