@@ -138,18 +138,22 @@ example-langgraph-no-rubrics:
       - name: count_tool_calls_by_name
         metric_level: ToolCall
 
-
       - name: count_tool_calls_by_name
         metric_level: Thread
       
       - name: count_tool_calls_by_name
         metric_level: Message
-        depends_on:
-          - name: is_role
-            kwargs:
-              role: assistant
-            metric_name: assistant
-            metric_min_value: 1
+
+      - name: count_tool_calls_by_name
+        metric_level: Turn
+
+      # - name: count_tool_calls
+      #   depends_on:
+      #     - name: is_role
+      #       kwargs:
+      #         role: assistant
+      #       metric_name: assistant
+      #       metric_min_value: 1
 
       - name: count_tool_calls_by_name
         metric_level: Turn
@@ -221,7 +225,6 @@ cl-no-rubrics:
       - name: rendering_error_count
 
       - name: flesch_kincaid_grade
-
 terry_test_rubric:
   data:
     - ../../data/test-cases/checkpoint.db
