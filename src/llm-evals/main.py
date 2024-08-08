@@ -200,7 +200,10 @@ def run(eval_name: str, evals_path: str, config_path: str):
                                  'ToolCall': toolcalls_to_evaluate}
 
         for level, object_list in object_lists_by_level.items():
-            rubric_count += compute_metrics.add_metrics(object_list, metrics_by_level.get(level, []))
+            # Add the metrics to objects at this level
+            compute_metrics.add_all_metrics_to_objects(object_list, metrics_by_level.get(level, []))
+            # Update the count of how many rubrics might be run based on rubric evals at this level
+            rubric_count += compute_metrics.count_rubric_metrics(object_list)
 
         runner.logger.info(
             f"Metrics will include up to {rubric_count} rubric evaluations."

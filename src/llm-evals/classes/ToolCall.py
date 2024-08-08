@@ -36,4 +36,8 @@ class ToolCall(BaseModel):
     tool_call_id = pw.TextField()
     response_content = pw.TextField()
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.metrics_to_evaluate = []
+
 
