@@ -178,6 +178,13 @@ def get_parent_metrics(all_metrics: dict, child: dict):
                 if "type" in requirement and candidate_type not in allowed_types:
                     matches = False
                     # print("here1")
+
+                # if the level of this metric doesn't match the level
+                # of the child, don't match it - we only allow dependencies at the
+                # same level of analysis
+                if child.get("metric_level") != candidate.get("metric_level"):
+                    matches = False
+
                 # if the conditionals are listed in the depends_on entry but don't match...
                 conditionals = ["last_turn_only", "context_only", "name", "kwargs"]
                 for conditional in conditionals:

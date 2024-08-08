@@ -105,8 +105,8 @@ example:
 example-langgraph-no-rubrics:
   data:
     #- /Users/tom-dhf/git/pedagogical-plots/src/langgraph/checkpoint.db
+    #- /Users/arafferty/git/pedagogical-plots/src/langgraph/checkpoint-older.db
     - /Users/arafferty/git/pedagogical-plots/src/langgraph/checkpoint.db
-
   do_completion: False
 
   name: dependency example
@@ -130,6 +130,11 @@ example-langgraph-no-rubrics:
         metric_level: Message
         kwargs:
           role: user
+      
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: assistant
 
       - name: string_length
         metric_level: Thread
@@ -148,9 +153,24 @@ example-langgraph-no-rubrics:
       
       - name: count_tool_calls_by_name
         metric_level: Message
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
 
       - name: count_tool_calls_by_name
         metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+
+
 
       # - name: count_tool_calls
       #   depends_on:

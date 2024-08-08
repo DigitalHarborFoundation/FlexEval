@@ -58,7 +58,7 @@ def is_role(turn: Union[Turn, Message], role: str) -> int:
     Return 1 is the role for this Turn or Message matches the passed in role,
     and 0 otherwise.
     '''
-    return int(turn.role == role)
+    return [{'name': role, 'value': int(turn.role == role)}]
 
 
 
