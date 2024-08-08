@@ -169,7 +169,9 @@ example-langgraph-no-rubrics:
             metric_name: assistant
             metric_min_value: 1
 
-
+      - name: count_numeric_tool_call_params_by_name
+        metric_level: ToolCall
+        
 
 
       # - name: count_tool_calls

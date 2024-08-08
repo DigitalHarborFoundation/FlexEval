@@ -162,6 +162,18 @@ def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> 
         results.append({"name": toolcall_name, "value": toolcall_count})
     return results
 
+def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
+    results = []
+    toolcall_args = json.loads(toolcall.args)
+    for arg_name, arg_value in toolcall_args.items():
+        try:
+            numeric_val = float(arg_value)
+            key = toolcall.function_name + "_" + arg_name
+            results.append({"name": key, "value": numeric_val})
+        except:
+            pass
+
+    return results
 
 def count_role_entries_in_turn(
     turn: list,
