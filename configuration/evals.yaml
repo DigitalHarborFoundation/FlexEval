@@ -122,7 +122,7 @@ example-langgraph-no-rubrics:
       # - name: string_length
       
       - name: is_role
-        metric_level: Turn
+        # metric_level: Turn
         kwargs:
           role: assistant
       
@@ -171,7 +171,7 @@ example-langgraph-no-rubrics:
 
       - name: count_numeric_tool_call_params_by_name
         metric_level: ToolCall
-        
+
 
 
       # - name: count_tool_calls

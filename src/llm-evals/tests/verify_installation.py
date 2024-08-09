@@ -35,6 +35,13 @@ class TestConfiguration(unittest.TestCase):
             self.user_evals = yaml.safe_load(file)
         with open(self.config["rubric_metrics_path"]) as file:
             self.rubric_metrics = yaml.safe_load(file)
+        
+        # Apply the defaults before any testing of validity, since
+        # may only be valid with these defaults
+        with open(self.config["eval_schema_path"], "r") as infile:
+            schema = json.load(infile)
+        self.user_evals[self.eval_suite_name] = helpers.apply_defaults(schema, self.user_evals[self.eval_suite_name])
+
 
     def test_env_file_exists(self):
         assert os.path.exists(
@@ -141,6 +148,7 @@ class TestConfiguration(unittest.TestCase):
         """
         Test that all function metrics specified in eval config exist and are called with appropriate args.
         """
+
         for function_metric in (
             self.user_evals[self.eval_suite_name].get("metrics").get("function", [])
         ):

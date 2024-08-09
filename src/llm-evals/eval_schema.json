@@ -209,7 +209,6 @@
     },
     "completion_llm": {
       "type": "object",
-      "default":{},
       "description":"Specification of the LLM or API used to perform new completions. Must be defined if `do_completions: true` is set.",
       "properties": {
         "function_name": {
@@ -233,7 +232,6 @@
     "grader_llm": {
       "type": "object",
       "description":"Specification of the LLM or API used to grade rubrics. Must be defined if any rubric_metrics are specified.",
-      "default":{},
       "properties": {
         "function_name": {
           "type": "string",

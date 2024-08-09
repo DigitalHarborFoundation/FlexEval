@@ -188,9 +188,7 @@ def run(eval_name: str, evals_path: str, config_path: str):
                 metrics_by_level[metric_level] = []
             metrics_by_level[metric_level].append(metric_instance)
         
-        # TODO: Add evaluating of metrics at other levels besides turn!
         # TODO: if we go back to supporting completions, this will likely need to change
-
         threads_to_evaluate = [thread for thread in evalsetrun.threads]
         messages_to_evaluate = [message for message in evalsetrun.messages]
         toolcalls_to_evaluate = [toolcall for toolcall in evalsetrun.toolcalls]
