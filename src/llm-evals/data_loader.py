@@ -18,7 +18,7 @@ def load_jsonl(dataset, filename):
         # That means it has 'input' as a key, and a list of dictionaries as values
         # per line
         for thread in contents.splitlines():
-            thread = Thread.create(evalsetrun=dataset.evalsetrun, dataset=dataset)
+            thread_object = Thread.create(evalsetrun=dataset.evalsetrun, dataset=dataset)
 
             # Get system prompt used in the thread - assuming only 1
             system_prompt = [
@@ -32,7 +32,7 @@ def load_jsonl(dataset, filename):
                 Message.create(
                     evalsetrun=dataset.evalsetrun,
                     dataset=dataset,
-                    thread=thread,
+                    thread=thread_object,
                     role=message.get("role", None),
                     content=message.get("content", None),
                     metadata=message.get("metadata", None),
@@ -40,7 +40,7 @@ def load_jsonl(dataset, filename):
                     system_prompt=system_prompt,
                 )
 
-            add_turns(thread)
+            add_turns(thread_object)
 
     # TODO - should we add ToolCall here? Is there a standard way to represent them in jsonl?
 
