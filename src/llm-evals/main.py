@@ -38,6 +38,7 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
         eval_name=eval_name,
         config_path=config_path,
         evals_path=evals_path,
+        clear_tables=clear_tables
     )
     dotenv.load_dotenv(runner.configuration["env_file"])
 
@@ -65,6 +66,7 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
             ),
             grader_llm=json.dumps(runner.eval.get("grader_llm", None)),
             rubrics=json.dumps(rubrics),
+            clear_tables=clear_tables
         )
         runner.logger.info(evalsetrun.metrics_graph_ordered_list)
     except Exception as e:
