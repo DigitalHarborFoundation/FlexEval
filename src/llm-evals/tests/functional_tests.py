@@ -92,8 +92,8 @@ def helper_test_tables_have_right_rows(
     Check row counts on various tables:
     - evalsetrun should always have one row
     - dataset should have one row per jsonl file
-    - datasetrow should have one row for every row in every jsonl file
-    - turn show have one row for every turn in every jsonl file
+    - thread should have one row for every row in every jsonl file
+    - turn should have one row for every turn in every jsonl file
     expected_num_turns is a tuple that has one entry per jsonl file, and each of those
     entries is a tuple with one entry per row in the corresponding jsonl file. The entry
     for each row is an int indicating the number of turns in that row.
@@ -115,9 +115,9 @@ def helper_test_tables_have_right_rows(
                 table_and_row_counts[table],
                 f"Table {table} should have {table_and_row_counts[table]} rows but has {data.shape[0]} rows",
             )
-            # Then do table-specific logic to make sure the evalsetrun_id, dataset_id, datasetrow_id,
+            # Then do table-specific logic to make sure the evalsetrun_id, dataset_id, thread_id,
             # and turn_number ids are set up and have the right length
-            if table == "datasetrow":
+            if table == "thread":
                 test_instance.assertEqual(
                     set(data["dataset_id"].value_counts().values),
                     set([len(turns_per_row) for turns_per_row in expected_num_turns]),
@@ -154,7 +154,7 @@ class TestSuite02(unittest.TestCase):
                 where 1=1
                 and evalsetrun_id=1 
                 and dataset_id=1 --first file
-                and datasetrow_id=1 --first row
+                and thread_id=1 --first row
                 and evaluation_name = 'flesch_reading_ease'
                 """
             ).fetchall()
@@ -168,11 +168,11 @@ class TestSuite02(unittest.TestCase):
         # STEP 1
         with sqlite3.connect(self.database_path) as connection:
             long_enough_strings = connection.execute(
-                """select evalsetrun_id, dataset_id, datasetrow_id, turn_id from metric 
+                """select evalsetrun_id, dataset_id, thread_id, turn_id from metric 
                 where 1=1
                 and evalsetrun_id=1 
                 and dataset_id=1 --first file
-                and datasetrow_id=1 --first row
+                and thread_id=1 --first row
                 and evaluation_name = 'string_length'
                 and metric_value >= 15
                 """
@@ -218,7 +218,7 @@ class TestSuite02(unittest.TestCase):
                         where 1=1
                         and evalsetrun_id={row[0]}
                         and dataset_id={row[1]} --first file
-                        and datasetrow_id={row[2]} --first row
+                        and thread_id={row[2]} --first row
                         and turn_id={row[3]}
                         and evaluation_name = 'flesch_reading_ease'
                         and metric_value IS NOT NULL
@@ -312,7 +312,7 @@ class TestSuite03(unittest.TestCase):
                 FROM 
                     metric 
                 GROUP BY 
-                    evalsetrun_id, dataset_id, datasetrow_id, turn_id, evaluation_name, metric_name
+                    evalsetrun_id, dataset_id, thread_id, turn_id, evaluation_name, metric_name
                 HAVING
                     COUNT(*) > 1
                 """
@@ -383,7 +383,7 @@ class TestSuite04(unittest.TestCase):
             user_no_tutor_acting_check = connection.execute(
                 """
                 SELECT 
-                    evalsetrun_id, dataset_id, datasetrow_id, turn_id
+                    evalsetrun_id, dataset_id, thread_id, turn_id
                 FROM 
                     metric t1
                 WHERE 

@@ -181,8 +181,12 @@ def compute_function_metric(
                 metrics_result = metric_function(object.context, **metric_kwargs)
             else:
                 # current turn only
-                #metrics_result = metric_function(turn.content, **metric_kwargs)
-                metrics_result = metric_function(object.get_content(), **metric_kwargs)
+                content = object.get_content()   
+                if isinstance(content, list):
+                    content = "\n".join(
+                        [item.get("content", "") for item in content]
+                    )
+                metrics_result = metric_function(content, **metric_kwargs)
         elif input_type is list:
             #This should apply for the Turn type only
             if context_only:
