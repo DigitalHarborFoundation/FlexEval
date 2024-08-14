@@ -41,6 +41,7 @@ class TestSuite01(unittest.TestCase):
         pass
 
     def test_tables_exist(self):
+        table_names = ['dataset','evalsetrun','thread','turn','message','toolcall','metric']
         # write assertions here
         with sqlite3.connect(self.database_path) as connection:
             tables_in_database = connection.execute(
