@@ -28,17 +28,22 @@ def load_jsonl(dataset, filename):
             ][0]
             # Create messages
             for message in json.loads(thread)["input"]:
-
-                Message.create(
-                    evalsetrun=dataset.evalsetrun,
-                    dataset=dataset,
-                    thread=thread_object,
-                    role=message.get("role", None),
-                    content=message.get("content", None),
-                    metadata=message.get("metadata", None),
-                    is_flexeval_completion=False,
-                    system_prompt=system_prompt,
-                )
+                role = message.get("role", None)
+                if role != "system":
+                    # System message shouldn't be added as a separate message
+                    system_prompt_for_this_message = ""
+                    if role != 'user':
+                        system_prompt_for_this_message = system_prompt
+                    Message.create(
+                        evalsetrun=dataset.evalsetrun,
+                        dataset=dataset,
+                        thread=thread_object,
+                        role=role,
+                        content=message.get("content", None),
+                        metadata=message.get("metadata", None),
+                        is_flexeval_completion=False,
+                        system_prompt=system_prompt_for_this_message,
+                    )
 
             add_turns(thread_object)
 
