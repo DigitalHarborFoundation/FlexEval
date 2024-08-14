@@ -169,8 +169,34 @@ def compute_function_metric(
         input_type = next(
             iter(inspect.signature(metric_function).parameters.values())
         ).annotation
+        # Check whether the metric_function has a string or a list input as the first thing.
+        # If so, need to extract the content first.
+        if input_type is str:
+            # This should apply only for Message or Turn types. For Turns,
+            # concatenates all together
+            # just pass in the content
+            if context_only:
+                # previous turn only
+                # join together the string contents of the previous turn
+                metrics_result = metric_function(object.context, **metric_kwargs)
+            else:
+                # current turn only
+                #metrics_result = metric_function(turn.content, **metric_kwargs)
+                metrics_result = metric_function(object.get_content(), **metric_kwargs)
+        elif input_type is list:
+            #This should apply for the Turn type only
+            if context_only:
+                # use the list of adjacent previous entries with roles different to yours
+                metrics_result = metric_function(
+                   object.get_context(), **metric_kwargs
+                )
+            else:
+                # this is on a single turn - pass in the parsed list
+                metrics_result = metric_function(object.get_content(), **metric_kwargs)
+        else:
+            # Must be a Thread/Turn/Message/ToolCall [verified in validation of setup]
+            metrics_result = metric_function(object, **metric_kwargs)
 
-        metrics_result = metric_function(object, **metric_kwargs)
         # # TODO - this logic needs testing!!!
         # # figure out how many previous adjacent turns have a role DIFFERENT than yours
         # # together, they are 'context'
