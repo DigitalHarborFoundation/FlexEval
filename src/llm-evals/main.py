@@ -24,12 +24,14 @@ import compute_metrics
 # - allow comparison with 'ideal' responses
 
 
-def run(eval_name: str, evals_path: str, config_path: str):
+def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
     """Runs the evaluations.
     We want this to be callable by both the CLI and the webapp
     That means it needs to do argument parsing BEFORE this is called
 
     TODO - for webapp, config should be an argument here ^
+
+    param: clear_tables - if True, deletes any existing data in the output database. Otherwise, appends
     """
     # TODO - make evals.yaml file path configurable
     runner = EvalRunner(

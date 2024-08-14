@@ -31,7 +31,7 @@ class EvalRunner(Model):
     database: SqliteDatabase
     eval_name: str
 
-    def __init__(self, eval_name: str, config_path: str, evals_path: str = None):
+    def __init__(self, eval_name: str, config_path: str, evals_path: str = None, clear_tables: bool = False):
 
         self.eval_name = eval_name
         self.config_path = config_path
@@ -42,7 +42,7 @@ class EvalRunner(Model):
         self.add_file_logger()
         self.validate_settings()
         self.initialize_database_connection()
-        self.initialize_database_tables()
+        self.initialize_database_tables(clear_tables)
         self.load_evaluation_settings()
 
     def initialize_logger(self):
@@ -125,14 +125,14 @@ class EvalRunner(Model):
         ) as conn:
             conn.execute("PRAGMA journal_mode=WAL;")  # Enable Write-Ahead Logging
 
-    def initialize_database_tables(self):
-        """Initializes database tables"""
+    def initialize_database_tables(self, clear_tables: bool = False):
+        """Initializes database tables. If clear_tables, then current contents of tables are dropped."""
         for cls in [EvalSetRun, Dataset, Thread, Turn, Message, ToolCall, Metric]:
             cls.initialize_database()
             db = cls._meta.database
             db.connect()
-            # TODO - remove this once the schema is finalized!!
-            # db.drop_tables([cls])
+            if clear_tables:
+                db.drop_tables([cls])
             db.create_tables([cls], safe=False)  # can alter tables if needed
 
     # def connect_to_db(self):
