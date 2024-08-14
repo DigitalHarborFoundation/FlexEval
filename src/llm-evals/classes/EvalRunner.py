@@ -13,9 +13,13 @@ import helpers
 
 from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
-from classes.DatasetRow import DatasetRow
+# from classes.DatasetRow import DatasetRow
 from classes.Turn import Turn
-from classes.TurnMetric import TurnMetric
+# from classes.TurnMetric import TurnMetric
+from classes.Thread import Thread
+from classes.Metric import Metric
+from classes.Message import Message
+from classes.ToolCall import ToolCall
 from helpers import apply_defaults
 
 
@@ -123,7 +127,7 @@ class EvalRunner(Model):
 
     def initialize_database_tables(self):
         """Initializes database tables"""
-        for cls in [EvalSetRun, Dataset, DatasetRow, Turn, TurnMetric]:
+        for cls in [EvalSetRun, Dataset, Thread, Turn, Message, ToolCall, Metric]:
             cls.initialize_database()
             db = cls._meta.database
             db.connect()

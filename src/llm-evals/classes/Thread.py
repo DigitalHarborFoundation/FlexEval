@@ -18,6 +18,20 @@ class Thread(BaseModel):
     langgraph_thread_id = pw.TextField(null=True)
     system_prompt = pw.TextField(null=True)
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.metrics_to_evaluate = []
+    
+    def get_content(self):
+        '''
+        Content is a list of dictionaries where each dictionary contains the role and content of messages
+        in the thread
+        '''
+        content = []
+        for message in self.messages:
+            content.append({"role": message.role, "content": message.content})
+        return content
+
     # def get_turn_components(self):
     #     return json.dumps(input)
 

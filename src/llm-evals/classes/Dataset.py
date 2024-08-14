@@ -1,16 +1,7 @@
 from classes.BaseModel import BaseModel
 from classes.EvalSetRun import EvalSetRun
-from classes.Message import Message
-from classes.Thread import Thread
-from classes.Turn import Turn
-from classes.Completion import Completion
 import json
 import peewee as pw
-import sqlite3
-import copy
-from pprint import pprint
-from collections import OrderedDict
-from datetime import datetime
 
 
 class Dataset(BaseModel):
@@ -51,13 +42,15 @@ class Dataset(BaseModel):
     #   turn_id
 
     def load_data(self):
+        import data_loader # Local import as this needs to happen after the module is fully loaded
 
         if self.filename.endswith(".jsonl"):
             self.datatype = "json"
-            self.load_jsonl(dataset=self)
+            data_loader.load_jsonl(dataset=self, filename=self.filename)
         elif is_sqlite_file(self.filename):
             self.datatype = "sqlite"
-            self.load_langgraph_sqlite()
+
+            data_loader.load_langgraph_sqlite(dataset=self, filename=self.filename)
         else:
             raise Exception(
                 f"Each Data File must be either a jsonl or sqlite file. You provided the file: {self.filename}"

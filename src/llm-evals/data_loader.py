@@ -18,7 +18,7 @@ def load_jsonl(dataset, filename):
         # That means it has 'input' as a key, and a list of dictionaries as values
         # per line
         for thread in contents.splitlines():
-            thread = Thread.create(evalsetrun=dataset.evalsetrun, dataset=dataset)
+            thread_object = Thread.create(evalsetrun=dataset.evalsetrun, dataset=dataset)
 
             # Get system prompt used in the thread - assuming only 1
             system_prompt = [
@@ -32,7 +32,7 @@ def load_jsonl(dataset, filename):
                 Message.create(
                     evalsetrun=dataset.evalsetrun,
                     dataset=dataset,
-                    thread=thread,
+                    thread=thread_object,
                     role=message.get("role", None),
                     content=message.get("content", None),
                     metadata=message.get("metadata", None),
@@ -40,7 +40,7 @@ def load_jsonl(dataset, filename):
                     system_prompt=system_prompt,
                 )
 
-            add_turns(thread)
+            add_turns(thread_object)
 
     # TODO - should we add ToolCall here? Is there a standard way to represent them in jsonl?
 
@@ -60,7 +60,7 @@ def load_langgraph_sqlite(dataset, filename):
             thread = Thread.create(
                 evalsetrun=dataset.evalsetrun,
                 dataset=dataset,
-                langgraph_thread_id=thread_id,
+                langgraph_thread_id=thread_id[0],
             )
 
             # Create messages
@@ -68,13 +68,16 @@ def load_langgraph_sqlite(dataset, filename):
             cursor.execute(query)
             completion_list = cursor.fetchall()
 
+            # context has to be reset at the start of every thread
+            context = []
+            # tool call variables
             tool_calls_dict = {}
             tool_responses_dict = {}
             for completion_row in completion_list:
                 # checkpoint is full state history
-                checkpoint = json.loads(completion_row[4])
+                checkpoint = json.loads(completion_row[3])
                 # metadata is the state update for that row
-                metadata = json.loads(completion_row[5])
+                metadata = json.loads(completion_row[4])
                 # IDs from langgraph
 
                 if metadata.get("writes") is None:
@@ -82,8 +85,13 @@ def load_langgraph_sqlite(dataset, filename):
                 else:
                     # user input condition
                     if metadata.get("source") == "input":
+                        #NOTE: I think with the updated logging of HumanMessage with langgraph, we don't need this case
                         update_dict = {}
-                        update_dict["input"] = metadata.get("writes").get("messages")
+                        update_dict["input"] = metadata.get("writes")#.get("messages")
+                        for message in update_dict["input"]["messages"]:
+                            message["id"] = ["HumanMessage"]
+                            message['kwargs'] = {}
+                            message['kwargs']['content'] = message['content']
                         role = "user"
                         system_prompt = None
                     # machine input condition
@@ -98,19 +106,25 @@ def load_langgraph_sqlite(dataset, filename):
                         raise Exception(
                             f"Unhandled input condition! here is the metadata: {metadata}"
                         )
+                    # Add system prompt as first thing in context if not already present
+                    if len(context) == 0:
+                        context.append({'role' : 'system', 'content' : system_prompt})
+
                     # iterate through nodes - there is probably only 1
-                    for node, value in update_dict:
+                    for node, value in update_dict.items():
                         # iterate through list of message updates
                         if "messages" in value:
                             for message in value["messages"]:
+                                content = message.get("kwargs", {}).get(
+                                        "content", None
+                                    )
                                 Message.create(
                                     evalsetrun=dataset.evalsetrun,
                                     dataset=dataset,
                                     thread=thread,
                                     role=role,
-                                    content=message.get("kwargs", {}).get(
-                                        "content", None
-                                    ),
+                                    content=content,
+                                    context=json.dumps(context),
                                     is_flexeval_completion=False,
                                     system_prompt=system_prompt,
                                     # language model stats
@@ -144,8 +158,8 @@ def load_langgraph_sqlite(dataset, filename):
                                     langgraph_thread_id=completion_row[0],
                                     langgraph_thread_ts=completion_row[1],
                                     langgraph_parent_ts=completion_row[2],
-                                    langgraph_checkpoint=completion_row[4],
-                                    langgraph_metadata=completion_row[5],
+                                    langgraph_checkpoint=completion_row[3],
+                                    langgraph_metadata=completion_row[4],
                                     langgraph_node=node,
                                     langgraph_message_type=message["id"][-1],
                                     langgraph_type=message.get("kwargs", {}).get(
@@ -156,6 +170,10 @@ def load_langgraph_sqlite(dataset, filename):
                                     .get("additional_kwargs", {})
                                     .get("print", False),
                                 )
+
+                                # update the context for the next Message
+                                context.append({'role' : role, 'content' : content})
+
                                 # record tool call info so we can match them up later
                                 if message.get("kwargs", {}).get("type") == "tool":
                                     tool_responses_dict[
@@ -180,7 +198,7 @@ def load_langgraph_sqlite(dataset, filename):
                         m for m in thread.messages if tool_call_id in m.tool_call_ids
                     ][0],
                     function_name=tool_call_vals.get("name"),
-                    args=tool_call_vals.get("args"),
+                    args=json.dumps(tool_call_vals.get("args")),
                     tool_call_id=tool_call_id,
                     response_content=tool_responses_dict.get(tool_call_id),
                 )
@@ -196,21 +214,24 @@ def add_turns(thread: Thread):
     message_roles = []
     for message in thread.messages:
         message_roles.append({"id": message.id, "role": message.role})
-    message_list, turn_dict = get_turns(input_list=thread)
+    message_placeholder_ids, turn_dict = get_turns(thread=thread)
     # Step 2 - Create turns, plus a mapping between the placeholder ids and the created ids
     turns = {}
-    for placeholder_turn_id, role in turns.items():
+    for placeholder_turn_id, role in turn_dict.items():#turns.items():
         t = Turn.create(
-            evalsetrun=thread.evalsetrun, dataset=thread, thread=thread, role=role
+            evalsetrun=thread.evalsetrun, dataset=thread.dataset, thread=thread, role=role
         )
         # map placeholder id to turn object
         turns[placeholder_turn_id] = t
     # Step 3 - add placeholder ids to messages
     # Can use zip since entries in message_list correspond to thread.messages
-    for ml, message in zip(message_list, thread.messages):
+    # NOTE: ANR: I don't follow how the message_list was supposed to work below.
+    for ml, message in zip(message_placeholder_ids, thread.messages):
         # Is this going to work? No idea
-        message.turn = turns[ml["placeholder_turn_id"]]
-        message.is_final_turn_in_input = ml.get("is_final_turn_in_input", False)
+        message.turn = turns[ml]
+        #message.is_final_turn_in_input = ml.get("is_final_turn_in_input", False)
+        message.save()
+    
 
 
 def verify_checkpoints_table_exists(cursor):
@@ -226,7 +247,7 @@ def verify_checkpoints_table_exists(cursor):
     assert result is not None, f"Table 'checkpoints' does not exist in the database."
 
 
-def get_turns(input_list: list):
+def get_turns(thread: Thread):
     """We're defining a turn as a list of 1 or more consequtive outputs
     by the same role, where the role is either 'user', or 'assistant/tool'.
     In other words, we would parse as follows:
@@ -242,37 +263,39 @@ def get_turns(input_list: list):
     # these are all treated as belonging to the same 'turn'
     machine_labels = ["assistant", "ai", "tool"]
 
-    input_list = copy.deepcopy(input_list)
     turn_id = 1
     previous_role = ""
-
-    for turnentry_id, entry in enumerate(input_list):
-        current_role = entry.get("role", None)
-        entry["role"] = current_role
+    # TODO: Make a message list here, store the placeholder ids, and update to the real turn ids; save at end
+    message_placeholder_ids = []
+    for turnentry_id, entry in enumerate(thread.messages):#enumerate(input_list):
+        current_role = entry.role #entry.get("role", None)
+        #entry["role"] = current_role
         # if your role matches a previous, don't increment turn_id
         if (current_role in machine_labels and previous_role in machine_labels) or (
             current_role not in machine_labels and previous_role not in machine_labels
         ):
-            previous_role = current_role
-            entry["placholder_turn_id"] = turn_id
-
+            pass # TODO: clean up the condition to avoid the empty if
+            #previous_role = current_role
+            #entry["placholder_turn_id"] = turn_id
         else:
             turn_id += 1
-            entry["placholder_turn_id"] = turn_id
-            previous_role = current_role
+            #entry["placholder_turn_id"] = turn_id
+            #previous_role = current_role
+        #entry.turn_id = turn_id
+        message_placeholder_ids.append(turn_id)
+        previous_role = current_role
+        #entry.save()
 
+    #NOTE: ANR seems like this could be optimized - e.g., set all
+    # to false, then do a select query for just the ones where turn_id column is turn_id. That would also
+    # reduce the number of saves to the database.
     # label final entry
-    for entry in input_list:
-        if entry["placholder_turn_id"] == turn_id:
-            entry["is_final_turn_in_input"] = True
-        else:
-            entry["is_final_turn_in_input"] = False
-    assert input_list[-1]["is_final_turn_in_input"] is True
-    for entry in input_list:
-        assert "placholder_turn_id" in entry
-
+    # ANR: moved up the turn_id_roles bit here to avoid iterating twice
     turn_id_roles = {}
-    for entry in input_list:
-        turn_id_roles[entry["placeholder_turn_id"]] = entry["role"]
+    for message_placehold_id, entry in zip(message_placeholder_ids, thread.messages): #input_list:
+        turn_id_roles[message_placehold_id] = entry.role
+        entry.is_final_turn_in_input = message_placehold_id == turn_id
+        entry.save() # Could optimize this to avoid saving twice
 
-    return input_list, turn_id_roles
+    return message_placeholder_ids, turn_id_roles
+
