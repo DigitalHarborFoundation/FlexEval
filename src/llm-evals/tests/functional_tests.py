@@ -414,6 +414,7 @@ class FunctionMetricValidation(unittest.TestCase):
             eval_name="test_default_kwargs_01",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
+            clear_tables=True
         )
 
 
