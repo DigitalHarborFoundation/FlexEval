@@ -1,7 +1,3 @@
-
-
-
-
 example:
   data:
     - ../../data/test-cases/dependency_example_test.jsonl
@@ -16,14 +12,13 @@ example:
     max_workers: 8
 
   metrics:
-
     function:
       - name: string_length
-      
+
       - name: is_role
         kwargs:
           role: assistant
-      
+
       - name: is_role
         kwargs:
           role: user
@@ -35,7 +30,7 @@ example:
               role: assistant
             metric_name: assistant
             metric_min_value: 1
-      
+
       - name: value_counts_by_tool_name
         kwargs:
           json_key: latex
@@ -45,47 +40,47 @@ example:
               role: assistant
             metric_name: assistant
             metric_min_value: 1
-      
+
       - name: count_role_entries_in_turn
-      
+
       - name: openai_moderation_api #run for every turn by default
         context_only: false #this is the default
-      
+
       - name: openai_moderation_api
         context_only: true
-      
+
       - name: flesch_kincaid_grade
-      
+
     rubric:
       - name: yeasayer_completion
         depends_on:
           - name: openai_moderation_api
             context_only: true
             metric_min_value: 0.1
-      
+
       - name: is_request_for_plot
         context_only: true
-        depends_on: 
+        depends_on:
           - name: is_role
             type: function
             kwargs:
               role: assistant
             metric_name: assistant
             metric_min_value: 1
-      
+
       - name: is_student_acting_as_tutor
         last_instance_only: true
-      
+
       - name: is_pedagogically_appropriate_plot
         depends_on:
-        - name: is_role
-          kwargs:
-            role: assistant
-          metric_name: assistant
-          metric_min_value: 1
-        - name: count_tool_calls
-          metric_min_value: 1 #TODO - sum of the 'value' for all rows where function_name is 'count_tool_calls' should be >= 1
-      
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+          - name: count_tool_calls
+            metric_min_value: 1 #TODO - sum of the 'value' for all rows where function_name is 'count_tool_calls' should be >= 1
+
   completion_llm:
     function_name: open_ai_completion
     include_system_prompt: False
@@ -93,14 +88,12 @@ example:
       model_name: gpt-3.5-turbo
       api_key_name: OPENAI_API_KEY
       n: 2
-    
-  
+
   grader_llm:
     function_name: open_ai_completion
     kwargs:
       model_name: gpt-4o
       api_key_name: OPENAI_API_KEY
-  
 
 example-langgraph-no-rubrics:
   data:
@@ -117,15 +110,14 @@ example-langgraph-no-rubrics:
     max_workers: 1
 
   metrics:
-
     function:
       # - name: string_length
-      
+
       - name: is_role
         metric_level: Turn
         kwargs:
           role: assistant
-      
+
       - name: is_role
         metric_level: Message
         kwargs:
@@ -143,7 +135,6 @@ example-langgraph-no-rubrics:
       - name: count_tool_calls_by_name
         metric_level: ToolCall
 
-
       # - name: count_tool_calls
       #   depends_on:
       #     - name: is_role
@@ -151,7 +142,7 @@ example-langgraph-no-rubrics:
       #         role: assistant
       #       metric_name: assistant
       #       metric_min_value: 1
-      
+
       # - name: value_counts_by_tool_name
       #   kwargs:
       #     json_key: latex
@@ -161,21 +152,16 @@ example-langgraph-no-rubrics:
       #         role: assistant
       #       metric_name: assistant
       #       metric_min_value: 1
-      
+
       # - name: count_role_entries_in_turn
-      
+
       # # - name: openai_moderation_api #run for every turn by default
       # #   context_only: false #this is the default
-      
+
       # # - name: openai_moderation_api
       # #   context_only: true
-      
+
       # - name: flesch_kincaid_grade
-      
-
-  
-
-
 
 cl-no-rubrics:
   data:
@@ -191,16 +177,15 @@ cl-no-rubrics:
     max_workers: 8
 
   metrics:
-
     function:
       - name: string_length
-      
+
       - name: count_emojis
-      
+
       - name: is_role
         kwargs:
           role: assistant
-      
+
       - name: is_role
         kwargs:
           role: user
@@ -212,7 +197,7 @@ cl-no-rubrics:
               role: assistant
             metric_name: assistant
             metric_min_value: 1
-      
+
       - name: value_counts_by_tool_name
         kwargs:
           json_key: latex
@@ -222,12 +207,47 @@ cl-no-rubrics:
               role: assistant
             metric_name: assistant
             metric_min_value: 1
-      
+
       - name: count_role_entries_in_turn
-              
+
       - name: error_count
 
       - name: rendering_error_count
-      
+
       - name: flesch_kincaid_grade
-      
+
+terry_test_rubric:
+  data:
+    - ../../data/test-cases/checkpoint.db
+
+  do_completion: False
+
+  name: Terry testing rubric metrics
+  notes: my notes
+
+  #anything in here will overwrite entries in src/llm-evals/config.yaml
+  config:
+    max_workers: 1
+
+  metrics:
+    function:
+      - name: string_length
+        metric_level: Thread
+    rubric:
+      - name: is_request_for_plot
+        context_only: false
+        metric_level: Message
+
+  completion_llm:
+    function_name: open_ai_completion
+    include_system_prompt: False
+    kwargs:
+      model_name: gpt-3.5-turbo
+      api_key_name: OPENAI_API_KEY
+      n: 2
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: gpt-4o
+      api_key_name: OPENAI_API_KEY
