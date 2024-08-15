@@ -53,7 +53,7 @@ def process_conversation(conversation:list)-> Union[int, float, dict[str, Union[
     """
     pass 
 
-def is_role(object: Union[Turn, Message], role: str) -> int:
+def is_role(object: Union[Turn, Message], role: str) -> dict:
     '''
     Return 1 is the role for this Turn or Message matches the passed in role,
     and 0 otherwise.
@@ -66,42 +66,7 @@ def is_role(object: Union[Turn, Message], role: str) -> int:
 
 
 
-def count_tool_calls(turn: list) -> list:
-    """
-    Calculate the number of calls to a tool, aggregated by name, in the turn.
-
-    Elements of 'turn' look like one of two things:
-    {
-        "role": "user"
-        "content": "some content"
-    }
-    OR
-    {
-        "role": "tool"
-        "name":"name of tool"
-        "content": [list of tool call info]
-    }
-    Args:
-        conversation list: A list of dictionaries representing conversational turns.
-                                             Each dictionary should have a 'role' key indicating the role of the participant.
-
-    Returns:
-        list: The number of conversational turns in the conversation, as a list of dicts with name/value keys
-    """
-    # Count number of tool calls by name
-    counter = {}
-    for entry in turn:
-        if entry["role"] == "tool":
-            counter[entry["name"]] = counter.get(entry["name"], 0) + 1
-
-    # Convert to list of dictionaries for output
-    results = []
-    for name, val in counter.items():
-        results.append({"name": name, "value": val})
-    return results
-
-
-def value_counts_by_tool_name(turn: list, json_key: str) -> list:
+def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
     """
     Counts the occurrences of particular values in the text content of tool call in the conversation.
     Assumes the roll will be tool, and that kwargs contains the argument json_key. values associated with
@@ -130,13 +95,10 @@ def value_counts_by_tool_name(turn: list, json_key: str) -> list:
                             key = entry["name"] + "_" + json_dict[json_key]
                             counter[key] = counter.get(key, 0) + 1
 
-    # Convert to list of dictionaries for output
-    results = []
-    for name, val in counter.items():
-        results.append({"name": name, "value": val})
-    return results
+    return counter
 
-def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> list:
+
+def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> dict:
     # Extract ToolCall objects based on the type of object being passed in
     toolcalls = []
     if isinstance(object, (Thread, Turn)):
@@ -153,12 +115,8 @@ def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> 
         if toolcall.function_name not in toolcall_counts:
             toolcall_counts[toolcall.function_name] = 0
         toolcall_counts[toolcall.function_name] = toolcall_counts[toolcall.function_name] + 1
-    
-    # Convert to a list of name: value dictionaries
-    results = []
-    for toolcall_name, toolcall_count in toolcall_counts.items():
-        results.append({"name": toolcall_name, "value": toolcall_count})
-    return results
+
+    return toolcall_counts
 
 def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
     results = []
@@ -219,21 +177,6 @@ def count_emojis(turn: str) -> Union[int, float]:
     )
     return len(emoji_pattern.findall(turn))
 
-
-
-# def string_length(turn: str) -> int:
-#     """
-#     Calculate the length of the input string.
-
-#     Args:
-#         turn (str): The input text string whose length is to be measured.
-
-#     Returns:
-#         Union[int, float]: The length of the input string as an integer or float.
-#     """
-#     if turn is None:
-#         return 0
-#     return len(turn)
 def string_length(object: Union[Thread, Turn, Message]) -> int:
     """
     Calculate the length of the content.
