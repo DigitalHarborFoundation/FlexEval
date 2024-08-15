@@ -7,36 +7,65 @@ import json
 import peewee as pw
 from classes.BaseModel import BaseModel
 from classes.EvalSetRun import EvalSetRun
-from classes.Dataset import Dataset
 from classes.Thread import Thread
+from classes.Dataset import Dataset
+from classes.Turn import Turn
 from playhouse.shortcuts import model_to_dict
 import copy
 import helpers
 
-# from configuration import function_metrics
 from configuration import completion_functions
-import inspect
-import string
-from typing import ForwardRef, get_args
 
 
-class Turn(BaseModel):
-    """Holds a single turn
-    In a conversational exchange, each 'Turn' holds information
-    from 1 or more outputs from the same source or role in sequence
+
+class Message(BaseModel):
+    """Holds a single component of a single turn
+    Corresponds to one output of a node in LangGraph
+    or one Turn in jsonl
     """
 
     id = pw.IntegerField(primary_key=True)
 
-    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="turns")
-    dataset = pw.ForeignKeyField(Dataset, backref="turns")
-    thread = pw.ForeignKeyField(Thread, backref="turns")
-    role = pw.TextField()
+    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="messages")
+    dataset = pw.ForeignKeyField(Dataset, backref="messages")
+    thread = pw.ForeignKeyField(Thread, backref="messages")
+    # must be null=True because we're adding it after create()
+    turn = pw.ForeignKeyField(Turn, null=True, backref="messages")
+
+    role = pw.TextField()  # user or assistant - 'tools' are counted as assistants
+    content = pw.TextField()
+    context = pw.TextField(null=True)  # Previous messages
+
+    # helpers
+    system_prompt = pw.TextField(null=True)
+    is_flexeval_completion = pw.BooleanField(null=True)
+    is_final_turn_in_input = pw.BooleanField(null=True)
+    langgraph_print = pw.TextField(null=True)
+
+    # language model stats
+    tool_callslanggraph_print = pw.TextField(null=True)
+    tool_call_ids = pw.TextField(null=True)
+    n_tool_calls = pw.IntegerField(null=True)
+    prompt_tokens = pw.IntegerField(null=True)
+    completion_tokens = pw.IntegerField(null=True)
+    model_name = pw.TextField(null=True)
+
+    # langgraph metadata
+    langgraph_step = pw.IntegerField(null=True)
+    langgraph_checkpoint_ts = pw.TextField(null=True)
+    langgraph_invocation_id = pw.TextField(null=True)
+    langgraph_thread_id = pw.TextField(null=True)
+    langgraph_thread_ts = pw.TextField(null=True)
+    langgraph_parent_ts = pw.TextField(null=True)
+    langgraph_checkpoint = pw.TextField(null=True)
+    langgraph_metadata = pw.TextField(null=True)
+    langgraph_node = pw.TextField(null=True)
+    langgraph_message_type = pw.TextField(null=True)
+    langgraph_type = pw.TextField(null=True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.metrics_to_evaluate = []
-
 
     def get_completion(self, include_system_prompt=False):
         # only get a completion if this is the final turn - we probably don't want to branch from mid-conversation
@@ -46,6 +75,7 @@ class Turn(BaseModel):
             completion_function_kwargs = completion_config.get("kwargs", None)
 
             # Check if the function name exists in the global namespace and call it
+
             if hasattr(completion_functions, completion_fn_name) and hasattr(
                 completion_functions, completion_fn_name
             ):
@@ -65,12 +95,7 @@ class Turn(BaseModel):
                 completion = None
 
             # "completion" will be the output of an existing completion function
-            # We need to make the message object
-            # and probably also a turn object
-
-            # which means it'll have a structure like this
-            # TODO - make this a requirement of the completion functions?
-            #       - make the completion function just return content?
+            # which generally means it'll have a structure like this
             # {"choices": [{"message": {"content": "hi", "role": "assistant"}}]}
             result = model_to_dict(self, exclude=[self.id])
             result["evalsetrun"] = self.evalsetrun
@@ -106,41 +131,16 @@ class Turn(BaseModel):
         else:
             return None
 
-    def get_context(self):
-        '''
-        Context is the context of the first message in the turn
-        '''
-        context = ""
-        for message in self.messages:
-            context = message.context
-            break
-        return json.loads(context)
-    
-
     def get_formatted_prompt(self, include_system_prompt=False):
         formatted_prompt = []
         if include_system_prompt:
             formatted_prompt.append({"role": "system", "content": self.system_prompt})
-        #context = json.loads(self.context)
-        context = self.get_context()
-
+        context = json.loads(self.context)
         if len(context) > 0:
             formatted_prompt += context  # TODO - we might just want a subset of this
-        
-        formatted_prompt += self.get_content()
-        # for t in json.loads(self.turn):
-        #     formatted_prompt.append({"role": t["role"], "content": t["content"]})
+        for t in json.loads(self.turn):
+            formatted_prompt.append({"role": t["role"], "content": t["content"]})
         return formatted_prompt
-    
-    def get_content(self):
-        '''
-        Content is a list of dictionaries where each dictionary contains the role and content of messages
-        in the turn
-        '''
-        content = []
-        for message in self.messages:
-            content.append({"role": message.role, "content": message.content})
-        return content
 
     def format_input_for_rubric(self):
         input = self.get_formatted_prompt()
@@ -153,4 +153,7 @@ class Turn(BaseModel):
         # output_minus_completion - all turns except the last
         # completion - last turn
         return output, output_minus_completion, completion
+    
+    def get_content(self):
+        return self.content
 

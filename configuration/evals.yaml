@@ -1,5 +1,8 @@
 
-evaluation:
+
+
+
+example:
   data:
     - ../../data/test-cases/dependency_example_test.jsonl
 
@@ -71,7 +74,7 @@ evaluation:
             metric_min_value: 1
       
       - name: is_student_acting_as_tutor
-        last_turn_only: true
+        last_instance_only: true
       
       - name: is_pedagogically_appropriate_plot
         depends_on:
@@ -99,3 +102,162 @@ evaluation:
       api_key_name: OPENAI_API_KEY
   
 
+example-langgraph-no-rubrics:
+  data:
+    #- /Users/tom-dhf/git/pedagogical-plots/src/langgraph/checkpoint.db
+    #- /Users/arafferty/git/pedagogical-plots/src/langgraph/checkpoint-older.db
+    - /Users/arafferty/git/pedagogical-plots/src/langgraph/checkpoint.db
+  do_completion: False
+
+  name: dependency example
+  notes: my notes
+
+  #anything in here will overwrite entries in src/llm-evals/config.yaml
+  config:
+    max_workers: 1
+
+  metrics:
+
+    function:
+      # - name: string_length
+      
+      - name: is_role
+        # metric_level: Turn
+        kwargs:
+          role: assistant
+      
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: user
+      
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: assistant
+
+      - name: string_length
+        metric_level: Thread
+
+      - name: string_length
+        metric_level: Turn
+
+      - name: string_length
+        metric_level: Message
+
+      - name: count_tool_calls_by_name
+        metric_level: ToolCall
+
+      - name: count_tool_calls_by_name
+        metric_level: Thread
+      
+      - name: count_tool_calls_by_name
+        metric_level: Message
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: count_tool_calls_by_name
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: count_numeric_tool_call_params_by_name
+        metric_level: ToolCall
+
+
+
+      # - name: count_tool_calls
+      #   depends_on:
+      #     - name: is_role
+      #       kwargs:
+      #         role: assistant
+      #       metric_name: assistant
+      #       metric_min_value: 1
+      
+      # - name: value_counts_by_tool_name
+      #   kwargs:
+      #     json_key: latex
+      #   depends_on:
+      #     - name: is_role
+      #       kwargs:
+      #         role: assistant
+      #       metric_name: assistant
+      #       metric_min_value: 1
+      
+      # - name: count_role_entries_in_turn
+      
+      # # - name: openai_moderation_api #run for every turn by default
+      # #   context_only: false #this is the default
+      
+      # # - name: openai_moderation_api
+      # #   context_only: true
+      
+      # - name: flesch_kincaid_grade
+      
+
+  
+
+
+
+cl-no-rubrics:
+  data:
+    - ../../data/test-cases/auto-conversations-cl.jsonl
+
+  do_completion: False
+
+  name: my-test
+  notes: analysis on function metrics only, on bot-driven conversations
+
+  #anything in here will overwrite entries in src/llm-evals/config.yaml
+  config:
+    max_workers: 8
+
+  metrics:
+
+    function:
+      - name: string_length
+      
+      - name: count_emojis
+      
+      - name: is_role
+        kwargs:
+          role: assistant
+      
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: value_counts_by_tool_name
+        kwargs:
+          json_key: latex
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: count_role_entries_in_turn
+              
+      - name: error_count
+
+      - name: rendering_error_count
+      
+      - name: flesch_kincaid_grade
+      

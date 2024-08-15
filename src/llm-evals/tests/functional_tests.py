@@ -20,29 +20,29 @@ sys.path.append("../../")
 
 from main import run
 
-
 class TestSuite01(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests
-        # in this case, we'd run the evals here using subprocess or something, or maybe main.py
+        # run code that needs to run before ANY of the tests, and clear any existing data from tables
+        # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_01",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
+            clear_tables=True
         )
         cls.database_path = os.environ["DATABASE_PATH"]
+
 
     @classmethod
     def tearDownClass(cls):
         # here, we'd delete the database?
-        # TODO delete database after use
         pass
 
     def test_tables_exist(self):
+        table_names = ['dataset','evalsetrun','thread','turn','message','toolcall','metric']
         # write assertions here
-        table_names = ["dataset", "datasetrow", "evalsetrun", "turn", "turnmetric"]
         with sqlite3.connect(self.database_path) as connection:
             tables_in_database = connection.execute(
                 "select name from sqlite_master where type = 'table'"
@@ -61,9 +61,10 @@ class TestSuite01(unittest.TestCase):
         # write assertions here
         with sqlite3.connect(self.database_path) as connection:
             metric = connection.execute(
-                "select metric_value from turnmetric where evalsetrun_id=1 and dataset_id=1 and datasetrow_id=1 and turn_id=1 and evaluation_name = 'string_length'"
+                "select metric_value from metric where evalsetrun_id=1 and dataset_id=1 and thread_id=1 and turn_id=1 and evaluation_name = 'string_length'"
             ).fetchall()
-        self.assertEqual(len(metric), 1, "More than one row was returned!")
+        self.assertNotEqual(len(metric), 0, "No rows returned for string_length metric; should have 1.")
+        self.assertEqual(len(metric), 1, "More than one row was returned for string_length metric.")
         self.assertAlmostEqual(metric[0][0], 12)
 
     def test_tables_have_right_rows(self):
@@ -75,7 +76,7 @@ class TestSuite01(unittest.TestCase):
 
         with sqlite3.connect(self.database_path) as connection:
             result = connection.execute(
-                """select evaluation_type from turnmetric 
+                """select evaluation_type from metric 
                 where 1=1
                 and evaluation_name = 'string_length'
                 """
@@ -91,18 +92,18 @@ def helper_test_tables_have_right_rows(
     Check row counts on various tables:
     - evalsetrun should always have one row
     - dataset should have one row per jsonl file
-    - datasetrow should have one row for every row in every jsonl file
-    - turn show have one row for every turn in every jsonl file
+    - thread should have one row for every row in every jsonl file
+    - turn should have one row for every turn in every jsonl file
     expected_num_turns is a tuple that has one entry per jsonl file, and each of those
     entries is a tuple with one entry per row in the corresponding jsonl file. The entry
     for each row is an int indicating the number of turns in that row.
     """
     num_jsonl_files = len(expected_num_turns)
-    expected_num_rows = [len(rows_in_file) for rows_in_file in expected_num_turns]
+    expected_num_threads = [len(rows_in_file) for rows_in_file in expected_num_turns]
     table_and_row_counts = {
         "evalsetrun": 1,
         "dataset": num_jsonl_files,
-        "datasetrow": sum(expected_num_rows),
+        "thread": sum(expected_num_threads),
         "turn": sum([sum(turns_per_row) for turns_per_row in expected_num_turns]),
     }
     with sqlite3.connect(test_instance.database_path) as connection:
@@ -114,9 +115,9 @@ def helper_test_tables_have_right_rows(
                 table_and_row_counts[table],
                 f"Table {table} should have {table_and_row_counts[table]} rows but has {data.shape[0]} rows",
             )
-            # Then do table-specific logic to make sure the evalsetrun_id, dataset_id, datasetrow_id,
+            # Then do table-specific logic to make sure the evalsetrun_id, dataset_id, thread_id,
             # and turn_number ids are set up and have the right length
-            if table == "datasetrow":
+            if table == "thread":
                 test_instance.assertEqual(
                     set(data["dataset_id"].value_counts().values),
                     set([len(turns_per_row) for turns_per_row in expected_num_turns]),
@@ -134,12 +135,13 @@ class TestSuite02(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests
-        # in this case, we'd run the evals here using subprocess or something, or maybe main.py
+        # run code that needs to run before ANY of the tests, and clear any existing data from tables
+        # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_02",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
+            clear_tables=True
         )
         cls.database_path = os.environ["DATABASE_PATH"]
 
@@ -148,11 +150,11 @@ class TestSuite02(unittest.TestCase):
         # the only readability score should be for the second entry
         with sqlite3.connect(self.database_path) as connection:
             metric = connection.execute(
-                """select turn_id, metric_value from turnmetric 
+                """select turn_id, metric_value from metric 
                 where 1=1
                 and evalsetrun_id=1 
                 and dataset_id=1 --first file
-                and datasetrow_id=1 --first row
+                and thread_id=1 --first row
                 and evaluation_name = 'flesch_reading_ease'
                 """
             ).fetchall()
@@ -166,11 +168,11 @@ class TestSuite02(unittest.TestCase):
         # STEP 1
         with sqlite3.connect(self.database_path) as connection:
             long_enough_strings = connection.execute(
-                """select evalsetrun_id, dataset_id, datasetrow_id, turn_id from turnmetric 
+                """select evalsetrun_id, dataset_id, thread_id, turn_id from metric 
                 where 1=1
                 and evalsetrun_id=1 
                 and dataset_id=1 --first file
-                and datasetrow_id=1 --first row
+                and thread_id=1 --first row
                 and evaluation_name = 'string_length'
                 and metric_value >= 15
                 """
@@ -181,11 +183,11 @@ class TestSuite02(unittest.TestCase):
             for row in long_enough_strings:
                 with self.subTest():
                     reading_ease = connection.execute(
-                        f"""select evalsetrun_id, dataset_id, datasetrow_id, turn_id from turnmetric 
+                        f"""select evalsetrun_id, dataset_id, thread_id, turn_id from metric 
                         where 1=1
                         and evalsetrun_id={row[0]}
                         and dataset_id={row[1]} --first file
-                        and datasetrow_id={row[2]} --first row
+                        and thread_id={row[2]} --first row
                         and turn_id={row[3]}
                         and evaluation_name = 'flesch_reading_ease'
                         and metric_value IS NOT NULL
@@ -197,11 +199,11 @@ class TestSuite02(unittest.TestCase):
         # now let's look at the converse
         with sqlite3.connect(self.database_path) as connection:
             long_enough_strings = connection.execute(
-                """select evalsetrun_id, dataset_id, datasetrow_id, turn_id from turnmetric 
+                """select evalsetrun_id, dataset_id, thread_id, turn_id from metric 
                 where 1=1
                 and evalsetrun_id=1 
                 and dataset_id=1 --first file
-                and datasetrow_id=1 --first row
+                and thread_id=1 --first row
                 and evaluation_name = 'string_length'
                 and metric_value < 15
                 """
@@ -212,11 +214,11 @@ class TestSuite02(unittest.TestCase):
             for row in long_enough_strings:
                 with self.subTest():
                     reading_ease = connection.execute(
-                        f"""select evalsetrun_id, dataset_id, datasetrow_id, turn_id from turnmetric 
+                        f"""select evalsetrun_id, dataset_id, thread_id, turn_id from metric 
                         where 1=1
                         and evalsetrun_id={row[0]}
                         and dataset_id={row[1]} --first file
-                        and datasetrow_id={row[2]} --first row
+                        and thread_id={row[2]} --first row
                         and turn_id={row[3]}
                         and evaluation_name = 'flesch_reading_ease'
                         and metric_value IS NOT NULL
@@ -232,18 +234,18 @@ class TestSuite02(unittest.TestCase):
             long_string_no_readingease = connection.execute(
                 """
                 SELECT 
-                    evalsetrun_id, dataset_id, datasetrow_id, turn_id
+                    evalsetrun_id, dataset_id, thread_id, turn_id
                 FROM 
-                    turnmetric t1
+                    metric t1
                 WHERE 
                     evaluation_name = 'string_length' AND metric_value >= 15
                 AND NOT EXISTS 
                     (
                     SELECT 1
-                    FROM turnmetric t2
+                    FROM metric t2
                     WHERE t2.evalsetrun_id = t1.evalsetrun_id 
                         AND t2.dataset_id = t1.dataset_id
-                        AND t2.datasetrow_id = t1.datasetrow_id
+                        AND t2.thread_id = t1.thread_id
                         AND t2.turn_id = t1.turn_id
                         AND t2.evaluation_name = 'flesch_reading_ease'
                     ); 
@@ -260,7 +262,7 @@ class TestSuite02(unittest.TestCase):
                 SELECT 
                     evaluation_type, rubric_prompt, rubric_completion, rubric_model, rubric_completion_tokens, rubric_score
                 FROM 
-                    turnmetric
+                    metric
                 WHERE 
                     evaluation_type = 'function' 
                     AND 
@@ -280,14 +282,16 @@ class TestSuite03(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests
-        # in this case, we'd run the evals here using subprocess or something, or maybe main.py
+        # run code that needs to run before ANY of the tests, and clear any existing data from tables
+        # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_03",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
+            clear_tables=True
         )
         cls.database_path = os.environ["DATABASE_PATH"]
+
 
     def test_tables_have_right_rows(self):
         # this suite has two jsonls, simple.jsonl and multiturn.jsonl,
@@ -299,16 +303,16 @@ class TestSuite03(unittest.TestCase):
 
     def test_one_row_per_metric_without_dependency(self):
         # test for function_metric with no dependency, 
-        # every (jsonl/row/turn/metric) combo should get just one row in TurnMetrics
+        # every (jsonl/row/turn/metric) combo should get just one row in Metrics
         with sqlite3.connect(self.database_path) as connection:
             duplicated_metric = connection.execute(
                 """
                 SELECT 
-                    evalsetrun_id, dataset_id, datasetrow_id, turn_id, evaluation_name, metric_name, COUNT(*) as count 
+                    evalsetrun_id, dataset_id, thread_id, turn_id, evaluation_name, metric_name, COUNT(*) as count 
                 FROM 
-                    turnmetric 
+                    metric 
                 GROUP BY 
-                    evalsetrun_id, dataset_id, datasetrow_id, turn_id, evaluation_name, metric_name
+                    evalsetrun_id, dataset_id, thread_id, turn_id, evaluation_name, metric_name
                 HAVING
                     COUNT(*) > 1
                 """
@@ -325,8 +329,10 @@ class TestSuite04(unittest.TestCase):
             eval_name="test_suite_04",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
+            clear_tables=True
         )
         cls.database_path = os.environ["DATABASE_PATH"]
+
         
     def test_rubric_metric_value(self):
         # test if the rurbric output expected values 
@@ -336,7 +342,7 @@ class TestSuite04(unittest.TestCase):
                 SELECT 
                     turn_id, metric_value 
                 FROM 
-                    turnmetric 
+                    metric 
                 WHERE 1=1
                     AND evaluation_type = 'rubric'
                 """
@@ -354,7 +360,7 @@ class TestSuite04(unittest.TestCase):
                 SELECT 
                     evaluation_type, rubric_prompt, rubric_completion, rubric_model, rubric_completion_tokens, rubric_score
                 FROM 
-                    turnmetric
+                    metric
                 WHERE 
                     evaluation_type = 'rubric' 
                     AND 
@@ -377,9 +383,9 @@ class TestSuite04(unittest.TestCase):
             user_no_tutor_acting_check = connection.execute(
                 """
                 SELECT 
-                    evalsetrun_id, dataset_id, datasetrow_id, turn_id
+                    evalsetrun_id, dataset_id, thread_id, turn_id
                 FROM 
-                    turnmetric t1
+                    metric t1
                 WHERE 
                     evaluation_name = 'is_role' 
                     AND metric_name = 'user'
@@ -387,10 +393,10 @@ class TestSuite04(unittest.TestCase):
                 AND NOT EXISTS 
                     (
                     SELECT 1
-                    FROM turnmetric t2
+                    FROM metric t2
                     WHERE t2.evalsetrun_id = t1.evalsetrun_id 
                         AND t2.dataset_id = t1.dataset_id
-                        AND t2.datasetrow_id = t1.datasetrow_id
+                        AND t2.thread_id = t1.thread_id
                         AND t2.turn_id = t1.turn_id
                         AND t2.evaluation_name = 'is_student_acting_as_tutor'
                     ); 
@@ -400,97 +406,7 @@ class TestSuite04(unittest.TestCase):
 
 
 
-class TestPlots01(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        run(
-            eval_name="test_plots_01",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
-        )
-        cls.database_path = os.environ["DATABASE_PATH"]
-
-    def test_is_role(self):
-        with sqlite3.connect(self.database_path) as connection:
-            result = connection.execute(
-                """select 
-                    turnmetric.evaluation_name
-                    , turn.role
-                    , turnmetric.kwargs
-                    , metric_name
-                    , metric_value
-                from turnmetric
-                inner join turn on turnmetric.turn_id = turn.id
-                where 1=1
-                and turnmetric.evalsetrun_id=1 
-                and turnmetric.dataset_id=1 --first file
-                and turnmetric.datasetrow_id=1 --first row
-                and turnmetric.evaluation_name = 'is_role'
-                """
-            ).fetchall()
-        self.assertGreater(len(result), 0)
-        for row in result:
-
-            with self.subTest():
-                self.assertEqual(row[0], "is_role")
-
-            with self.subTest():
-                self.assertIn(row[3], ["assistant", "user"])
-
-            if row[1] == "user" and row[3] == "user":
-                with self.subTest():
-                    self.assertEqual(row[4], 1.0)  # only one user
-            if row[1] == "user" and row[3] == "assistant":
-                with self.subTest():
-                    self.assertEqual(row[4], 0.0)
-            if row[1] == "assistant" and row[3] == "assistant":
-                with self.subTest():
-                    self.assertGreaterEqual(row[4], 1.0)  # at least one assistant
-            if row[1] == "assistant" and row[3] == "user":
-                with self.subTest():
-                    self.assertEqual(row[4], 0.0)
-
-    def test_count_tool_calls(self):
-        # 1, 3, 1
-        with sqlite3.connect(self.database_path) as connection:
-            result = pd.read_sql_query(
-                """
-                select 
-                    turnmetric.evaluation_name
-                    , turn.role
-                    , turnmetric.datasetrow_id
-                    , turnmetric.kwargs
-                    , metric_name
-                    , metric_value
-                from turnmetric
-                inner join turn on turnmetric.turn_id = turn.id
-                where 1=1
-                and turnmetric.evalsetrun_id=1 
-                and turnmetric.dataset_id=1 --first file
-                and turnmetric.evaluation_name = 'count_tool_calls'
-                """,
-                connection,
-            )
-            self.assertGreater(result.shape[0], 0)
-            # no user should have a tool call
-            with self.subTest():
-                self.assertFalse(any(result["role"].apply(lambda x: x == "user")))
-
-            # correct number of plots are identified
-            with self.subTest():
-                self.assertTrue(result.query("datasetrow_id == 1").shape[0] == 1)
-            with self.subTest():
-                self.assertTrue(result.query("datasetrow_id == 2").shape[0] == 3)
-            with self.subTest():
-                self.assertTrue(result.query("datasetrow_id == 3").shape[0] == 1)
-
-            # plot name is detected
-            with self.subTest():
-                self.assertEqual(
-                    result.loc[0, "metric_name"],
-                    "plot_one_or_more_equations_or_inequalities",
-                )
 
 class FunctionMetricValidation(unittest.TestCase):
     def test_default_kwargs01(self):
@@ -498,6 +414,7 @@ class FunctionMetricValidation(unittest.TestCase):
             eval_name="test_default_kwargs_01",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
+            clear_tables=True
         )
 
 
@@ -551,7 +468,7 @@ class ConfigFailures(unittest.TestCase):
 # every jsonl gets an entry in Dataset
 # every (jsonl/row) get an entry in DatasetRow
 # also, every (jsonl/row/turn) gets an entry in Turn
-# for function_metric with no dependency, every (jsonl/row/turn/metric) combo gets a row in TurnMetrics
+# for function_metric with no dependency, every (jsonl/row/turn/metric) combo gets a row in Metrics
 
 # for EVERY turn where the string_length is >= 15, the same turn ALSO has a flesch_reading_ease entry
 

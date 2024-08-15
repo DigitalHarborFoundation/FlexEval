@@ -5,11 +5,17 @@ import re
 import json
 from typing import Union
 
+from classes.Turn import Turn
+from classes.Message import Message
+from classes.Thread import Thread
+from classes.ToolCall import ToolCall
+
+
 ## ~.~ function templates starts ~.~
 from typing import Union
 
 # Example input: either a single turn as a string or an entire conversation as a list of libraries. 
-turn_example = "This is a conversatioal turn."
+turn_example = "This is a conversational turn."
 conversation_example = [{'role':"X1", 'content': "Y1"}, 
                         {'role':"X2", 'content': "Y2"}, ...]
 
@@ -47,9 +53,19 @@ def process_conversation(conversation:list)-> Union[int, float, dict[str, Union[
     """
     pass 
 
+def is_role(turn: Union[Turn, Message], role: str) -> int:
+    '''
+    Return 1 is the role for this Turn or Message matches the passed in role,
+    and 0 otherwise.
+    '''
+    return [{'name': role, 'value': int(turn.role == role)}]
 
-def is_role(turn: list, role: str) -> dict:
-    return {role: len([i for i in turn if i["role"] == role])}
+
+
+
+
+# def is_role(turn: list, role: str) -> dict:
+#     return {role: len([i for i in turn if i["role"] == role])}
 
 
 def count_tool_calls(turn: list) -> list:
@@ -122,6 +138,42 @@ def value_counts_by_tool_name(turn: list, json_key: str) -> list:
         results.append({"name": name, "value": val})
     return results
 
+def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> list:
+    # Extract ToolCall objects based on the type of object being passed in
+    toolcalls = []
+    if isinstance(object, (Thread, Turn)):
+        for message in object.messages:
+            toolcalls += [toolcall for toolcall in message.toolcalls]
+    elif isinstance(object, Message):
+        toolcalls += [toolcall for toolcall in object.toolcalls]
+    else: # Must be just a tool call
+        toolcalls.append(object)
+    
+    # Count the toolcalls
+    toolcall_counts = {}
+    for toolcall in toolcalls:
+        if toolcall.function_name not in toolcall_counts:
+            toolcall_counts[toolcall.function_name] = 0
+        toolcall_counts[toolcall.function_name] = toolcall_counts[toolcall.function_name] + 1
+    
+    # Convert to a list of name: value dictionaries
+    results = []
+    for toolcall_name, toolcall_count in toolcall_counts.items():
+        results.append({"name": toolcall_name, "value": toolcall_count})
+    return results
+
+def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
+    results = []
+    toolcall_args = json.loads(toolcall.args)
+    for arg_name, arg_value in toolcall_args.items():
+        try:
+            numeric_val = float(arg_value)
+            key = toolcall.function_name + "_" + arg_name
+            results.append({"name": key, "value": numeric_val})
+        except:
+            pass
+
+    return results
 
 def count_role_entries_in_turn(
     turn: list,
@@ -171,19 +223,40 @@ def count_emojis(turn: str) -> Union[int, float]:
 
 
 
-def string_length(turn: str) -> int:
+# def string_length(turn: str) -> int:
+#     """
+#     Calculate the length of the input string.
+
+#     Args:
+#         turn (str): The input text string whose length is to be measured.
+
+#     Returns:
+#         Union[int, float]: The length of the input string as an integer or float.
+#     """
+#     if turn is None:
+#         return 0
+#     return len(turn)
+def string_length(object: Union[Thread, Turn, Message]) -> int:
     """
-    Calculate the length of the input string.
+    Calculate the length of the content.
 
     Args:
-        turn (str): The input text string whose length is to be measured.
+        object (Union[Thread, Turn, Message]): 
 
     Returns:
-        Union[int, float]: The length of the input string as an integer or float.
+        int: The length of the content of the messages (added together for
+            thread and turn that may contain more than one message)
     """
-    if turn is None:
-        return 0
-    return len(turn)
+    content = object.get_content()
+    length = 0
+    if isinstance(content, str):
+        length = len(content)
+    else: # list
+        # Sum up the lengths of the individual contents
+        for role_content_dict in content:
+            length += len(role_content_dict.get('content', ''))
+
+    return length
 
 
 def flesch_reading_ease(turn: str) -> float:

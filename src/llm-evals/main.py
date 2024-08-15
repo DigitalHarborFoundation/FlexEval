@@ -6,33 +6,48 @@ import json
 from classes.EvalRunner import EvalRunner
 from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
-from classes.DatasetRow import DatasetRow
 from classes.Turn import Turn
-from classes.TurnMetric import TurnMetric
+from classes.Metric import Metric
 import dotenv
+import compute_metrics
+
+# Levels of abstraction -
+# Dataset
+# Thread
+# Turn
+# Message
+# ToolCall
+# Metric
 
 
 # Features to add:
 # - allow comparison with 'ideal' responses
 
 
-def run(eval_name: str, evals_path: str, config_path: str):
+def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
     """Runs the evaluations.
     We want this to be callable by both the CLI and the webapp
     That means it needs to do argument parsing BEFORE this is called
 
     TODO - for webapp, config should be an argument here ^
+
+    param: clear_tables - if True, deletes any existing data in the output database. Otherwise, appends
     """
     # TODO - make evals.yaml file path configurable
     runner = EvalRunner(
         eval_name=eval_name,
         config_path=config_path,
         evals_path=evals_path,
+        clear_tables=clear_tables
     )
     dotenv.load_dotenv(runner.configuration["env_file"])
 
     with open(runner.configuration["rubric_metrics_path"]) as file:
         rubrics = yaml.safe_load(file)
+
+    #######################################################
+    ############  Create Test Run  ########################
+    #######################################################
     try:
         runner.logger.info("Creating EvalSetRun")
         # (runner.eval.get("metrics"))
@@ -51,89 +66,31 @@ def run(eval_name: str, evals_path: str, config_path: str):
             ),
             grader_llm=json.dumps(runner.eval.get("grader_llm", None)),
             rubrics=json.dumps(rubrics),
+            clear_tables=clear_tables
         )
         runner.logger.info(evalsetrun.metrics_graph_ordered_list)
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)
         raise e
 
+    #######################################################
+    ############  Load and Parse Data  ####################
+    #######################################################
+
     try:
         runner.logger.info("Loading data")
         for filename in evalsetrun.get_datasets():
-            runner.logger.debug(f"Loading data file {filename}")
-            with open(filename, "r") as infile:
-                contents = infile.read()
             # these will automatically be saved as a property of evalsetrun
-            Dataset.create(
-                evalsetrun=evalsetrun,
-                filename=filename,
-                contents=contents,
-            )
+            Dataset.create(evalsetrun=evalsetrun, filename=filename)
+
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)
 
     try:
         runner.logger.info("Parsing data files")
         for dataset in evalsetrun.datasets:
-            runner.logger.debug(f"Parsing data file {dataset.filename}")
-
-            rows = dataset.get_rows()
-            for row in rows:
-                DatasetRow.create(
-                    dataset=dataset,
-                    evalsetrun=dataset.evalsetrun,
-                    input=json.dumps(row.get("input", None)),
-                    ideals=json.dumps(row.get("ideals", None)),
-                    metadata=json.dumps(
-                        {k: v for k, v in row.items() if k not in ["input", "ideals"]}
-                    ),
-                )
-    except Exception as e:
-        runner.logger.exception("An error occurred", exc_info=True)
-
-    try:
-        runner.logger.info("Parsing turns")
-        for dataset in evalsetrun.datasets:
-            for row in dataset.rows:
-                turns = row.get_turns()
-                for turn_ix, turn in enumerate(turns):
-                    assert isinstance(turn["turn"], list)
-
-                    # some turns have tool calls, in which case the content
-                    # is actually a list of dicts
-                    content = ""
-                    for i in turn["turn"]:
-                        c = i.get("content", "")
-                        if isinstance(c, str):
-                            if len(content) > 0:
-                                # because we're concatenating lines together
-                                content += "\n"
-                            content += c
-                        elif isinstance(c, list):
-                            for entry in c:
-                                c2 = entry.get("content", "")
-                                if isinstance(c2, str):
-                                    if len(content) > 0:
-                                        content += "\n"
-                                    content += c2
-
-                    Turn.create(
-                        evalsetrun=row.evalsetrun,
-                        dataset=dataset,
-                        datasetrow=row,
-                        turn_number=turn_ix + 1,
-                        turn=json.dumps(turn["turn"]),
-                        role=turn["role"],
-                        content=content,
-                        tool_used=turn["tool_used"],
-                        system_prompt=turn["system_prompt"],
-                        context=json.dumps(
-                            [item for d in turns[:turn_ix] for item in d["turn"]]
-                        ),  # concatenate all turns except the current
-                        is_final_turn_in_input=turn["is_final_turn_in_input"],
-                        is_completion=False,
-                        prompt_tokens=None,
-                    )
+            runner.logger.debug(f"Loading data from {dataset.filename}")
+            dataset.load_data()
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)
 
@@ -214,7 +171,7 @@ def run(eval_name: str, evals_path: str, config_path: str):
         turns_to_evaluate = []
         for turn in evalsetrun.turns:
             # only do completions
-            if turn.is_completion and evalsetrun.do_completion:
+            if evalsetrun.do_completion and turn.is_completion: #NOTE: ANR: turn no longer has an is_completion
                 turns_to_evaluate.append(turn)
             # or do all turns
             elif not evalsetrun.do_completion:
@@ -223,44 +180,62 @@ def run(eval_name: str, evals_path: str, config_path: str):
         # collect function calls to make
         # here, we'll use the metric ordering established in evalsetrun.metric_graph
         rubric_count = 0
-        for turn in turns_to_evaluate:
-            turn.metrics_to_evaluate = []
-            # metric dependencies happen WITHIN turns, rather than across
-            # this means I can associate a sequence of metrics within each turn
-            # but then have the turns execute them in parallel
-            # each turn will keep track of its own set of metrics
-            for metric_instance in json.loads(evalsetrun.metrics_graph_ordered_list):
-                turn.metrics_to_evaluate.append(metric_instance)
-                if metric_instance.get("evaluation_type") == "rubric":
-                    rubric_count += 1
+        # Here, need loops over threads, turns, messages, and tool calls, and then getting the appropriate
+        # metrics to each. Seems like we can still use the same metric_graph (which may have ≥ 4 connected 
+        # components), and enforce in validation step that dependencies are only between metrics defined
+        # at the same granularity.
+        # Create a dictionary for the metrics
+        metrics_by_level = {}
+        for metric_instance in json.loads(evalsetrun.metrics_graph_ordered_list):
+            metric_level = metric_instance['metric_level']
+            if metric_level not in metrics_by_level:
+                metrics_by_level[metric_level] = []
+            metrics_by_level[metric_level].append(metric_instance)
+        
+        # TODO: if we go back to supporting completions, this will likely need to change
+        threads_to_evaluate = [thread for thread in evalsetrun.threads]
+        messages_to_evaluate = [message for message in evalsetrun.messages]
+        toolcalls_to_evaluate = [toolcall for toolcall in evalsetrun.toolcalls]
+        object_lists_by_level = {'Thread': threads_to_evaluate,
+                                 'Turn': turns_to_evaluate, 
+                                 'Message': messages_to_evaluate,
+                                 'ToolCall': toolcalls_to_evaluate}
+
+        for level, object_list in object_lists_by_level.items():
+            # Add the metrics to objects at this level
+            compute_metrics.add_all_metrics_to_objects(object_list, metrics_by_level.get(level, []))
+            # Update the count of how many rubrics might be run based on rubric evals at this level
+            rubric_count += compute_metrics.count_rubric_metrics(object_list)
 
         runner.logger.info(
             f"Metrics will include up to {rubric_count} rubric evaluations."
         )
         if n_workers == 1:
             metrics = []
-            for turn in turns_to_evaluate:
-                # it already knows its arguments
-                turn_metrics = turn.compute_metrics()
-                # metric = compute_metric(**arg)
-                for m in turn_metrics:
-                    if m.get("evaluation_type", None) is None:
-                        runner.logger.exception(
-                            f"Metric {m} does not have a value for the key `type`."
-                        )
-                    if m.get("metric_value", None) is None:
-                        runner.logger.exception(
-                            f"Metric {m} does not have a value for the key `metric_value`."
-                        )
-                metrics += turn_metrics
+            for level, object_list in object_lists_by_level.items():
+                for object in object_list:
+                    cur_metrics = compute_metrics.compute_metrics(object)
+                    for m in cur_metrics:
+                        if m.get("evaluation_type", None) is None:
+                            runner.logger.exception(
+                                f"Metric {m} does not have a value for the key `type`."
+                            )
+                        if m.get("metric_value", None) is None:
+                            runner.logger.exception(
+                                f"Metric {m} does not have a value for the key `metric_value`."
+                            )
+                    metrics += cur_metrics
+
         else:
 
             # if we want the dependencies to be obeyed, we must
 
             with ThreadPoolExecutor(max_workers=n_workers) as executor:
                 futures = []
-                for turn in turns_to_evaluate:
-                    futures.append(executor.submit(turn.compute_metrics))
+                for level, object_list in object_lists_by_level.items():
+                    for object in object_list:
+                        futures.append(executor.submit(compute_metrics.compute_metrics, object))
+
 
                 # Wait for all futures to complete and handle exceptions
                 for future in futures:
@@ -275,15 +250,21 @@ def run(eval_name: str, evals_path: str, config_path: str):
         runner.logger.info(f"Saving {len(metrics)} metrics to database.")
         for metric in metrics:
             # TODO - speed this up somehow
-            TurnMetric.create(
-                turn=metric["turn"],
-                evalsetrun=metric["turn"].evalsetrun,
-                dataset=metric["turn"].dataset,
-                datasetrow=metric["turn"].datasetrow,
+            thread = metric.get("thread")
+            if thread is None:
+                thread = metric[metric['metric_level'].lower()].thread
+            Metric.create(
+                message=metric.get("message",None),
+                turn=metric.get("turn",None),
+                toolcall=metric.get("toolcall",None),
+                evalsetrun=metric[metric['metric_level'].lower()].evalsetrun, #metric["turn"].evalsetrun,
+                dataset=metric[metric['metric_level'].lower()].dataset, #metric["turn"].dataset,
+                thread=thread,
                 evaluation_name=metric["evaluation_name"],
                 evaluation_type=metric["evaluation_type"],
                 metric_name=metric["metric_name"],
                 metric_value=metric["metric_value"],
+                metric_level=metric["metric_level"],
                 kwargs=metric["kwargs"],
                 depends_on=json.dumps(metric["depends_on"]),
                 source=metric["source"],
@@ -312,7 +293,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Add an argument
     parser.add_argument(
-        "eval_name",
+        "--eval_name",
         type=str,
         help="Which eval set in evals.yaml you want to run",
     )
