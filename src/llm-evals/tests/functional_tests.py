@@ -460,7 +460,94 @@ class ConfigFailures(unittest.TestCase):
             evals_path="tests/evals.yaml",
         )
 
+class TestBasicFunctionMetrics(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        # run code that needs to run before ANY of the tests, and clear any existing data from tables
+        # in this case, we run the evals via main.py
+        run(
+            eval_name="test_basic_function_metrics_01",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+            clear_tables=True
+        )
+        cls.database_path = os.environ["DATABASE_PATH"]
+
+    def test_correct_metric_levels(self):
+        # Expect to have one is_role evaluation for every Turn, at the
+        # turn level, all with metric_name assistant, and two is_role
+        # evaluations for every Message, one with metric_name assistant
+        # and one with metric_name user.
+        with sqlite3.connect(self.database_path) as connection:
+            num_turns = connection.execute(
+                """
+                SELECT COUNT(*) FROM turn
+                """         
+            ).fetchone()[0]
+
+            turn_level_metrics = connection.execute(
+                """
+                SELECT 
+                    dataset_id, turn_id, message_id
+                FROM 
+                    metric
+                WHERE 1=1
+                    AND metric_level = 'Turn'
+                    AND evaluation_name = 'is_role'
+                """         
+            ).fetchall()
+            self.assertEqual(len(turn_level_metrics), num_turns, f"Expected one metric for each Turn for the is_role evaluation, but there were {num_turns} and {turn_level_metrics} metrics.")
+            represented_turns = set()
+            for metric in turn_level_metrics:
+                # Expect each turn to be represented exactly once. 
+                # No metric should have a message level set. All dataset_ids should be 1
+                dataset_id, turn_id, message_id = metric
+                self.assertEqual(dataset_id, 1, "Expected all dataset ids to be 1")
+                self.assertFalse(turn_id in represented_turns, f"The turn id {turn_id} appeared more than once, but each turn should have one is_role only.")
+                represented_turns.add(turn_id)
+                self.assertIsNone(message_id, f"No turn level metrics should also have a message id, but found message id {message_id}")
+            
+            num_messages = connection.execute(
+                """
+                SELECT COUNT(*) FROM message
+                """         
+            ).fetchone()[0]
+            message_level_metrics = connection.execute(
+                """
+                SELECT 
+                    dataset_id, turn_id, message_id, metric_name, metric_value
+                FROM 
+                    metric
+                WHERE 1=1
+                    AND metric_level = 'Message'
+                    AND evaluation_name = 'is_role'
+                """         
+            ).fetchall()
+            self.assertEqual(len(message_level_metrics), num_messages*2, 
+                             (f"Expected two metrics for each Message for the is_role "
+                              f"evaluation, but there were {num_turns} and {turn_level_metrics} metrics."))
+            represented_messages = {}
+            for metric in message_level_metrics:
+                # Expect each message to be represented twice, with opposite values for the two evals
+                # No metric should have a message level set. All dataset_ids should be 1
+                dataset_id, turn_id, message_id, metric_name, metric_value = metric
+                self.assertEqual(dataset_id, 1, "Expected all dataset ids to be 1")
+                self.assertIsNone(turn_id, f"No message level metrics should also have a turn id, but found message id {message_id}")
+                if message_id not in represented_messages:
+                    represented_messages[message_id] = {}
+                self.assertFalse(metric_name in represented_messages[message_id], 
+                                 (f"The metric {metric_name} for is_role appeared more than once, "
+                                  "but each message should have of these metrics only."))
+                represented_messages[message_id][metric_name] = metric_value
+                self.assertIn(metric_name, ['user', 'assistant'], 
+                              f"Metric name should be user or assistant but was {metric_name}")
+                if len(represented_messages[message_id]) == 2:
+                    self.assertNotEqual(represented_messages[message_id]['user'], 
+                                        represented_messages[message_id]['assistant'],
+                                        (f"Message id {message_id} had the same value for is_role user and "
+                                          "  is_role assistant"))
+                
 # other tests
 
 ## basic - are the table rows being populated

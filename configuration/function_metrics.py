@@ -53,19 +53,17 @@ def process_conversation(conversation:list)-> Union[int, float, dict[str, Union[
     """
     pass 
 
-def is_role(turn: Union[Turn, Message], role: str) -> int:
+def is_role(object: Union[Turn, Message], role: str) -> int:
     '''
     Return 1 is the role for this Turn or Message matches the passed in role,
     and 0 otherwise.
+
+    Args:
+    object: the Turn or Message
+    role: a string with the desired role to check against
     '''
-    return [{'name': role, 'value': int(turn.role == role)}]
+    return {role: int(object.role == role)}
 
-
-
-
-
-# def is_role(turn: list, role: str) -> dict:
-#     return {role: len([i for i in turn if i["role"] == role])}
 
 
 def count_tool_calls(turn: list) -> list:
