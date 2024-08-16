@@ -460,6 +460,22 @@ class ConfigFailures(unittest.TestCase):
             evals_path="tests/evals.yaml",
         )
 
+    @unittest.expectedFailure
+    def test_config_failure_06(cls):
+        run(
+            eval_name="config_failure_06",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
+    
+    @unittest.expectedFailure
+    def test_config_failure_07(cls):
+        run(
+            eval_name="config_failure_07",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
+
 class TestBasicFunctionMetrics(unittest.TestCase):
 
     @classmethod

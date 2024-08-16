@@ -206,6 +206,26 @@ config_failure_05:
       - name: no_such_rubric # rubric name does not exist
 
 
+config_failure_06:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: count_numeric_tool_call_params_by_name 
+        metric_level: Thread # function metric doesn't have a valid input type for this level
+
+config_failure_07:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: count_tool_calls_by_name 
+        metric_level: Thread 
+        context_only: true # function metric does not take a string or list, so context_only must be false
+
+
 test_default_kwargs_01:
   data:
     - tests/data/simple.jsonl 

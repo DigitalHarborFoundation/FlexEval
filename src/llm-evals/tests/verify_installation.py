@@ -144,6 +144,7 @@ class TestConfiguration(unittest.TestCase):
         # Validate against schema
         jsonschema.validate(instance=data, schema=schema)
 
+
     def test_function_metrics_exist(self):
         """
         Test that all function metrics specified in eval config exist and are called with appropriate args.
@@ -220,27 +221,49 @@ class TestConfiguration(unittest.TestCase):
         elif metric_level.lower() == 'message':
             assert (
                 first_arg_type is str
-                or first_arg_type is list
                 or first_arg_type is Message
                 or first_arg_type is ForwardRef('Message')
                 or Message in get_args(first_arg_type)
                 or ForwardRef('Message') in get_args(first_arg_type) 
-            ), f"Input to metric function {name} with metric_level set to {metric_level} must be a string, list, or Message but it was {first_arg_type}"
+            ), f"Input to metric function {name} with metric_level set to {metric_level} must be a string or Message but it was {first_arg_type}"
         elif metric_level.lower() == 'toolcall':
             assert (
-                first_arg_type is str
-                or first_arg_type is list
+                first_arg_type is dict
                 or first_arg_type is ToolCall
                 or first_arg_type is ForwardRef('ToolCall')
                 or ToolCall in get_args(first_arg_type)
                 or ForwardRef('ToolCall') in get_args(first_arg_type) 
-            ), f"Input to metric function {name} with `metric_level` set to {metric_level} must be a string, list, or ToolCall but it was {first_arg_type}"
+            ), f"Input to metric function {name} with `metric_level` set to {metric_level} must be a dict or ToolCall but it was {first_arg_type}"
         else:
             raise Exception(
                     f"You set `metric_level` for the metric function `{name}` to {metric_level}, but `metric_level` must be one of Thread, Turn, Message, or ToolCall."
             )
         
-        
+    def test_context_only_used_only_for_string_list_functions(self):
+        for function_metric in (
+            self.user_evals[self.eval_suite_name].get("metrics").get("function", [])
+        ):
+            name = function_metric["name"]
+            if function_metric.get("context_only", False):
+                # context_only can only be true for a string or list input function
+                metric_function = getattr(function_metrics, name, None)
+                params = inspect.signature(metric_function).parameters
+                first_arg_type  = next((arg_tuple[1].annotation for arg_tuple in iter(params.items())), None)
+                if first_arg_type is None:
+                    raise Exception(f"The metric function `{name}` has no inputs, but must have at least one.")
+
+                assert(
+                    first_arg_type is str
+                    or first_arg_type is list
+                ), (
+                    f"When context_only is True for a metric function, the input type for that function must be a string"
+                    f" or a list. The metric function `{name}` has context_only set to True, but the first argument for"
+                    f" the function is of type {first_arg_type}. If you would like to pass the value for context_only"
+                    f" to the function, include it as a keyword arg (nested in kwargs)."
+                )
+
+
+
     def test_metric_templates_are_valid(self):
         for rubric_metric in (
             self.user_evals[self.eval_suite_name].get("metrics").get("rubric", [])
