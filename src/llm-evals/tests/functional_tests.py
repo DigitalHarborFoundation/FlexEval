@@ -547,7 +547,59 @@ class TestBasicFunctionMetrics(unittest.TestCase):
                                         represented_messages[message_id]['assistant'],
                                         (f"Message id {message_id} had the same value for is_role user and "
                                           "  is_role assistant"))
+
+class TestListStringInputFunctionMetrics(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # run code that needs to run before ANY of the tests, and clear any existing data from tables
+        # in this case, we run the evals via main.py
+        run(
+            eval_name="test_list_string_function_metrics",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+            clear_tables=True
+        )
+        cls.database_path = os.environ["DATABASE_PATH"]
+
+    def test_reading_ease_levels_by_level(self):
+        message_id_to_reading_ease = {1: 119.19, 2: 119.19, 3: 35.61, 4: 77.91}
+        message_id_to_reading_ease_context_only = {1: 206.84, 2: 119.19, 3: 119.19, 4: 92.8}
+        turn_id_to_reading_ease = {1: 119.19, 2: 83.32, 3: 77.91}
+        turn_id_to_reading_ease_context_only = {1: 206.84, 2: 119.19, 3: 92.8}
+        with sqlite3.connect(self.database_path) as connection:
+            reading_ease_metrics = connection.execute(
+                    """
+                    SELECT 
+                        turn_id, message_id, context_only, metric_level, metric_name, metric_value
+                    FROM 
+                        metric
+                    WHERE 1=1
+                        AND thread_id = 1
+                        AND evaluation_name = 'flesch_reading_ease'
+                    """         
+                ).fetchall()
+            for result in reading_ease_metrics:
+                turn_id, message_id, context_only, metric_level, metric_name, metric_value = result
+                comparison_dict = None
+                comparison_id = None
+                if metric_level == 'Message':
+                    comparison_id = message_id
+                    if context_only:
+                        comparison_dict = message_id_to_reading_ease_context_only
+                    else:
+                        comparison_dict = message_id_to_reading_ease
+                elif metric_level == 'Turn':
+                    comparison_id = turn_id
+                    if context_only:
+                        comparison_dict = turn_id_to_reading_ease_context_only
+                    else:
+                        comparison_dict = turn_id_to_reading_ease
+                else:
+                    raise Exception(f"Expected only Message and Turn levels for reading ease but found {metric_level}")
                 
+                self.assertAlmostEqual(comparison_dict[comparison_id], metric_value,
+                                       msg="Metric value for reading ease not equal to expected value")
+
 # other tests
 
 ## basic - are the table rows being populated

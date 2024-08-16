@@ -37,6 +37,7 @@ class Metric(BaseModel):
     metric_level = pw.TextField()
     metric_value = pw.FloatField(null=True)  # necessary if rubric result is INVALID
     kwargs = pw.TextField()
+    context_only = pw.BooleanField(default=False)
     source = (
         pw.TextField()
     )  # TODO - make another table for this? But maybe not, because this also contains filled-in rubrics

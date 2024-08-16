@@ -46,7 +46,7 @@ example:
             metric_name: assistant
             metric_min_value: 1
       
-      - name: count_role_entries_in_turn
+      - name: count_role_entries
       
       - name: openai_moderation_api #run for every turn by default
         context_only: false #this is the default
@@ -172,10 +172,10 @@ example-langgraph-no-rubrics:
       - name: count_numeric_tool_call_params_by_name
         metric_level: ToolCall
       
-      - name: count_role_entries_in_turn
+      - name: count_role_entries
         metric_level: Thread
       
-      - name: count_role_entries_in_turn
+      - name: count_role_entries
         metric_level: Turn
 
 
@@ -259,7 +259,7 @@ cl-no-rubrics:
             metric_name: assistant
             metric_min_value: 1
       
-      - name: count_role_entries_in_turn
+      - name: count_role_entries
               
       - name: error_count
 

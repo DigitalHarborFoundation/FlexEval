@@ -106,7 +106,7 @@ class Turn(BaseModel):
         else:
             return None
 
-    def get_context(self):
+    def get_context(self, include_system_prompt=False):
         '''
         Context is the context of the first message in the turn
         '''
@@ -114,7 +114,10 @@ class Turn(BaseModel):
         for message in self.messages:
             context = message.context
             break
-        return json.loads(context)
+        context = json.loads(context)
+        if not include_system_prompt:
+            context = [cur_dict for cur_dict in context if cur_dict.get('role') != 'system']
+        return context
     
 
     def get_formatted_prompt(self, include_system_prompt=False):
@@ -132,18 +135,20 @@ class Turn(BaseModel):
         #     formatted_prompt.append({"role": t["role"], "content": t["content"]})
         return formatted_prompt
     
-    def get_content(self):
+    def get_content(self, include_toolcalls=True):
         '''
         Content is a list of dictionaries where each dictionary 
         contains the role and content of messages and tool calls
         in the turn. Each tool call appears after the message it's
-        associated with.
+        associated with. If toolcalls are not desired, pass False
+        to include_toolcalls.
         '''
         content = []
         for message in self.messages:
             content.append({"role": message.role, "content": message.content})
-            for toolcall in message.toolcalls:
-                content.append(toolcall.get_dict_representation())
+            if include_toolcalls:
+                for toolcall in message.toolcalls:
+                    content.append(toolcall.get_dict_representation())
  
         return content
 

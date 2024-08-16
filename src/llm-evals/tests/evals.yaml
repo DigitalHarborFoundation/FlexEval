@@ -239,3 +239,32 @@ test_basic_function_metrics_01:
         metric_level: Message
         kwargs:
           role: user
+
+test_list_string_function_metrics:
+  data:
+    - tests/data/multiturn.jsonl 
+
+  metrics:
+    function:
+      - name: count_role_entries
+        metric_level: Turn
+      
+      - name: count_role_entries
+        metric_level: Thread
+      
+      - name: flesch_reading_ease
+        metric_level: Message
+      
+      - name: flesch_reading_ease
+        metric_level: Turn
+        context_only: false
+
+
+      - name: flesch_reading_ease
+        metric_level: Message
+        context_only: true
+      
+      - name: flesch_reading_ease
+        metric_level: Turn
+        context_only: true
+

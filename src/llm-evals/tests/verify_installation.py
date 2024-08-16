@@ -155,7 +155,7 @@ class TestConfiguration(unittest.TestCase):
             name = function_metric["name"]
             assert hasattr(function_metrics, name) and callable(
                 getattr(function_metrics, name, None)
-            ), f"No function named {name} exists in `{self.config['function_metrics_path']}`"
+            ), f"No function named {name} exists in `function_metrics.py`"
 
             metric_function = getattr(function_metrics, name, None)
 
@@ -281,7 +281,7 @@ class TestConfiguration(unittest.TestCase):
             name = function_metric["name"]
             assert hasattr(function_metrics, name) and callable(
                 getattr(function_metrics, name, None)
-            ), f"No function named {name} exists in `{self.config['function_metrics_path']}`"
+            ), f"No function named {name} exists in `function_metrics.py`"
 
             metric_function = getattr(function_metrics, name, None)
 
