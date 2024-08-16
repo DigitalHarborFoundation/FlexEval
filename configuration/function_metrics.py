@@ -14,19 +14,27 @@ from classes.ToolCall import ToolCall
 ## ~.~ function templates starts ~.~
 from typing import Union
 
-# Example input: either a single turn as a string or an entire conversation as a list of libraries. 
+# Example input types:
+# - a single turn as a string
+# - an entire conversation as a list of dictionaries
+# - an object of type Thread, Turn, Message, or ToolCall.
+#   These objects have the same fields as in the correspondingly
+#   named databases, and can access objects at higher or lower
+#   levels of granularity. Examples are provided below for working 
+#   with these objects.
 turn_example = "This is a conversational turn."
 conversation_example = [{'role':"X1", 'content': "Y1"}, 
                         {'role':"X2", 'content': "Y2"}, ...]
 
-# A function template to process a single turn
-def process_single_turn(turn: str) -> Union[int, float, dict[str, Union[int, float]]]:
+# A function template to process a single message
+def process_single_turn(message: str) -> Union[int, float, dict[str, Union[int, float]]]:
     """
-        Process a single conversational turn and return the desired output
+        Process a single conversational message and return the desired output
         
         Args: 
-        turn (str): a single conversational turn as a string
-            CAUTION: You should keep the param name as "turn" 
+        message (str): a single conversational message as a string
+                NOTE: Metrics that take a string as input are valid at the Turn
+                      and Message levels.
         
         Returns:
         an integer (e.g., 2), \
@@ -42,8 +50,8 @@ def process_conversation(conversation:list)-> Union[int, float, dict[str, Union[
         
         Args: 
         conversation (list): an entire conversation as a list
-            CAUTION: You should keep the param name as "conversation" 
-        
+                NOTE: Metrics that take a list as input are valid at the Thread
+                      and Turn levels.
         Returns: 
         an integer, e.g., 2 \
         or a floating point number, e.g., 2.8 \
@@ -99,6 +107,13 @@ def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
 
 
 def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> dict:
+    '''
+    Counts how many times a ToolCall was used to call functions, with metric names
+    equal to function names. 
+
+    NOTE: This function provides an example of how to go from higher levels of granularity
+    (e.g., Thread) to lower levels of granularity (e.g., ToolCall).
+    '''
     # Extract ToolCall objects based on the type of object being passed in
     toolcalls = []
     if isinstance(object, (Thread, Turn)):
@@ -119,6 +134,10 @@ def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> 
     return toolcall_counts
 
 def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
+    '''
+    Extracts the values of all numeric ToolCall parameter inputs, with
+    metric_name being the name of the corresponding parameter.
+    '''
     results = []
     toolcall_args = json.loads(toolcall.args)
     for arg_name, arg_value in toolcall_args.items():
