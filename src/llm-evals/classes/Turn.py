@@ -134,12 +134,17 @@ class Turn(BaseModel):
     
     def get_content(self):
         '''
-        Content is a list of dictionaries where each dictionary contains the role and content of messages
-        in the turn
+        Content is a list of dictionaries where each dictionary 
+        contains the role and content of messages and tool calls
+        in the turn. Each tool call appears after the message it's
+        associated with.
         '''
         content = []
         for message in self.messages:
             content.append({"role": message.role, "content": message.content})
+            for toolcall in message.toolcalls:
+                content.append(toolcall.get_dict_representation())
+ 
         return content
 
     def format_input_for_rubric(self):
@@ -153,4 +158,6 @@ class Turn(BaseModel):
         # output_minus_completion - all turns except the last
         # completion - last turn
         return output, output_minus_completion, completion
+    
+    
 

@@ -188,7 +188,7 @@ def compute_function_metric(
                     )
                 metrics_result = metric_function(content, **metric_kwargs)
         elif input_type is list:
-            #This should apply for the Turn type only
+            #This should apply for the Turn and Thread types only
             if context_only:
                 # use the list of adjacent previous entries with roles different to yours
                 metrics_result = metric_function(

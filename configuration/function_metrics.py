@@ -131,24 +131,26 @@ def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
 
     return results
 
-def count_role_entries_in_turn(
-    turn: list,
+def count_role_entries(
+    turn_or_thread: list,
 ) -> list:
     """
-    Calculate the number of conversational turns for each role. Excludes the system prompt.
+    Calculate the number of conversational actions for each role. Excludes the system prompt.
+    An action is counted even if the content for that action was blank (e.g., a blank message
+    associated with a tool call).
 
     Args:
-        conversation (List[Dict[str, Any]]): A list of dictionaries representing conversational turns.
-                                             Each dictionary should have a 'role' key indicating the role of the participant.
+        turn_or_thread (list): List of dictionaries with the role and content from each 
+                                message in the turn or thread.
 
     Returns:
         List[Dict[str, Any]]: A list of dicts with role/value entries indicating the number of turns for each role
     """
-    roles = set([i["role"] for i in turn])
+    roles = set([i["role"] for i in turn_or_thread])
     results = []
     for role in roles:
         # get just the turns for the role
-        turns = [i for i in turn if i["role"] == role]
+        turns = [i for i in turn_or_thread if i["role"] == role]
         # get the number of turns
         results.append({"name": role, "value": len(turns)})
     return results

@@ -171,6 +171,12 @@ example-langgraph-no-rubrics:
 
       - name: count_numeric_tool_call_params_by_name
         metric_level: ToolCall
+      
+      - name: count_role_entries_in_turn
+        metric_level: Thread
+      
+      - name: count_role_entries_in_turn
+        metric_level: Turn
 
 
 

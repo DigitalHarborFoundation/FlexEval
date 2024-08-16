@@ -24,12 +24,12 @@ class Thread(BaseModel):
     
     def get_content(self):
         '''
-        Content is a list of dictionaries where each dictionary contains the role and content of messages
-        in the thread
+        Content is a list of dictionaries where each dictionary contains the 
+        role and content of messages and tool calls in the thread
         '''
         content = []
-        for message in self.messages:
-            content.append({"role": message.role, "content": message.content})
+        for turn in self.turns:
+            content = content + turn.get_content()
         return content
 
     # def get_turn_components(self):
