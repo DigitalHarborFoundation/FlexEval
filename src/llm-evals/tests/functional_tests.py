@@ -599,7 +599,43 @@ class TestListStringInputFunctionMetrics(unittest.TestCase):
                 
                 self.assertAlmostEqual(comparison_dict[comparison_id], metric_value,
                                        msg="Metric value for reading ease not equal to expected value")
+                
+    def test_count_role_entries(self):
+        thread_and_turn_id_to_role_entries = {1: {1 : {'user' : 1}, 2: {'assistant': 2}, 3: {'user': 1}},
+                                              2: {4 : {'user' : 1}, 5: {'assistant': 2}, 6: {'user': 1}},
+                                              3: {7 : {'user' : 1}, 8: {'assistant': 2}, 9: {'user': 2}, 10: {'assistant': 1}}}
+        thread_id_to_role_entries = {}
+        for thread_id, turn_to_role_entries in thread_and_turn_id_to_role_entries.items():
+            cur_role_entries = {}
+            for turn, role_entries in turn_to_role_entries.items():
+                for role, count in role_entries.items():
+                    if role not in cur_role_entries:
+                        cur_role_entries[role] = 0
+                    cur_role_entries[role] += count
+            thread_id_to_role_entries[thread_id] = cur_role_entries
 
+        with sqlite3.connect(self.database_path) as connection:
+            role_entry_metrics = connection.execute(
+                    """
+                    SELECT 
+                        thread_id, turn_id, metric_level, metric_name, metric_value
+                    FROM 
+                        metric
+                    WHERE 1=1
+                        AND thread_id = 1
+                        AND evaluation_name = 'count_role_entries'
+                    """         
+                ).fetchall()
+            for result in role_entry_metrics:
+                thread_id, turn_id, metric_level, metric_name, metric_value = result
+                if metric_level == 'Thread':
+                    self.assertEqual(thread_id_to_role_entries[thread_id][metric_name],
+                                     metric_value,
+                                     f"Wrong count for role {metric_name} in thread {thread_id}")
+                elif metric_level == 'Turn':
+                    self.assertEqual(thread_and_turn_id_to_role_entries[thread_id][turn_id][metric_name],
+                                     metric_value,
+                                     f"Wrong count for role {metric_name} in turn {turn_id}")
 # other tests
 
 ## basic - are the table rows being populated
