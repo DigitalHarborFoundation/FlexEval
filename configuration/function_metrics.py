@@ -15,8 +15,8 @@ from classes.ToolCall import ToolCall
 from typing import Union
 
 # Example input types:
-# - a single turn as a string
-# - an entire conversation as a list of dictionaries
+# - a single message as a string
+# - an entire conversation (i.e., Thread) as a list of dictionaries
 # - an object of type Thread, Turn, Message, or ToolCall.
 #   These objects have the same fields as in the correspondingly
 #   named databases, and can access objects at higher or lower
@@ -27,7 +27,7 @@ conversation_example = [{'role':"X1", 'content': "Y1"},
                         {'role':"X2", 'content': "Y2"}, ...]
 
 # A function template to process a single message
-def process_single_turn(message: str) -> Union[int, float, dict[str, Union[int, float]]]:
+def process_single_message(message: str) -> Union[int, float, dict[str, Union[int, float]]]:
     """
         Process a single conversational message and return the desired output
         
