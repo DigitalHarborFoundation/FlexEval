@@ -55,7 +55,6 @@ $${\color{red}\textsf{WARNING: FlexEval is under early and active development. T
 
 $${\color{red}\textsf{Expect breaking changes. We will establish a versioning system soon.}}$$
 
-
 ## Running
 
 Prior to running, the tool needs to be configured to meet your needs. This includes telling it how to connect to the LLM you want to test, and telling it which tests you want to run.
@@ -68,8 +67,8 @@ Step 1: Environment file
 
 - Copy `.env-example` to make a new file called `.env`.
 
-Step 2: Install the virtual envirionment. Run: 
-    
+Step 2: Install the virtual envirionment. Run:
+
     python -m venv venv
     source venv/bin/activate
 
@@ -85,7 +84,7 @@ Step 4a (optional):
 
 Step 4b (optional):
 
-- Edit `configuration/rubric_metrics.yaml` as desired. Rubrics in this file will be used to evaluate conversations and completions using COT prompting and will report a numeric score (e.g., 0 or 1) or a choice string (e.g.,"A", "B", "C", or "D"). Check the `The model-graded eval template` section in [Existing templates for evals](https://github.com/openai/evals/blob/d3dc89042ddee879a68a326fdb37716ee518640c/docs/eval-templates.md) for some rubric writing guidelines and templates.
+- Edit `configuration/rubric_metrics.yaml` as desired. Rubrics in this file will be used to evaluate conversations and completions using "chain-of-thoughts then classify" (COT classify) and will report a numeric score (e.g., 0 or 1) mapped to a choice string (e.g.,"Yes", "No") from the classification results. For more information on how to write and use rubrics in FlexEval, check `doc/rubric_metric_guidelines.md` in this repo.
 
 Step 4c (optional):
 
@@ -135,4 +134,3 @@ This tool is intended to be somewhat "batteries included". It supports the follo
 - a set of included metrics calculated as Python files
 
 This list will grow as we add functionality to meet LEVI team needs.
-
