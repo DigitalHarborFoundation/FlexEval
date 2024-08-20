@@ -206,6 +206,26 @@ config_failure_05:
       - name: no_such_rubric # rubric name does not exist
 
 
+config_failure_06:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: count_numeric_tool_call_params_by_name 
+        metric_level: Thread # function metric doesn't have a valid input type for this level
+
+config_failure_07:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: count_tool_calls_by_name 
+        metric_level: Thread 
+        context_only: true # function metric does not take a string or list, so context_only must be false
+
+
 test_default_kwargs_01:
   data:
     - tests/data/simple.jsonl 
@@ -218,4 +238,53 @@ test_default_kwargs_01:
         kwargs:  # Allows kwargs with any names so okay
           any_kwarg_name_okay: 13
 
+test_basic_function_metrics_01:
+  data:
+    - tests/data/simple.jsonl 
+
+  metrics:
+    function:
+      - name: is_role
+        metric_level: Turn
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: assistant
+        
+
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: user
+
+test_list_string_function_metrics:
+  data:
+    - tests/data/multiturn.jsonl 
+
+  metrics:
+    function:
+      - name: count_role_entries
+        metric_level: Turn
+      
+      - name: count_role_entries
+        metric_level: Thread
+      
+      - name: flesch_reading_ease
+        metric_level: Message
+      
+      - name: flesch_reading_ease
+        metric_level: Turn
+        context_only: false
+
+
+      - name: flesch_reading_ease
+        metric_level: Message
+        context_only: true
+      
+      - name: flesch_reading_ease
+        metric_level: Turn
+        context_only: true
 
