@@ -55,13 +55,13 @@ test_suite_04:
             metric_name: user
             metric_min_value: 1
 
-  completion_llm:
-    function_name: open_ai_completion
-    include_system_prompt: False
-    kwargs:
-      model_name: gpt-3.5-turbo
-      api_key_name: OPENAI_API_KEY
-      n: 2
+  # completion_llm:
+  #   function_name: open_ai_completion
+  #   include_system_prompt: False
+  #   kwargs:
+  #     model_name: gpt-3.5-turbo
+  #     api_key_name: OPENAI_API_KEY
+  #     n: 2
 
   grader_llm:
     function_name: open_ai_completion
@@ -83,7 +83,7 @@ test_plots_01:
         kwargs:
           role: user
 
-      - name: count_tool_calls
+      - name: count_tool_calls_by_name
         depends_on:
           - name: is_role
             type: function
@@ -106,7 +106,7 @@ test_plots_02:
         kwargs:
           role: user
 
-      - name: count_tool_calls
+      - name: count_tool_calls_by_name
         depends_on:
           - name: is_role
             type: function
@@ -154,7 +154,7 @@ config_failure_01:
         kwargs:
           role: user
 
-      - name: count_tool_calls
+      - name: count_tool_calls_by_name
         depends_on:
           #This can't disimbiguate between the is_role types
           #because metric_name isn't created till the end
@@ -173,7 +173,7 @@ config_failure_02:
         kwargs:
           role: user
 
-      - name: count_tool_calls
+      - name: count_tool_calls_by_name
         depends_on:
           #here you have a depends_on name that doesn't match anything
           - name: is_role2
@@ -208,7 +208,7 @@ config_failure_05:
 
 test_default_kwargs_01:
   data:
-    - tests/data/plot-convos.jsonl
+    - tests/data/simple.jsonl 
 
   metrics:
     function:

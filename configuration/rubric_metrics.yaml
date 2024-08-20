@@ -72,7 +72,7 @@ is_request_for_plot:
       
       [BEGIN DATA]
       ***
-      {context}
+      {turn}
 
       ***
       [END DATA]
@@ -93,7 +93,6 @@ is_request_for_plot:
     "YES": 1
     "NO": 0
 
-  
 is_student_acting_as_tutor:
   notes: |-
     we want this to run at the END of the conversation
@@ -124,7 +123,7 @@ is_student_acting_as_tutor:
     __start rubric__
     If the student (user) ever changes roles and starts acting as if it were the tutor, print "YES".
     If the student (user) never changes roles and start acting as if it were the tutor, print "NO".
-    
+
     Note:
     If a student turn is ambiguous, you can assume they are not acting as the tutor.
     __end rubric__
@@ -168,7 +167,7 @@ is_pedagogically_appropriate_plot:
     __start rubric__
     If the student (user) ever changes roles and starts acting as if it were the tutor, print "YES".
     If the student (user) never changes roles and start acting as if it were the tutor, print "NO".
-    
+
     Note:
     If a student turn is ambiguous, you can assume they are not acting as the tutor.
     __end rubric__
@@ -184,5 +183,3 @@ is_pedagogically_appropriate_plot:
     "C": .5
     "D": .25
     "F": 0
-
-

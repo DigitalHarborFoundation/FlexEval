@@ -20,25 +20,39 @@ def load_jsonl(dataset, filename):
         for thread in contents.splitlines():
             thread_object = Thread.create(evalsetrun=dataset.evalsetrun, dataset=dataset)
 
+            # Context 
+            context = []
             # Get system prompt used in the thread - assuming only 1
             system_prompt = [
                 i["content"]
                 for i in json.loads(thread)["input"]
                 if i["role"] == "system"
             ][0]
+
+            # Add the system prompt as context
+            context.append({'role' : 'system', 'content' : system_prompt})
+
             # Create messages
             for message in json.loads(thread)["input"]:
-
-                Message.create(
-                    evalsetrun=dataset.evalsetrun,
-                    dataset=dataset,
-                    thread=thread_object,
-                    role=message.get("role", None),
-                    content=message.get("content", None),
-                    metadata=message.get("metadata", None),
-                    is_flexeval_completion=False,
-                    system_prompt=system_prompt,
-                )
+                role = message.get("role", None)
+                if role != "system":
+                    # System message shouldn't be added as a separate message
+                    system_prompt_for_this_message = ""
+                    if role != 'user':
+                        system_prompt_for_this_message = system_prompt
+                    Message.create(
+                        evalsetrun=dataset.evalsetrun,
+                        dataset=dataset,
+                        thread=thread_object,
+                        role=role,
+                        content=message.get("content", None),
+                        context=json.dumps(context),
+                        metadata=message.get("metadata", None),
+                        is_flexeval_completion=False,
+                        system_prompt=system_prompt_for_this_message,
+                    )
+                    # Update context
+                    context.append({'role' : role, 'content' : message.get("content", None)})
 
             add_turns(thread_object)
 

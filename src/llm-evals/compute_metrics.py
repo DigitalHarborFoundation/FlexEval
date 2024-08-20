@@ -104,9 +104,9 @@ def compute_metric(
     evaluation_name: str,
     evaluation_type: str,
     metric_level: str, 
-    context_only: bool,
-    last_instance_only: bool,
     kwargs: dict,
+    context_only: bool = None,
+    last_instance_only: bool = None,
     depends_on: list = None,
     id: int = None,
 ) -> list:
@@ -126,8 +126,6 @@ def compute_metric(
             rubric_name=evaluation_name,
             metric_kwargs=kwargs,
             metric_level=metric_level,
-            context_only=context_only,
-            last_turn_only=last_instance_only,
             object=object,
             depends_on=depends_on,
             id=id,
@@ -169,8 +167,38 @@ def compute_function_metric(
         input_type = next(
             iter(inspect.signature(metric_function).parameters.values())
         ).annotation
+        # Check whether the metric_function has a string or a list input as the first thing.
+        # If so, need to extract the content first.
+        if input_type is str:
+            # This should apply only for Message or Turn types. For Turns,
+            # concatenates all together
+            # just pass in the content
+            if context_only:
+                # previous turn only
+                # join together the string contents of the previous turn
+                metrics_result = metric_function(object.context, **metric_kwargs)
+            else:
+                # current turn only
+                content = object.get_content()   
+                if isinstance(content, list):
+                    content = "\n".join(
+                        [item.get("content", "") for item in content]
+                    )
+                metrics_result = metric_function(content, **metric_kwargs)
+        elif input_type is list:
+            #This should apply for the Turn type only
+            if context_only:
+                # use the list of adjacent previous entries with roles different to yours
+                metrics_result = metric_function(
+                   object.get_context(), **metric_kwargs
+                )
+            else:
+                # this is on a single turn - pass in the parsed list
+                metrics_result = metric_function(object.get_content(), **metric_kwargs)
+        else:
+            # Must be a Thread/Turn/Message/ToolCall [verified in validation of setup]
+            metrics_result = metric_function(object, **metric_kwargs)
 
-        metrics_result = metric_function(object, **metric_kwargs)
         # # TODO - this logic needs testing!!!
         # # figure out how many previous adjacent turns have a role DIFFERENT than yours
         # # together, they are 'context'
@@ -283,15 +311,9 @@ def compute_rubric_metric(
     metric_kwargs: dict,
     object: Union[Thread, Turn, Message],
     metric_level: str,
-    context_only: bool,
-    last_turn_only: bool,
     depends_on: list,
     id: int,
 ):
-
-    # exit unless the criteria are met
-    if last_turn_only and not (object.is_completion or object.is_final_turn_in_input):
-        return []
 
     # load metrics
     rubrics = json.loads(object.evalsetrun.rubrics)
@@ -302,48 +324,39 @@ def compute_rubric_metric(
     prompt = rubrics.get(rubric_name).get("prompt", "")
 
     # format input for rubric
-    conversation, context, completion = object.format_input_for_rubric()
-
-    # The prompts will have three types
-    # {context} -- everything BEFORE the last entry
-    # {completion} -- new completion or last entry
-    # {turn} -- just the current turn -- cannot be used with the other two
-
-    # TODO - think through this and make sure this is the logic we want
-    if "{turn}" in prompt:
-        # TODO - maybe make this JUST the previous turn???
-        if context_only:
-            populated_prompt = prompt.format(context)
-        else:
-            # single turn - do this for every turn
+    conversation, context, turn = object.format_input_for_rubric()
+    # conversation : all turns; context: all turns without the last entry; completion: only the last entry
+    # use three keywords: 
+    # #{conversation} -- The whole conversation 
+    # #{context} -- The previous turns without the current entry 
+    # #{turn} -- Only the current turn / message / toolcall depending on the metric_level 
+    # for the future: add {compeltion} under the condition of do_completion == True
+    
+    # Add verfication steps before populating the rubric 
+    # case 1: {conversation} and {context} should not go together 
+    # case 2: {completion} and {turn} should not go together
+    # case 3: if there is a {completion}, do_completion should be true
+    
+    if "{conversation}" in prompt and "{context}" in prompt:
+        raise Exception("Your rubric should not have both {conversation} and {context}. Please check the README file for more information about how to write FlexEval rubrics.")
+    
+    if "{completion}" in prompt and "{turn}" in prompt:
+        raise Exception("Your rubric should not have both {turn} and {completion}. Please check the README file for more information about how to write FlexEval rubrics.")
+    
+    if "{completion}" in prompt and not object.evalsetrun.do_completion:
+        raise Exception("Your rubric has {completion}, but in your test specification for this rubric evaluation, do_completion is not True. Please check the README file for more information about how to write FlexEval rubrics.")
+      
+    populated_prompt = prompt.format(
+            conversation=conversation,
+            context=context,
+            turn=turn
+        )
+    # with do_completion == True, only the completion is evaluated with or without the context. 
+    if object.evalsetrun.do_completion and object.is_completion:
             populated_prompt = prompt.format(
-                turn=completion
-            )  # just use the entire conversation
-    elif "{completion}" in prompt and "{context}" in prompt:
-        if context_only:
-            raise Exception(
-                f"You set `context_only` for the rubric `{rubric_name}`, but that rubric has both {{context}} and {{completion}} entries. This does not make sense!"
-            )
-        # if 'do_completion', only evaluate completions
-        if object.evalsetrun.do_completion and object.is_completion:
-            populated_prompt = prompt.format(context=context, completion=completion)
-        # TODO - if not do_completion, evaluate ???????every turn?????
-        elif not object.evalsetrun.do_completion:
-            populated_prompt = prompt.format(context=context, completion=completion)
-        else:
-            return []
-    elif "{conversation}" in prompt:
-        # evaluate the full conversation UP TO the existing plot
-        # it's a completion, OR we aren't doing completions so we just do this on the last turn
-        if object.evalsetrun.do_completion and object.is_completion:
-            populated_prompt = prompt.format(conversation=conversation)
-        elif not object.evalsetrun.do_completion:
-            populated_prompt = prompt.format(conversation=conversation)
-        else:
-            return []
-    else:
-        return []
-
+            completion=turn  
+        )
+    
     choice_scores = rubrics.get(rubric_name).get("choice_scores")
     # get rubric grader
     grader_completion_function = json.loads(object.evalsetrun.grader_llm)
@@ -406,8 +419,6 @@ Reasoning:""".strip()
             "depends_on": depends_on,
             "source": populated_prompt,
             "metric_level": metric_level,
-            "context_only": context_only,
-            "last_turn_only": last_turn_only,
             "metric_value": choice_scores[score],
             "rubric_prompt": populated_prompt,
             "rubric_completion": completion["choices"][0]["message"]["content"],

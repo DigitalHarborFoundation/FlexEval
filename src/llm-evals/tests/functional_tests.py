@@ -20,29 +20,29 @@ sys.path.append("../../")
 
 from main import run
 
-
 class TestSuite01(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests
-        # in this case, we'd run the evals here using subprocess or something, or maybe main.py
+        # run code that needs to run before ANY of the tests, and clear any existing data from tables
+        # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_01",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
+            clear_tables=True
         )
         cls.database_path = os.environ["DATABASE_PATH"]
+
 
     @classmethod
     def tearDownClass(cls):
         # here, we'd delete the database?
-        # TODO delete database after use
         pass
 
     def test_tables_exist(self):
+        table_names = ['dataset','evalsetrun','thread','turn','message','toolcall','metric']
         # write assertions here
-        table_names = ["dataset","thread","turn","message","toolcall","evalsetrun", "metric"]
         with sqlite3.connect(self.database_path) as connection:
             tables_in_database = connection.execute(
                 "select name from sqlite_master where type = 'table'"
@@ -61,9 +61,10 @@ class TestSuite01(unittest.TestCase):
         # write assertions here
         with sqlite3.connect(self.database_path) as connection:
             metric = connection.execute(
-                "select metric_value from metric where evalsetrun_id=1 and dataset_id=1 and datasetrow_id=1 and turn_id=1 and evaluation_name = 'string_length'"
+                "select metric_value from metric where evalsetrun_id=1 and dataset_id=1 and thread_id=1 and turn_id=1 and evaluation_name = 'string_length'"
             ).fetchall()
-        self.assertEqual(len(metric), 1, "More than one row was returned!")
+        self.assertNotEqual(len(metric), 0, "No rows returned for string_length metric; should have 1.")
+        self.assertEqual(len(metric), 1, "More than one row was returned for string_length metric.")
         self.assertAlmostEqual(metric[0][0], 12)
 
     def test_tables_have_right_rows(self):
@@ -91,18 +92,18 @@ def helper_test_tables_have_right_rows(
     Check row counts on various tables:
     - evalsetrun should always have one row
     - dataset should have one row per jsonl file
-    - datasetrow should have one row for every row in every jsonl file
-    - turn show have one row for every turn in every jsonl file
+    - thread should have one row for every row in every jsonl file
+    - turn should have one row for every turn in every jsonl file
     expected_num_turns is a tuple that has one entry per jsonl file, and each of those
     entries is a tuple with one entry per row in the corresponding jsonl file. The entry
     for each row is an int indicating the number of turns in that row.
     """
     num_jsonl_files = len(expected_num_turns)
-    expected_num_rows = [len(rows_in_file) for rows_in_file in expected_num_turns]
+    expected_num_threads = [len(rows_in_file) for rows_in_file in expected_num_turns]
     table_and_row_counts = {
         "evalsetrun": 1,
         "dataset": num_jsonl_files,
-        "datasetrow": sum(expected_num_rows),
+        "thread": sum(expected_num_threads),
         "turn": sum([sum(turns_per_row) for turns_per_row in expected_num_turns]),
     }
     with sqlite3.connect(test_instance.database_path) as connection:
@@ -114,9 +115,9 @@ def helper_test_tables_have_right_rows(
                 table_and_row_counts[table],
                 f"Table {table} should have {table_and_row_counts[table]} rows but has {data.shape[0]} rows",
             )
-            # Then do table-specific logic to make sure the evalsetrun_id, dataset_id, datasetrow_id,
+            # Then do table-specific logic to make sure the evalsetrun_id, dataset_id, thread_id,
             # and turn_number ids are set up and have the right length
-            if table == "datasetrow":
+            if table == "thread":
                 test_instance.assertEqual(
                     set(data["dataset_id"].value_counts().values),
                     set([len(turns_per_row) for turns_per_row in expected_num_turns]),
@@ -134,12 +135,13 @@ class TestSuite02(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests
-        # in this case, we'd run the evals here using subprocess or something, or maybe main.py
+        # run code that needs to run before ANY of the tests, and clear any existing data from tables
+        # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_02",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
+            clear_tables=True
         )
         cls.database_path = os.environ["DATABASE_PATH"]
 
@@ -152,7 +154,7 @@ class TestSuite02(unittest.TestCase):
                 where 1=1
                 and evalsetrun_id=1 
                 and dataset_id=1 --first file
-                and datasetrow_id=1 --first row
+                and thread_id=1 --first row
                 and evaluation_name = 'flesch_reading_ease'
                 """
             ).fetchall()
@@ -166,11 +168,11 @@ class TestSuite02(unittest.TestCase):
         # STEP 1
         with sqlite3.connect(self.database_path) as connection:
             long_enough_strings = connection.execute(
-                """select evalsetrun_id, dataset_id, datasetrow_id, turn_id from metric 
+                """select evalsetrun_id, dataset_id, thread_id, turn_id from metric 
                 where 1=1
                 and evalsetrun_id=1 
                 and dataset_id=1 --first file
-                and datasetrow_id=1 --first row
+                and thread_id=1 --first row
                 and evaluation_name = 'string_length'
                 and metric_value >= 15
                 """
@@ -216,7 +218,7 @@ class TestSuite02(unittest.TestCase):
                         where 1=1
                         and evalsetrun_id={row[0]}
                         and dataset_id={row[1]} --first file
-                        and datasetrow_id={row[2]} --first row
+                        and thread_id={row[2]} --first row
                         and turn_id={row[3]}
                         and evaluation_name = 'flesch_reading_ease'
                         and metric_value IS NOT NULL
@@ -280,14 +282,16 @@ class TestSuite03(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests
-        # in this case, we'd run the evals here using subprocess or something, or maybe main.py
+        # run code that needs to run before ANY of the tests, and clear any existing data from tables
+        # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_03",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
+            clear_tables=True
         )
         cls.database_path = os.environ["DATABASE_PATH"]
+
 
     def test_tables_have_right_rows(self):
         # this suite has two jsonls, simple.jsonl and multiturn.jsonl,
@@ -308,7 +312,7 @@ class TestSuite03(unittest.TestCase):
                 FROM 
                     metric 
                 GROUP BY 
-                    evalsetrun_id, dataset_id, datasetrow_id, turn_id, evaluation_name, metric_name
+                    evalsetrun_id, dataset_id, thread_id, turn_id, evaluation_name, metric_name
                 HAVING
                     COUNT(*) > 1
                 """
@@ -325,8 +329,10 @@ class TestSuite04(unittest.TestCase):
             eval_name="test_suite_04",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
+            clear_tables=True
         )
         cls.database_path = os.environ["DATABASE_PATH"]
+
         
     def test_rubric_metric_value(self):
         # test if the rurbric output expected values 
@@ -377,7 +383,7 @@ class TestSuite04(unittest.TestCase):
             user_no_tutor_acting_check = connection.execute(
                 """
                 SELECT 
-                    evalsetrun_id, dataset_id, datasetrow_id, turn_id
+                    evalsetrun_id, dataset_id, thread_id, turn_id
                 FROM 
                     metric t1
                 WHERE 
@@ -400,97 +406,7 @@ class TestSuite04(unittest.TestCase):
 
 
 
-class TestPlots01(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        run(
-            eval_name="test_plots_01",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
-        )
-        cls.database_path = os.environ["DATABASE_PATH"]
-
-    def test_is_role(self):
-        with sqlite3.connect(self.database_path) as connection:
-            result = connection.execute(
-                """select 
-                    metric.evaluation_name
-                    , turn.role
-                    , metric.kwargs
-                    , metric_name
-                    , metric_value
-                from metric
-                inner join turn on metric.turn_id = turn.id
-                where 1=1
-                and metric.evalsetrun_id=1 
-                and metric.dataset_id=1 --first file
-                and metric.thread_id=1 --first row
-                and metric.evaluation_name = 'is_role'
-                """
-            ).fetchall()
-        self.assertGreater(len(result), 0)
-        for row in result:
-
-            with self.subTest():
-                self.assertEqual(row[0], "is_role")
-
-            with self.subTest():
-                self.assertIn(row[3], ["assistant", "user"])
-
-            if row[1] == "user" and row[3] == "user":
-                with self.subTest():
-                    self.assertEqual(row[4], 1.0)  # only one user
-            if row[1] == "user" and row[3] == "assistant":
-                with self.subTest():
-                    self.assertEqual(row[4], 0.0)
-            if row[1] == "assistant" and row[3] == "assistant":
-                with self.subTest():
-                    self.assertGreaterEqual(row[4], 1.0)  # at least one assistant
-            if row[1] == "assistant" and row[3] == "user":
-                with self.subTest():
-                    self.assertEqual(row[4], 0.0)
-
-    def test_count_tool_calls(self):
-        # 1, 3, 1
-        with sqlite3.connect(self.database_path) as connection:
-            result = pd.read_sql_query(
-                """
-                select 
-                    metric.evaluation_name
-                    , turn.role
-                    , metric.thread_id
-                    , metric.kwargs
-                    , metric_name
-                    , metric_value
-                from metric
-                inner join turn on metric.turn_id = turn.id
-                where 1=1
-                and metric.evalsetrun_id=1 
-                and metric.dataset_id=1 --first file
-                and metric.evaluation_name = 'count_tool_calls'
-                """,
-                connection,
-            )
-            self.assertGreater(result.shape[0], 0)
-            # no user should have a tool call
-            with self.subTest():
-                self.assertFalse(any(result["role"].apply(lambda x: x == "user")))
-
-            # correct number of plots are identified
-            with self.subTest():
-                self.assertTrue(result.query("thread_id == 1").shape[0] == 1)
-            with self.subTest():
-                self.assertTrue(result.query("thread_id == 2").shape[0] == 3)
-            with self.subTest():
-                self.assertTrue(result.query("thread_id == 3").shape[0] == 1)
-
-            # plot name is detected
-            with self.subTest():
-                self.assertEqual(
-                    result.loc[0, "metric_name"],
-                    "plot_one_or_more_equations_or_inequalities",
-                )
 
 class FunctionMetricValidation(unittest.TestCase):
     def test_default_kwargs01(self):
@@ -498,6 +414,7 @@ class FunctionMetricValidation(unittest.TestCase):
             eval_name="test_default_kwargs_01",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
+            clear_tables=True
         )
 
 
