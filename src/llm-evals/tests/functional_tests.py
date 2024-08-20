@@ -20,6 +20,7 @@ sys.path.append("../../")
 
 from main import run
 
+
 class TestSuite01(unittest.TestCase):
 
     @classmethod
@@ -30,10 +31,9 @@ class TestSuite01(unittest.TestCase):
             eval_name="test_suite_01",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
-            clear_tables=True
+            clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
-
 
     @classmethod
     def tearDownClass(cls):
@@ -41,7 +41,15 @@ class TestSuite01(unittest.TestCase):
         pass
 
     def test_tables_exist(self):
-        table_names = ['dataset','evalsetrun','thread','turn','message','toolcall','metric']
+        table_names = [
+            "dataset",
+            "evalsetrun",
+            "thread",
+            "turn",
+            "message",
+            "toolcall",
+            "metric",
+        ]
         # write assertions here
         with sqlite3.connect(self.database_path) as connection:
             tables_in_database = connection.execute(
@@ -63,8 +71,12 @@ class TestSuite01(unittest.TestCase):
             metric = connection.execute(
                 "select metric_value from metric where evalsetrun_id=1 and dataset_id=1 and thread_id=1 and turn_id=1 and evaluation_name = 'string_length'"
             ).fetchall()
-        self.assertNotEqual(len(metric), 0, "No rows returned for string_length metric; should have 1.")
-        self.assertEqual(len(metric), 1, "More than one row was returned for string_length metric.")
+        self.assertNotEqual(
+            len(metric), 0, "No rows returned for string_length metric; should have 1."
+        )
+        self.assertEqual(
+            len(metric), 1, "More than one row was returned for string_length metric."
+        )
         self.assertAlmostEqual(metric[0][0], 12)
 
     def test_tables_have_right_rows(self):
@@ -141,7 +153,7 @@ class TestSuite02(unittest.TestCase):
             eval_name="test_suite_02",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
-            clear_tables=True
+            clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
 
@@ -226,7 +238,7 @@ class TestSuite02(unittest.TestCase):
                     ).fetchall()
                     # there's exactly ONE row for each turn that has long enough string length
                     self.assertEqual(len(reading_ease), 0)
-                    
+
     def test_multirow_dependency(self):
         # test for EVERY turn where the string_length is >= 15, \
         # the same turn ALSO has a flesch_reading_ease entry
@@ -249,10 +261,13 @@ class TestSuite02(unittest.TestCase):
                         AND t2.turn_id = t1.turn_id
                         AND t2.evaluation_name = 'flesch_reading_ease'
                     ); 
-                """         
+                """
             ).fetchall()
-        self.assertEqual(len(long_string_no_readingease), 0, "For some rows with string length >= 15, no flesch_reading_ease score is reported")
-
+        self.assertEqual(
+            len(long_string_no_readingease),
+            0,
+            "For some rows with string length >= 15, no flesch_reading_ease score is reported",
+        )
 
     def test_type_contradiction(self):
         # test: everything that has evaluation_type=function has null for EVERY column that starts with 'rubric'
@@ -273,10 +288,15 @@ class TestSuite02(unittest.TestCase):
                         OR rubric_completion_tokens IS NOT NULL
                         OR rubric_score IS NOT NULL
                         )
-                """         
+                """
             ).fetchall()
-            
-        self.assertEqual(len(function_type), 0, "Contradiction: function type rows with rubric-associated values")
+
+        self.assertEqual(
+            len(function_type),
+            0,
+            "Contradiction: function type rows with rubric-associated values",
+        )
+
 
 class TestSuite03(unittest.TestCase):
 
@@ -288,10 +308,9 @@ class TestSuite03(unittest.TestCase):
             eval_name="test_suite_03",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
-            clear_tables=True
+            clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
-
 
     def test_tables_have_right_rows(self):
         # this suite has two jsonls, simple.jsonl and multiturn.jsonl,
@@ -302,7 +321,7 @@ class TestSuite03(unittest.TestCase):
         helper_test_tables_have_right_rows(self, ((3, 3), (3, 3, 4)))
 
     def test_one_row_per_metric_without_dependency(self):
-        # test for function_metric with no dependency, 
+        # test for function_metric with no dependency,
         # every (jsonl/row/turn/metric) combo should get just one row in Metrics
         with sqlite3.connect(self.database_path) as connection:
             duplicated_metric = connection.execute(
@@ -317,10 +336,11 @@ class TestSuite03(unittest.TestCase):
                     COUNT(*) > 1
                 """
             ).fetchall()
-        self.assertEqual(len(duplicated_metric), 0, "Duplicated rows!") 
+        self.assertEqual(len(duplicated_metric), 0, "Duplicated rows!")
+
 
 class TestSuite04(unittest.TestCase):
-    # rubric associated tests 
+    # rubric associated tests
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests
@@ -329,13 +349,12 @@ class TestSuite04(unittest.TestCase):
             eval_name="test_suite_04",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
-            clear_tables=True
+            clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
 
-        
     def test_rubric_metric_value(self):
-        # test if the rurbric output expected values 
+        # test if the rurbric output expected values
         with sqlite3.connect(self.database_path) as connection:
             rubric_metric = connection.execute(
                 """
@@ -350,7 +369,11 @@ class TestSuite04(unittest.TestCase):
         expected_values = [0.0, 1.0]
         for row in rubric_metric:
             with self.subTest():
-                self.assertIn(row[1], expected_values, f"Output value is not expected for row {row[0]}")
+                self.assertIn(
+                    row[1],
+                    expected_values,
+                    f"Output value is not expected for row {row[0]}",
+                )
 
     def test_rubric_not_null(self):
         # test: every row with evaluation_type=rubric should not contain null for rubric-related columns
@@ -371,10 +394,14 @@ class TestSuite04(unittest.TestCase):
                         OR rubric_completion_tokens IS NULL
                         OR rubric_score IS NULL
                         )
-                """         
+                """
             ).fetchall()
-            
-        self.assertEqual(len(function_type), 0, "Null values found in rows where type = rubric")
+
+        self.assertEqual(
+            len(function_type), 0, "Null values found in rows where type = rubric"
+        )
+
+    # %%
 
     def test_rubric_dependency(self):
         # test: For EVERY turn where the role is user, \
@@ -400,12 +427,13 @@ class TestSuite04(unittest.TestCase):
                         AND t2.turn_id = t1.turn_id
                         AND t2.evaluation_name = 'is_student_acting_as_tutor'
                     ); 
-                """         
+                """
             ).fetchall()
-        self.assertEqual(len(user_no_tutor_acting_check), 0, "For some rows where the role is user, no is_student_acting_as_tutor is reported")
-
-
-
+        self.assertEqual(
+            len(user_no_tutor_acting_check),
+            0,
+            "For some rows where the role is user, no is_student_acting_as_tutor is reported",
+        )
 
 
 class FunctionMetricValidation(unittest.TestCase):
@@ -414,7 +442,7 @@ class FunctionMetricValidation(unittest.TestCase):
             eval_name="test_default_kwargs_01",
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
-            clear_tables=True
+            clear_tables=True,
         )
 
 
@@ -451,7 +479,7 @@ class ConfigFailures(unittest.TestCase):
             config_path="config-tests.yaml",
             evals_path="tests/evals.yaml",
         )
-    
+
     @unittest.expectedFailure
     def test_config_failure_05(cls):
         run(

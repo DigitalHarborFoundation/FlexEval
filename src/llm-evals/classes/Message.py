@@ -17,7 +17,6 @@ import helpers
 from configuration import completion_functions
 
 
-
 class Message(BaseModel):
     """Holds a single component of a single turn
     Corresponds to one output of a node in LangGraph
@@ -79,7 +78,9 @@ class Message(BaseModel):
             if hasattr(completion_functions, completion_fn_name) and hasattr(
                 completion_functions, completion_fn_name
             ):
-                completion_function = getattr(completion_functions, completion_fn_name, None)
+                completion_function = getattr(
+                    completion_functions, completion_fn_name, None
+                )
                 completion = completion_function(
                     conversation_history=self.get_formatted_prompt(
                         include_system_prompt=False
@@ -153,7 +154,6 @@ class Message(BaseModel):
         # output_minus_completion - all turns except the last
         # completion - last turn
         return output, output_minus_completion, completion
-    
+
     def get_content(self):
         return self.content
-
