@@ -138,8 +138,9 @@ class Message(BaseModel):
         context = json.loads(self.context)
         if len(context) > 0:
             formatted_prompt += context  # TODO - we might just want a subset of this
-        for t in json.loads(self.turn):
-            formatted_prompt.append({"role": t["role"], "content": t["content"]})
+        formatted_prompt.append({"role": self.role, "content": self.content})
+        # for t in json.loads(self.turn):
+        #     formatted_prompt.append({"role": t["role"], "content": t["content"]})
         return formatted_prompt
 
     def format_input_for_rubric(self):
