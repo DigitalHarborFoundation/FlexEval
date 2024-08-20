@@ -63,6 +63,10 @@ class Message(BaseModel):
     langgraph_message_type = pw.TextField(null=True)
     langgraph_type = pw.TextField(null=True)
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.metrics_to_evaluate = []
+
     def get_completion(self, include_system_prompt=False):
         # only get a completion if this is the final turn - we probably don't want to branch from mid-conversation
         if self.is_final_turn_in_input:

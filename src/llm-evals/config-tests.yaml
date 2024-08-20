@@ -1,9 +1,7 @@
 
 
 # paths are relative to the root of the repo
-function_metrics_path: '../../configuration/function_metrics.py'
 rubric_metrics_path: '../../configuration/rubric_metrics.yaml'
-completion_functions: '../../configuration/completion_functions.py'
 evals_path: tests/evals.yaml
 env_file: .env #in same location as main.py
 logs_path: tests/logs/

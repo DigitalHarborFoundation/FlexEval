@@ -167,8 +167,38 @@ def compute_function_metric(
         input_type = next(
             iter(inspect.signature(metric_function).parameters.values())
         ).annotation
+        # Check whether the metric_function has a string or a list input as the first thing.
+        # If so, need to extract the content first.
+        if input_type is str:
+            # This should apply only for Message or Turn types. For Turns,
+            # concatenates all together
+            # just pass in the content
+            if context_only:
+                # previous turn only
+                # join together the string contents of the previous turn
+                metrics_result = metric_function(object.context, **metric_kwargs)
+            else:
+                # current turn only
+                content = object.get_content()   
+                if isinstance(content, list):
+                    content = "\n".join(
+                        [item.get("content", "") for item in content]
+                    )
+                metrics_result = metric_function(content, **metric_kwargs)
+        elif input_type is list:
+            #This should apply for the Turn type only
+            if context_only:
+                # use the list of adjacent previous entries with roles different to yours
+                metrics_result = metric_function(
+                   object.get_context(), **metric_kwargs
+                )
+            else:
+                # this is on a single turn - pass in the parsed list
+                metrics_result = metric_function(object.get_content(), **metric_kwargs)
+        else:
+            # Must be a Thread/Turn/Message/ToolCall [verified in validation of setup]
+            metrics_result = metric_function(object, **metric_kwargs)
 
-        metrics_result = metric_function(object, **metric_kwargs)
         # # TODO - this logic needs testing!!!
         # # figure out how many previous adjacent turns have a role DIFFERENT than yours
         # # together, they are 'context'
@@ -401,18 +431,36 @@ Reasoning:""".strip()
         }
     return [result]
 
-def add_metrics(iterable_of_objects, metrics_for_level):
-    rubric_count = 0
+def add_all_metrics_to_objects(iterable_of_objects, metrics):
+    '''
+    Adds all metric instances in metrics_for_level to each instance of
+    an evaluable object (e.g., Turn, Thread, Message, or ToolCall) in
+    iterable_of_objects. This addition is done by appending to the 
+    `metrics_to_evaluate` field, which all instances in iterable_of_objects
+    should have.
+
+    :param iterable_of_objects: list of objects that have a metrics_to_evaluate field
+    :param metrics: list of metric instances to add to each object
+    '''
     for object in iterable_of_objects:
-        object.metrics_to_evaluate = []
+        # Field metrics_to_evaluate initialized in constructor
         # metric dependencies happen WITHIN turns, rather than across
         # this means I can associate a sequence of metrics within each turn
         # but then have the turns execute them in parallel
         # each turn will keep track of its own set of metrics
         # Keeping this as a loop to do the rubric_count appropriately
-        for metric_instance in metrics_for_level:
-        #for metric_instance in json.loads(evalsetrun.metrics_graph_ordered_list):
-            object.metrics_to_evaluate.append(metric_instance)
+        object.metrics_to_evaluate = object.metrics_to_evaluate + metrics
+
+def count_rubric_metrics(iterable_of_objects):
+    '''
+    Returns the total number of rubric type metrics in
+    the metrics_to_evaluate field in each object.
+
+    :param iterable_of_objects: list of objects that have a metrics_to_evaluate field
+    '''
+    rubric_count = 0
+    for object in iterable_of_objects:
+        for metric_instance in object.metrics_to_evaluate:
             if metric_instance.get("evaluation_type") == "rubric":
                 rubric_count += 1
     return rubric_count

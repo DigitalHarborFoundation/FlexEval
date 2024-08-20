@@ -24,18 +24,21 @@ import compute_metrics
 # - allow comparison with 'ideal' responses
 
 
-def run(eval_name: str, evals_path: str, config_path: str):
+def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
     """Runs the evaluations.
     We want this to be callable by both the CLI and the webapp
     That means it needs to do argument parsing BEFORE this is called
 
     TODO - for webapp, config should be an argument here ^
+
+    param: clear_tables - if True, deletes any existing data in the output database. Otherwise, appends
     """
     # TODO - make evals.yaml file path configurable
     runner = EvalRunner(
         eval_name=eval_name,
         config_path=config_path,
         evals_path=evals_path,
+        clear_tables=clear_tables
     )
     dotenv.load_dotenv(runner.configuration["env_file"])
 
@@ -63,6 +66,7 @@ def run(eval_name: str, evals_path: str, config_path: str):
             ),
             grader_llm=json.dumps(runner.eval.get("grader_llm", None)),
             rubrics=json.dumps(rubrics),
+            clear_tables=clear_tables
         )
         runner.logger.info(evalsetrun.metrics_graph_ordered_list)
     except Exception as e:
@@ -188,9 +192,7 @@ def run(eval_name: str, evals_path: str, config_path: str):
                 metrics_by_level[metric_level] = []
             metrics_by_level[metric_level].append(metric_instance)
         
-        # TODO: Add evaluating of metrics at other levels besides turn!
         # TODO: if we go back to supporting completions, this will likely need to change
-
         threads_to_evaluate = [thread for thread in evalsetrun.threads]
         messages_to_evaluate = [message for message in evalsetrun.messages]
         toolcalls_to_evaluate = [toolcall for toolcall in evalsetrun.toolcalls]
@@ -200,7 +202,10 @@ def run(eval_name: str, evals_path: str, config_path: str):
                                  'ToolCall': toolcalls_to_evaluate}
 
         for level, object_list in object_lists_by_level.items():
-            rubric_count += compute_metrics.add_metrics(object_list, metrics_by_level.get(level, []))
+            # Add the metrics to objects at this level
+            compute_metrics.add_all_metrics_to_objects(object_list, metrics_by_level.get(level, []))
+            # Update the count of how many rubrics might be run based on rubric evals at this level
+            rubric_count += compute_metrics.count_rubric_metrics(object_list)
 
         runner.logger.info(
             f"Metrics will include up to {rubric_count} rubric evaluations."
