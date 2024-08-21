@@ -2,7 +2,6 @@
 #git+https://github.com/HDFGroup/hdf5.git@hdf5_1_14_3
 #git+https://github.com/openai/evals.git@release/3.0.1
 
-evals==3.0.1
 pyyaml
 python-dotenv
 requests
@@ -19,3 +18,9 @@ peewee
 #for metric dependencies
 networkx
 jsonschema
+
+# Langgraph
+langchain-openai
+langgraph
+langgraph-checkpoint-sqlite
+sympy

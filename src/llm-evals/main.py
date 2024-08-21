@@ -19,7 +19,6 @@ import compute_metrics
 # ToolCall
 # Metric
 
-
 # Features to add:
 # - allow comparison with 'ideal' responses
 
@@ -38,7 +37,7 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
         eval_name=eval_name,
         config_path=config_path,
         evals_path=evals_path,
-        clear_tables=clear_tables
+        clear_tables=clear_tables,
     )
     dotenv.load_dotenv(runner.configuration["env_file"])
 
@@ -65,8 +64,15 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
                 runner.eval.get("completion_llm", {}).get("model_name", None)
             ),
             grader_llm=json.dumps(runner.eval.get("grader_llm", None)),
-            rubrics=json.dumps(rubrics),
-            clear_tables=clear_tables
+            # only save rubrics that will actually be used
+            rubrics=json.dumps(
+                {
+                    i["evaluation_name"]: rubrics[i["evaluation_name"]]
+                    for i in runner.metrics_graph_ordered_list
+                    if i["evaluation_type"] == "rubric"
+                }
+            ),
+            clear_tables=clear_tables,
         )
         runner.logger.info(evalsetrun.metrics_graph_ordered_list)
     except Exception as e:
@@ -171,7 +177,9 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
         turns_to_evaluate = []
         for turn in evalsetrun.turns:
             # only do completions
-            if evalsetrun.do_completion and turn.is_completion: #NOTE: ANR: turn no longer has an is_completion
+            if (
+                evalsetrun.do_completion and turn.is_completion
+            ):  # NOTE: ANR: turn no longer has an is_completion
                 turns_to_evaluate.append(turn)
             # or do all turns
             elif not evalsetrun.do_completion:
@@ -181,29 +189,33 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
         # here, we'll use the metric ordering established in evalsetrun.metric_graph
         rubric_count = 0
         # Here, need loops over threads, turns, messages, and tool calls, and then getting the appropriate
-        # metrics to each. Seems like we can still use the same metric_graph (which may have ≥ 4 connected 
+        # metrics to each. Seems like we can still use the same metric_graph (which may have ≥ 4 connected
         # components), and enforce in validation step that dependencies are only between metrics defined
         # at the same granularity.
         # Create a dictionary for the metrics
         metrics_by_level = {}
         for metric_instance in json.loads(evalsetrun.metrics_graph_ordered_list):
-            metric_level = metric_instance['metric_level']
+            metric_level = metric_instance["metric_level"]
             if metric_level not in metrics_by_level:
                 metrics_by_level[metric_level] = []
             metrics_by_level[metric_level].append(metric_instance)
-        
+
         # TODO: if we go back to supporting completions, this will likely need to change
         threads_to_evaluate = [thread for thread in evalsetrun.threads]
         messages_to_evaluate = [message for message in evalsetrun.messages]
         toolcalls_to_evaluate = [toolcall for toolcall in evalsetrun.toolcalls]
-        object_lists_by_level = {'Thread': threads_to_evaluate,
-                                 'Turn': turns_to_evaluate, 
-                                 'Message': messages_to_evaluate,
-                                 'ToolCall': toolcalls_to_evaluate}
+        object_lists_by_level = {
+            "Thread": threads_to_evaluate,
+            "Turn": turns_to_evaluate,
+            "Message": messages_to_evaluate,
+            "ToolCall": toolcalls_to_evaluate,
+        }
 
         for level, object_list in object_lists_by_level.items():
             # Add the metrics to objects at this level
-            compute_metrics.add_all_metrics_to_objects(object_list, metrics_by_level.get(level, []))
+            compute_metrics.add_all_metrics_to_objects(
+                object_list, metrics_by_level.get(level, [])
+            )
             # Update the count of how many rubrics might be run based on rubric evals at this level
             rubric_count += compute_metrics.count_rubric_metrics(object_list)
 
@@ -234,8 +246,9 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
                 futures = []
                 for level, object_list in object_lists_by_level.items():
                     for object in object_list:
-                        futures.append(executor.submit(compute_metrics.compute_metrics, object))
-
+                        futures.append(
+                            executor.submit(compute_metrics.compute_metrics, object)
+                        )
 
                 # Wait for all futures to complete and handle exceptions
                 for future in futures:
@@ -252,13 +265,17 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
             # TODO - speed this up somehow
             thread = metric.get("thread")
             if thread is None:
-                thread = metric[metric['metric_level'].lower()].thread
+                thread = metric[metric["metric_level"].lower()].thread
             Metric.create(
-                message=metric.get("message",None),
-                turn=metric.get("turn",None),
-                toolcall=metric.get("toolcall",None),
-                evalsetrun=metric[metric['metric_level'].lower()].evalsetrun, #metric["turn"].evalsetrun,
-                dataset=metric[metric['metric_level'].lower()].dataset, #metric["turn"].dataset,
+                message=metric.get("message", None),
+                turn=metric.get("turn", None),
+                toolcall=metric.get("toolcall", None),
+                evalsetrun=metric[
+                    metric["metric_level"].lower()
+                ].evalsetrun,  # metric["turn"].evalsetrun,
+                dataset=metric[
+                    metric["metric_level"].lower()
+                ].dataset,  # metric["turn"].dataset,
                 thread=thread,
                 evaluation_name=metric["evaluation_name"],
                 evaluation_type=metric["evaluation_type"],
@@ -281,6 +298,11 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
         runner.logger.exception("An error occurred", exc_info=True)
 
     runner.logger.info(f"Evaluation run complete.")
+
+    # remove logging handler so we don't get repeat logs if we call run() twice
+    handlers = runner.logger.handlers[:]
+    for handler in handlers:
+        runner.logger.removeHandler(handler)
 
 
 if __name__ == "__main__":
