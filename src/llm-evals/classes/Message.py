@@ -32,7 +32,6 @@ class Message(BaseModel):
     turn = pw.ForeignKeyField(Turn, null=True, backref="messages")
 
     role = pw.TextField()  # user or assistant - 'tools' are counted as assistants
-    content = pw.TextField()
     context = pw.TextField(null=True)  # Previous messages
 
     # helpers
@@ -54,12 +53,13 @@ class Message(BaseModel):
     langgraph_thread_id = pw.TextField(null=True)
     langgraph_checkpoint_id = pw.TextField(null=True)
     langgraph_parent_checkpoint_id = pw.TextField(null=True)
-    langgraph_checkpoint = pw.TextField(null=True)
-    langgraph_metadata = pw.TextField(null=True)
     langgraph_node = pw.TextField(null=True)
     langgraph_message_type = pw.TextField(null=True)
     langgraph_type = pw.TextField(null=True)
     langgraph_invocation_id = pw.TextField(null=True)
+    # putting these at the end so the database is easier to browse
+    langgraph_checkpoint = pw.TextField(null=True)
+    langgraph_metadata = pw.TextField(null=True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

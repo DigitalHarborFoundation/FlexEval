@@ -495,12 +495,12 @@ class TestSuite01_langgraph(unittest.TestCase):
         self.assertEqual(
             len(metric), 1, "More than one row was returned for string_length metric."
         )
-        self.assertAlmostEqual(metric[0][0], 12)
+        self.assertAlmostEqual(metric[0][0], 22)  # len('factor 190,913,277,151')
 
     def test_tables_have_right_rows(self):
-        # this suite has one jsonl, simple.jsonl, which has 2 rows.
+        # this suite has 2 conversations with 8 rows each
         # the first row has 3 turns. the second row also has 3 turns.
-        helper_test_tables_have_right_rows(self, ((3, 3),))
+        helper_test_tables_have_right_rows(self, ((8, 8),))
 
     def test_string_length_has_function_label(self):
 
