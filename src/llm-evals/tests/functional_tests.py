@@ -51,6 +51,7 @@ class TestSuite01(unittest.TestCase):
             "metric",
         ]
         # write assertions here
+        print(self.database_path)
         with sqlite3.connect(self.database_path) as connection:
             tables_in_database = connection.execute(
                 "select name from sqlite_master where type = 'table'"
@@ -434,6 +435,84 @@ class TestSuite04(unittest.TestCase):
             0,
             "For some rows where the role is user, no is_student_acting_as_tutor is reported",
         )
+
+
+class TestSuite01_langgraph(unittest.TestCase):
+    """TODO - can we just somehow combine this with the other?"""
+
+    @classmethod
+    def setUpClass(cls):
+        # run code that needs to run before ANY of the tests, and clear any existing data from tables
+        # in this case, we run the evals via main.py
+        run(
+            eval_name="test_suite_01_langgraph",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+            clear_tables=True,
+        )
+        cls.database_path = os.environ["DATABASE_PATH"]
+
+    @classmethod
+    def tearDownClass(cls):
+        # here, we'd delete the database?
+        pass
+
+    def test_tables_exist(self):
+        table_names = [
+            "dataset",
+            "evalsetrun",
+            "thread",
+            "turn",
+            "message",
+            "toolcall",
+            "metric",
+        ]
+        # write assertions here
+        print(self.database_path)
+        with sqlite3.connect(self.database_path) as connection:
+            tables_in_database = connection.execute(
+                "select name from sqlite_master where type = 'table'"
+            ).fetchall()
+            tables_in_database = [i[0] for i in tables_in_database]
+        for table_name in table_names:
+            with self.subTest():
+                self.assertIn(
+                    table_name, tables_in_database, "Table is missing from database!"
+                )
+
+        # make sure there are no extra tables
+        self.assertEqual(set(table_names), set(tables_in_database))
+
+    def test_string_length_entry(self):
+        # write assertions here
+        with sqlite3.connect(self.database_path) as connection:
+            metric = connection.execute(
+                "select metric_value from metric where evalsetrun_id=1 and dataset_id=1 and thread_id=1 and turn_id=1 and evaluation_name = 'string_length'"
+            ).fetchall()
+        self.assertNotEqual(
+            len(metric), 0, "No rows returned for string_length metric; should have 1."
+        )
+        self.assertEqual(
+            len(metric), 1, "More than one row was returned for string_length metric."
+        )
+        self.assertAlmostEqual(metric[0][0], 12)
+
+    def test_tables_have_right_rows(self):
+        # this suite has one jsonl, simple.jsonl, which has 2 rows.
+        # the first row has 3 turns. the second row also has 3 turns.
+        helper_test_tables_have_right_rows(self, ((3, 3),))
+
+    def test_string_length_has_function_label(self):
+
+        with sqlite3.connect(self.database_path) as connection:
+            result = connection.execute(
+                """select evaluation_type from metric 
+                where 1=1
+                and evaluation_name = 'string_length'
+                """
+            ).fetchall()
+            self.assertGreater(len(result), 0)
+            self.assertTrue(all([i[0] == "function" for i in result]))
 
 
 class FunctionMetricValidation(unittest.TestCase):

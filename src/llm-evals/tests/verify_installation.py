@@ -1,3 +1,17 @@
+"""These tests run every time main.run() is called.
+
+They check to make sure FlexEval is configured properly. In particular, 
+they check the evals.yaml file you're using and the specific evaluation you're running
+and they make sure
+1. functions exists that match your function metric names
+2. rubrics exist that match your rubric metric names
+3. any dependencies are set up properly
+4. ...and more!
+
+Any misconfiguration should be caught here. If an evaluation fails due to misconfiguration
+and it's not caught here, that's a bug - and we should add a test here
+"""
+
 import unittest
 import os
 from openai import OpenAI
@@ -35,13 +49,14 @@ class TestConfiguration(unittest.TestCase):
             self.user_evals = yaml.safe_load(file)
         with open(self.config["rubric_metrics_path"]) as file:
             self.rubric_metrics = yaml.safe_load(file)
-        
+
         # Apply the defaults before any testing of validity, since
         # may only be valid with these defaults
         with open(self.config["eval_schema_path"], "r") as infile:
             schema = json.load(infile)
-        self.user_evals[self.eval_suite_name] = helpers.apply_defaults(schema, self.user_evals[self.eval_suite_name])
-
+        self.user_evals[self.eval_suite_name] = helpers.apply_defaults(
+            schema, self.user_evals[self.eval_suite_name]
+        )
 
     def test_env_file_exists(self):
         assert os.path.exists(
@@ -170,7 +185,9 @@ class TestConfiguration(unittest.TestCase):
                     # First arg
                     arg_found = True
                     first_arg_type = arg_tuple[1].annotation
-                    self.helper_valid_first_function_param(function_metric, first_arg_type)
+                    self.helper_valid_first_function_param(
+                        function_metric, first_arg_type
+                    )
                 else:
                     # Later arguments - need to be filled by kwargs, have defaults, or be variable length keyword args
                     arg_names.append(arg_tuple[0])
@@ -196,51 +213,50 @@ class TestConfiguration(unittest.TestCase):
                     ), f"Keyword argument `{kwarg}` specified in json for function `{name}`, but no argument with that name found in function signature."
 
     def helper_valid_first_function_param(self, function_metric, first_arg_type):
-        name = function_metric['name']
+        name = function_metric["name"]
         # Needs to be an allowed first argument type and match the metric level
-        metric_level = function_metric['metric_level']
-        if metric_level.lower() == 'thread':
+        metric_level = function_metric["metric_level"]
+        if metric_level.lower() == "thread":
             assert (
                 first_arg_type is str
                 or first_arg_type is list
                 or first_arg_type is Thread
-                or first_arg_type is ForwardRef('Thread')
+                or first_arg_type is ForwardRef("Thread")
                 or Thread in get_args(first_arg_type)
-                or ForwardRef('Thread') in get_args(first_arg_type) 
+                or ForwardRef("Thread") in get_args(first_arg_type)
             ), f"Input to metric function {name} with metric_level set to {metric_level} must be a string, list, or Thread but it was {first_arg_type}"
-        elif metric_level.lower() == 'turn':
+        elif metric_level.lower() == "turn":
             assert (
                 first_arg_type is str
                 or first_arg_type is list
                 or first_arg_type is Turn
-                or first_arg_type is ForwardRef('Turn')
+                or first_arg_type is ForwardRef("Turn")
                 or Turn in get_args(first_arg_type)
-                or ForwardRef('Turn') in get_args(first_arg_type) 
+                or ForwardRef("Turn") in get_args(first_arg_type)
             ), f"Input to metric function {name} with metric_level set to {metric_level} must be a string, list, or Turn but it was {first_arg_type}"
-        elif metric_level.lower() == 'message':
+        elif metric_level.lower() == "message":
             assert (
                 first_arg_type is str
                 or first_arg_type is list
                 or first_arg_type is Message
-                or first_arg_type is ForwardRef('Message')
+                or first_arg_type is ForwardRef("Message")
                 or Message in get_args(first_arg_type)
-                or ForwardRef('Message') in get_args(first_arg_type) 
+                or ForwardRef("Message") in get_args(first_arg_type)
             ), f"Input to metric function {name} with metric_level set to {metric_level} must be a string, list, or Message but it was {first_arg_type}"
-        elif metric_level.lower() == 'toolcall':
+        elif metric_level.lower() == "toolcall":
             assert (
                 first_arg_type is str
                 or first_arg_type is list
                 or first_arg_type is ToolCall
-                or first_arg_type is ForwardRef('ToolCall')
+                or first_arg_type is ForwardRef("ToolCall")
                 or ToolCall in get_args(first_arg_type)
-                or ForwardRef('ToolCall') in get_args(first_arg_type) 
+                or ForwardRef("ToolCall") in get_args(first_arg_type)
             ), f"Input to metric function {name} with `metric_level` set to {metric_level} must be a string, list, or ToolCall but it was {first_arg_type}"
         else:
             raise Exception(
-                    f"You set `metric_level` for the metric function `{name}` to {metric_level}, but `metric_level` must be one of Thread, Turn, Message, or ToolCall."
+                f"You set `metric_level` for the metric function `{name}` to {metric_level}, but `metric_level` must be one of Thread, Turn, Message, or ToolCall."
             )
-        
-        
+
     def test_metric_templates_are_valid(self):
         for rubric_metric in (
             self.user_evals[self.eval_suite_name].get("metrics").get("rubric", [])

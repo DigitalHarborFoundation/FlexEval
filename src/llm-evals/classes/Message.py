@@ -51,16 +51,15 @@ class Message(BaseModel):
 
     # langgraph metadata
     langgraph_step = pw.IntegerField(null=True)
-    langgraph_checkpoint_ts = pw.TextField(null=True)
-    langgraph_invocation_id = pw.TextField(null=True)
     langgraph_thread_id = pw.TextField(null=True)
-    langgraph_thread_ts = pw.TextField(null=True)
-    langgraph_parent_ts = pw.TextField(null=True)
+    langgraph_checkpoint_id = pw.TextField(null=True)
+    langgraph_parent_checkpoint_id = pw.TextField(null=True)
     langgraph_checkpoint = pw.TextField(null=True)
     langgraph_metadata = pw.TextField(null=True)
     langgraph_node = pw.TextField(null=True)
     langgraph_message_type = pw.TextField(null=True)
     langgraph_type = pw.TextField(null=True)
+    langgraph_invocation_id = pw.TextField(null=True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

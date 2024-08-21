@@ -13,8 +13,10 @@ import helpers
 
 from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
+
 # from classes.DatasetRow import DatasetRow
 from classes.Turn import Turn
+
 # from classes.TurnMetric import TurnMetric
 from classes.Thread import Thread
 from classes.Metric import Metric
@@ -31,7 +33,13 @@ class EvalRunner(Model):
     database: SqliteDatabase
     eval_name: str
 
-    def __init__(self, eval_name: str, config_path: str, evals_path: str = None, clear_tables: bool = False):
+    def __init__(
+        self,
+        eval_name: str,
+        config_path: str,
+        evals_path: str = None,
+        clear_tables: bool = False,
+    ):
 
         self.eval_name = eval_name
         self.config_path = config_path
@@ -98,8 +106,7 @@ class EvalRunner(Model):
         suite = unittest.defaultTestLoader.discover(
             "tests/", pattern="verify_installation.py"
         )
-        # set args
-
+        # set args in environment so they're available in the test
         os.environ["CONFIG_FILENAME"] = self.config_path
         os.environ["EVALUATION_NAME"] = self.eval_name
         # Run the tests and capture the results

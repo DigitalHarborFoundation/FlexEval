@@ -59,7 +59,7 @@ try:
 except:
     pass
 # Invoke graph - twice
-with SqliteSaver.from_conn_string("langgraph_test_data.db") as memory:
+with SqliteSaver.from_conn_string("data/langgraph-test-data.db") as memory:
     graph = graph_builder.compile(checkpointer=memory)
 
     config = {"configurable": {"thread_id": datetime.now().isoformat()}}
