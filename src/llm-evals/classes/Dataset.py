@@ -42,14 +42,13 @@ class Dataset(BaseModel):
     #   turn_id
 
     def load_data(self):
-        import data_loader # Local import as this needs to happen after the module is fully loaded
+        import data_loader  # Local import as this needs to happen after the module is fully loaded
 
         if self.filename.endswith(".jsonl"):
             self.datatype = "json"
             data_loader.load_jsonl(dataset=self, filename=self.filename)
         elif is_sqlite_file(self.filename):
             self.datatype = "sqlite"
-
             data_loader.load_langgraph_sqlite(dataset=self, filename=self.filename)
         else:
             raise Exception(
