@@ -8,6 +8,14 @@ test_suite_01:
     function:
       - name: string_length
 
+test_suite_01_langgraph:
+  data:
+    - tests/data/langgraph-test-data.db
+
+  metrics:
+    function:
+      - name: string_length
+
 test_suite_02:
   data:
     - tests/data/simple.jsonl
@@ -66,7 +74,7 @@ test_suite_04:
   grader_llm:
     function_name: open_ai_completion
     kwargs:
-      model_name: gpt-3.5-turbo
+      model_name: gpt-4o-mini
       api_key_name: OPENAI_API_KEY
 
 test_plots_01:
@@ -137,7 +145,7 @@ test_plots_02:
   grader_llm:
     function_name: open_ai_completion
     kwargs:
-      model_name: gpt-4o
+      model_name: gpt-4o-mini
       api_key_name: OPENAI_API_KEY
 
 config_failure_01:
