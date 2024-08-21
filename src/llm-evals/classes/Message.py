@@ -156,3 +156,10 @@ class Message(BaseModel):
 
     def get_content(self):
         return self.content
+    
+    def get_context(self, include_system_prompt=False):
+        context = json.loads(self.context)
+        if not include_system_prompt:
+            context = [cur_dict for cur_dict in context if cur_dict.get('role') != 'system']
+        return context
+

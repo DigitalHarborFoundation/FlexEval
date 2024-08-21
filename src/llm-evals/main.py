@@ -284,6 +284,7 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
                 metric_level=metric["metric_level"],
                 kwargs=metric["kwargs"],
                 depends_on=json.dumps(metric["depends_on"]),
+                context_only=metric.get("context_only"),
                 source=metric["source"],
                 rubric_prompt=metric.get("rubric_prompt", None),
                 rubric_completion=metric.get("rubric_completion", None),

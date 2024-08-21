@@ -14,19 +14,27 @@ from classes.ToolCall import ToolCall
 ## ~.~ function templates starts ~.~
 from typing import Union
 
-# Example input: either a single turn as a string or an entire conversation as a list of libraries. 
+# Example input types:
+# - a single message as a string
+# - an entire conversation (i.e., Thread) as a list of dictionaries
+# - an object of type Thread, Turn, Message, or ToolCall.
+#   These objects have the same fields as in the correspondingly
+#   named databases, and can access objects at higher or lower
+#   levels of granularity. Examples are provided below for working 
+#   with these objects.
 turn_example = "This is a conversational turn."
 conversation_example = [{'role':"X1", 'content': "Y1"}, 
                         {'role':"X2", 'content': "Y2"}, ...]
 
-# A function template to process a single turn
-def process_single_turn(turn: str) -> Union[int, float, dict[str, Union[int, float]]]:
+# A function template to process a single message
+def process_single_message(message: str) -> Union[int, float, dict[str, Union[int, float]]]:
     """
-        Process a single conversational turn and return the desired output
+        Process a single conversational message and return the desired output
         
         Args: 
-        turn (str): a single conversational turn as a string
-            CAUTION: You should keep the param name as "turn" 
+        message (str): a single conversational message as a string
+                NOTE: Metrics that take a string as input are valid at the Turn
+                      and Message levels.
         
         Returns:
         an integer (e.g., 2), \
@@ -42,8 +50,8 @@ def process_conversation(conversation:list)-> Union[int, float, dict[str, Union[
         
         Args: 
         conversation (list): an entire conversation as a list
-            CAUTION: You should keep the param name as "conversation" 
-        
+                NOTE: Metrics that take a list as input are valid at the Thread
+                      and Turn levels.
         Returns: 
         an integer, e.g., 2 \
         or a floating point number, e.g., 2.8 \
@@ -53,57 +61,20 @@ def process_conversation(conversation:list)-> Union[int, float, dict[str, Union[
     """
     pass 
 
-def is_role(turn: Union[Turn, Message], role: str) -> int:
+def is_role(object: Union[Turn, Message], role: str) -> dict:
     '''
     Return 1 is the role for this Turn or Message matches the passed in role,
     and 0 otherwise.
-    '''
-    return [{'name': role, 'value': int(turn.role == role)}]
 
-
-
-
-
-# def is_role(turn: list, role: str) -> dict:
-#     return {role: len([i for i in turn if i["role"] == role])}
-
-
-def count_tool_calls(turn: list) -> list:
-    """
-    Calculate the number of calls to a tool, aggregated by name, in the turn.
-
-    Elements of 'turn' look like one of two things:
-    {
-        "role": "user"
-        "content": "some content"
-    }
-    OR
-    {
-        "role": "tool"
-        "name":"name of tool"
-        "content": [list of tool call info]
-    }
     Args:
-        conversation list: A list of dictionaries representing conversational turns.
-                                             Each dictionary should have a 'role' key indicating the role of the participant.
-
-    Returns:
-        list: The number of conversational turns in the conversation, as a list of dicts with name/value keys
-    """
-    # Count number of tool calls by name
-    counter = {}
-    for entry in turn:
-        if entry["role"] == "tool":
-            counter[entry["name"]] = counter.get(entry["name"], 0) + 1
-
-    # Convert to list of dictionaries for output
-    results = []
-    for name, val in counter.items():
-        results.append({"name": name, "value": val})
-    return results
+    object: the Turn or Message
+    role: a string with the desired role to check against
+    '''
+    return {role: int(object.role == role)}
 
 
-def value_counts_by_tool_name(turn: list, json_key: str) -> list:
+
+def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
     """
     Counts the occurrences of particular values in the text content of tool call in the conversation.
     Assumes the roll will be tool, and that kwargs contains the argument json_key. values associated with
@@ -132,13 +103,17 @@ def value_counts_by_tool_name(turn: list, json_key: str) -> list:
                             key = entry["name"] + "_" + json_dict[json_key]
                             counter[key] = counter.get(key, 0) + 1
 
-    # Convert to list of dictionaries for output
-    results = []
-    for name, val in counter.items():
-        results.append({"name": name, "value": val})
-    return results
+    return counter
 
-def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> list:
+
+def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> dict:
+    '''
+    Counts how many times a ToolCall was used to call functions, with metric names
+    equal to function names. 
+
+    NOTE: This function provides an example of how to go from higher levels of granularity
+    (e.g., Thread) to lower levels of granularity (e.g., ToolCall).
+    '''
     # Extract ToolCall objects based on the type of object being passed in
     toolcalls = []
     if isinstance(object, (Thread, Turn)):
@@ -155,14 +130,14 @@ def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> 
         if toolcall.function_name not in toolcall_counts:
             toolcall_counts[toolcall.function_name] = 0
         toolcall_counts[toolcall.function_name] = toolcall_counts[toolcall.function_name] + 1
-    
-    # Convert to a list of name: value dictionaries
-    results = []
-    for toolcall_name, toolcall_count in toolcall_counts.items():
-        results.append({"name": toolcall_name, "value": toolcall_count})
-    return results
+
+    return toolcall_counts
 
 def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
+    '''
+    Extracts the values of all numeric ToolCall parameter inputs, with
+    metric_name being the name of the corresponding parameter.
+    '''
     results = []
     toolcall_args = json.loads(toolcall.args)
     for arg_name, arg_value in toolcall_args.items():
@@ -175,27 +150,44 @@ def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
 
     return results
 
-def count_role_entries_in_turn(
-    turn: list,
+def count_role_entries(
+    turn_or_thread: list,
 ) -> list:
     """
-    Calculate the number of conversational turns for each role. Excludes the system prompt.
+    Calculate the number of conversational actions for each role. Excludes the system prompt.
+    An action is counted even if the content for that action was blank (e.g., a blank message
+    associated with a tool call).
 
     Args:
-        conversation (List[Dict[str, Any]]): A list of dictionaries representing conversational turns.
-                                             Each dictionary should have a 'role' key indicating the role of the participant.
+        turn_or_thread (list): List of dictionaries with the role and content from each 
+                                message in the turn or thread.
 
     Returns:
         List[Dict[str, Any]]: A list of dicts with role/value entries indicating the number of turns for each role
     """
-    roles = set([i["role"] for i in turn])
+    roles = set([i["role"] for i in turn_or_thread])
     results = []
     for role in roles:
         # get just the turns for the role
-        turns = [i for i in turn if i["role"] == role]
+        turns = [i for i in turn_or_thread if i["role"] == role]
         # get the number of turns
         results.append({"name": role, "value": len(turns)})
     return results
+
+def is_last_turn_in_thread(turn: Turn) -> int:
+    """
+    Returns 1 if this turn is the final turn in its thread, and 0 otherwise.
+
+    Args:
+        turn: turn to evaluate
+    
+    Returns:
+        int: 1 for this being the temporally last turn in the thread, 0 otherwise
+    """
+    from peewee import fn
+    # Select the id of the Turn in the current thread that has the max value
+    max_turn_id = Turn.select(fn.max(Turn.id)).where(Turn.thread_id == turn.thread.id).scalar()
+    return int(max_turn_id == turn.id)
 
 
 def count_emojis(turn: str) -> Union[int, float]:
@@ -221,21 +213,6 @@ def count_emojis(turn: str) -> Union[int, float]:
     )
     return len(emoji_pattern.findall(turn))
 
-
-
-# def string_length(turn: str) -> int:
-#     """
-#     Calculate the length of the input string.
-
-#     Args:
-#         turn (str): The input text string whose length is to be measured.
-
-#     Returns:
-#         Union[int, float]: The length of the input string as an integer or float.
-#     """
-#     if turn is None:
-#         return 0
-#     return len(turn)
 def string_length(object: Union[Thread, Turn, Message]) -> int:
     """
     Calculate the length of the content.

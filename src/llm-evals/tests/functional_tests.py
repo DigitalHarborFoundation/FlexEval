@@ -567,7 +567,198 @@ class ConfigFailures(unittest.TestCase):
             evals_path="tests/evals.yaml",
         )
 
+    @unittest.expectedFailure
+    def test_config_failure_06(cls):
+        run(
+            eval_name="config_failure_06",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
+    
+    @unittest.expectedFailure
+    def test_config_failure_07(cls):
+        run(
+            eval_name="config_failure_07",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+        )
 
+class TestBasicFunctionMetrics(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # run code that needs to run before ANY of the tests, and clear any existing data from tables
+        # in this case, we run the evals via main.py
+        run(
+            eval_name="test_basic_function_metrics_01",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+            clear_tables=True
+        )
+        cls.database_path = os.environ["DATABASE_PATH"]
+
+    def test_correct_metric_levels(self):
+        # Expect to have one is_role evaluation for every Turn, at the
+        # turn level, all with metric_name assistant, and two is_role
+        # evaluations for every Message, one with metric_name assistant
+        # and one with metric_name user.
+        with sqlite3.connect(self.database_path) as connection:
+            num_turns = connection.execute(
+                """
+                SELECT COUNT(*) FROM turn
+                """         
+            ).fetchone()[0]
+
+            turn_level_metrics = connection.execute(
+                """
+                SELECT 
+                    dataset_id, turn_id, message_id
+                FROM 
+                    metric
+                WHERE 1=1
+                    AND metric_level = 'Turn'
+                    AND evaluation_name = 'is_role'
+                """         
+            ).fetchall()
+            self.assertEqual(len(turn_level_metrics), num_turns, f"Expected one metric for each Turn for the is_role evaluation, but there were {num_turns} and {turn_level_metrics} metrics.")
+            represented_turns = set()
+            for metric in turn_level_metrics:
+                # Expect each turn to be represented exactly once. 
+                # No metric should have a message level set. All dataset_ids should be 1
+                dataset_id, turn_id, message_id = metric
+                self.assertEqual(dataset_id, 1, "Expected all dataset ids to be 1")
+                self.assertFalse(turn_id in represented_turns, f"The turn id {turn_id} appeared more than once, but each turn should have one is_role only.")
+                represented_turns.add(turn_id)
+                self.assertIsNone(message_id, f"No turn level metrics should also have a message id, but found message id {message_id}")
+            
+            num_messages = connection.execute(
+                """
+                SELECT COUNT(*) FROM message
+                """         
+            ).fetchone()[0]
+            message_level_metrics = connection.execute(
+                """
+                SELECT 
+                    dataset_id, turn_id, message_id, metric_name, metric_value
+                FROM 
+                    metric
+                WHERE 1=1
+                    AND metric_level = 'Message'
+                    AND evaluation_name = 'is_role'
+                """         
+            ).fetchall()
+            self.assertEqual(len(message_level_metrics), num_messages*2, 
+                             (f"Expected two metrics for each Message for the is_role "
+                              f"evaluation, but there were {num_turns} and {turn_level_metrics} metrics."))
+            represented_messages = {}
+            for metric in message_level_metrics:
+                # Expect each message to be represented twice, with opposite values for the two evals
+                # No metric should have a message level set. All dataset_ids should be 1
+                dataset_id, turn_id, message_id, metric_name, metric_value = metric
+                self.assertEqual(dataset_id, 1, "Expected all dataset ids to be 1")
+                self.assertIsNone(turn_id, f"No message level metrics should also have a turn id, but found message id {message_id}")
+                if message_id not in represented_messages:
+                    represented_messages[message_id] = {}
+                self.assertFalse(metric_name in represented_messages[message_id], 
+                                 (f"The metric {metric_name} for is_role appeared more than once, "
+                                  "but each message should have of these metrics only."))
+                represented_messages[message_id][metric_name] = metric_value
+                self.assertIn(metric_name, ['user', 'assistant'], 
+                              f"Metric name should be user or assistant but was {metric_name}")
+                if len(represented_messages[message_id]) == 2:
+                    self.assertNotEqual(represented_messages[message_id]['user'], 
+                                        represented_messages[message_id]['assistant'],
+                                        (f"Message id {message_id} had the same value for is_role user and "
+                                          "  is_role assistant"))
+
+class TestListStringInputFunctionMetrics(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # run code that needs to run before ANY of the tests, and clear any existing data from tables
+        # in this case, we run the evals via main.py
+        run(
+            eval_name="test_list_string_function_metrics",
+            config_path="config-tests.yaml",
+            evals_path="tests/evals.yaml",
+            clear_tables=True
+        )
+        cls.database_path = os.environ["DATABASE_PATH"]
+
+    def test_reading_ease_levels_by_level(self):
+        message_id_to_reading_ease = {1: 119.19, 2: 119.19, 3: 35.61, 4: 77.91}
+        message_id_to_reading_ease_context_only = {1: 206.84, 2: 119.19, 3: 119.19, 4: 92.8}
+        turn_id_to_reading_ease = {1: 119.19, 2: 83.32, 3: 77.91}
+        turn_id_to_reading_ease_context_only = {1: 206.84, 2: 119.19, 3: 92.8}
+        with sqlite3.connect(self.database_path) as connection:
+            reading_ease_metrics = connection.execute(
+                    """
+                    SELECT 
+                        turn_id, message_id, context_only, metric_level, metric_name, metric_value
+                    FROM 
+                        metric
+                    WHERE 1=1
+                        AND thread_id = 1
+                        AND evaluation_name = 'flesch_reading_ease'
+                    """         
+                ).fetchall()
+            for result in reading_ease_metrics:
+                turn_id, message_id, context_only, metric_level, metric_name, metric_value = result
+                comparison_dict = None
+                comparison_id = None
+                if metric_level == 'Message':
+                    comparison_id = message_id
+                    if context_only:
+                        comparison_dict = message_id_to_reading_ease_context_only
+                    else:
+                        comparison_dict = message_id_to_reading_ease
+                elif metric_level == 'Turn':
+                    comparison_id = turn_id
+                    if context_only:
+                        comparison_dict = turn_id_to_reading_ease_context_only
+                    else:
+                        comparison_dict = turn_id_to_reading_ease
+                else:
+                    raise Exception(f"Expected only Message and Turn levels for reading ease but found {metric_level}")
+                
+                self.assertAlmostEqual(comparison_dict[comparison_id], metric_value,
+                                       msg="Metric value for reading ease not equal to expected value")
+                
+    def test_count_role_entries(self):
+        thread_and_turn_id_to_role_entries = {1: {1 : {'user' : 1}, 2: {'assistant': 2}, 3: {'user': 1}},
+                                              2: {4 : {'user' : 1}, 5: {'assistant': 2}, 6: {'user': 1}},
+                                              3: {7 : {'user' : 1}, 8: {'assistant': 2}, 9: {'user': 2}, 10: {'assistant': 1}}}
+        thread_id_to_role_entries = {}
+        for thread_id, turn_to_role_entries in thread_and_turn_id_to_role_entries.items():
+            cur_role_entries = {}
+            for turn, role_entries in turn_to_role_entries.items():
+                for role, count in role_entries.items():
+                    if role not in cur_role_entries:
+                        cur_role_entries[role] = 0
+                    cur_role_entries[role] += count
+            thread_id_to_role_entries[thread_id] = cur_role_entries
+
+        with sqlite3.connect(self.database_path) as connection:
+            role_entry_metrics = connection.execute(
+                    """
+                    SELECT 
+                        thread_id, turn_id, metric_level, metric_name, metric_value
+                    FROM 
+                        metric
+                    WHERE 1=1
+                        AND thread_id = 1
+                        AND evaluation_name = 'count_role_entries'
+                    """         
+                ).fetchall()
+            for result in role_entry_metrics:
+                thread_id, turn_id, metric_level, metric_name, metric_value = result
+                if metric_level == 'Thread':
+                    self.assertEqual(thread_id_to_role_entries[thread_id][metric_name],
+                                     metric_value,
+                                     f"Wrong count for role {metric_name} in thread {thread_id}")
+                elif metric_level == 'Turn':
+                    self.assertEqual(thread_and_turn_id_to_role_entries[thread_id][turn_id][metric_name],
+                                     metric_value,
+                                     f"Wrong count for role {metric_name} in turn {turn_id}")
 # other tests
 
 ## basic - are the table rows being populated

@@ -172,31 +172,28 @@ def compute_function_metric(
         # Check whether the metric_function has a string or a list input as the first thing.
         # If so, need to extract the content first.
         if input_type is str:
-            # This should apply only for Message or Turn types. For Turns,
-            # concatenates all together
-            # just pass in the content
+            # This should apply only for Message, Turn, or Thread types. 
+            # For Turn and Thread, concatenates all together
+            input = None
             if context_only:
-                # previous turn only
-                # join together the string contents of the previous turn
-                metrics_result = metric_function(object.context, **metric_kwargs)
+                # join together the string contents of all previous turns
+                input = join_all_contents_to_string(object.get_context())
             else:
                 # current turn only
-                content = object.get_content()   
-                if isinstance(content, list):
-                    content = "\n".join(
-                        [item.get("content", "") for item in content]
-                    )
-                metrics_result = metric_function(content, **metric_kwargs)
+                input = join_all_contents_to_string(object.get_content())
+            metrics_result = metric_function(input, **metric_kwargs)
         elif input_type is list:
-            #This should apply for the Turn type only
+            #This should apply for the Turn and Thread types only
             if context_only:
-                # use the list of adjacent previous entries with roles different to yours
                 metrics_result = metric_function(
                    object.get_context(), **metric_kwargs
                 )
             else:
                 # this is on a single turn - pass in the parsed list
                 metrics_result = metric_function(object.get_content(), **metric_kwargs)
+        elif input_type is dict:
+            #This should apply for the ToolCall type only
+            metrics_result = metric_function(object.get_dict_representation(), **metric_kwargs)
         else:
             # Must be a Thread/Turn/Message/ToolCall [verified in validation of setup]
             metrics_result = metric_function(object, **metric_kwargs)
@@ -483,3 +480,15 @@ def count_rubric_metrics(iterable_of_objects):
             if metric_instance.get("evaluation_type") == "rubric":
                 rubric_count += 1
     return rubric_count
+
+def join_all_contents_to_string(content):
+    '''
+    content is a list of dictionaries whose keys include 'content'.
+    Returns a string with all the 'content' entries concatenated together,
+    separated by newline.
+    '''
+    if isinstance(content, list):
+                    content = "\n".join(
+                        [item.get("content", "") for item in content]
+                    )
+    return content

@@ -40,4 +40,18 @@ class ToolCall(BaseModel):
         super().__init__(**kwargs)
         self.metrics_to_evaluate = []
 
+    def get_dict_representation(self) -> dict:
+        '''
+        Get a dictionary representation of the content of this toolcall,
+        suitable for passing to function metrics that need a standard Python
+        data structure representation of a tool call.
+
+        Keys in returned dictionary are role, content (for the response content),
+        function_name, and args.
+        '''
+        return {"role": "toolcall", 
+                "content": self.response_content, 
+                "args": self.args, 
+                "function_name": self.function_name}
+
 
