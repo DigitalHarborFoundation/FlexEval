@@ -204,6 +204,7 @@ def load_langgraph_sqlite(dataset, filename):
                                     .get("response_metadata", {})
                                     .get("model_name"),
                                     # langgraph metadata
+                                    langgraph_ts=checkpoint.get("ts"),
                                     langgraph_step=metadata.get("step"),
                                     langgraph_thread_id=completion_row["thread_id"],
                                     langgraph_checkpoint_id=completion_row[

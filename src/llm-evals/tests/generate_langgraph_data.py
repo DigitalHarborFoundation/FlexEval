@@ -55,19 +55,21 @@ graph_builder.add_edge("tools", "chatbot")
 graph_builder.set_entry_point("chatbot")
 
 try:
-    os.remove("langgraph_test_data.db")
+    os.remove("data/langgraph_test_data.db")
 except:
     pass
+
 # Invoke graph - twice
-with SqliteSaver.from_conn_string("data/langgraph-test-data.db") as memory:
-    graph = graph_builder.compile(checkpointer=memory)
+for i in range(2):
+    with SqliteSaver.from_conn_string("data/langgraph-test-data.db") as memory:
+        graph = graph_builder.compile(checkpointer=memory)
 
-    config = {"configurable": {"thread_id": datetime.now().isoformat()}}
+        config = {"configurable": {"thread_id": datetime.now().isoformat()}}
 
-    response = graph.invoke({"messages": ["factor 190,913,277,151"]}, config)
-    response = graph.invoke(
-        {"messages": ["print them again but reverse the order"]}, config
-    )
-    for m in response["messages"]:
-        print("Role:", m.type)
-        print(f"Content: '{m.content}'\n")
+        response = graph.invoke({"messages": ["factor 190,913,277,151"]}, config)
+        response = graph.invoke(
+            {"messages": ["print them again but reverse the order"]}, config
+        )
+        for m in response["messages"]:
+            print("Role:", m.type)
+            print(f"Content: '{m.content}'\n")

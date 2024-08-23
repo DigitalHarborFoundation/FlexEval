@@ -236,6 +236,7 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
                             runner.logger.exception(
                                 f"Metric {m} does not have a value for the key `metric_value`."
                             )
+
                     metrics += cur_metrics
 
         else:
@@ -284,7 +285,7 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
                 metric_level=metric["metric_level"],
                 kwargs=metric["kwargs"],
                 depends_on=json.dumps(metric["depends_on"]),
-                context_only=metric.get("context_only"),
+                context_only=metric.get("context_only", False),
                 source=metric["source"],
                 rubric_prompt=metric.get("rubric_prompt", None),
                 rubric_completion=metric.get("rubric_completion", None),

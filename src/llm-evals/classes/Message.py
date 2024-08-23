@@ -32,6 +32,7 @@ class Message(BaseModel):
     turn = pw.ForeignKeyField(Turn, null=True, backref="messages")
 
     role = pw.TextField()  # user or assistant - 'tools' are counted as assistants
+    content = pw.TextField()
     context = pw.TextField(null=True)  # Previous messages
 
     # helpers
@@ -49,6 +50,7 @@ class Message(BaseModel):
     model_name = pw.TextField(null=True)
 
     # langgraph metadata
+    langgraph_ts = pw.TextField(null=True)
     langgraph_step = pw.IntegerField(null=True)
     langgraph_thread_id = pw.TextField(null=True)
     langgraph_checkpoint_id = pw.TextField(null=True)
@@ -157,10 +159,11 @@ class Message(BaseModel):
 
     def get_content(self):
         return self.content
-    
+
     def get_context(self, include_system_prompt=False):
         context = json.loads(self.context)
         if not include_system_prompt:
-            context = [cur_dict for cur_dict in context if cur_dict.get('role') != 'system']
+            context = [
+                cur_dict for cur_dict in context if cur_dict.get("role") != "system"
+            ]
         return context
-

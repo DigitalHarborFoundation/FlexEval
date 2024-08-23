@@ -11,99 +11,100 @@ from typing import Union, ForwardRef, get_args
 import copy
 import json
 
-def compute_metrics(object : Union[Thread, Turn, Message, ToolCall]):
-        """we've defined a variable called metrics_to_evaluate
-        it's a list we need to loop through
-        each entry looks like this
-        {
-            'name': 'string_length',
-            'type': 'function',
-            'kwargs': {},
-            'depends_on': []
-        }
-        """
-        # we'll keep the results in a list
-        # for each new metric, if it has dependencies, we'll need to make sure they're met - otherwise we won't run it
-        evaluated_metrics = []
-        # METRICS IN ORDER
-        # print(self.metrics_to_evaluate)
-        for metric_to_evaluate in object.metrics_to_evaluate:
-            # print("\nEVAL")
-            # print(evaluated_metrics)
-            # see if there's a dependency
-            dependencies_are_all_met = True
-            # If there are no dependencies, this loop won't execute
-            # and the metric will be evaluated
-            if len(metric_to_evaluate.get("depends_on")) > 0:
 
-                # here, we have a metric with 1+ dependencies
-                # ALL of these dependencies must be satisfied
+def compute_metrics(object: Union[Thread, Turn, Message, ToolCall]):
+    """we've defined a variable called metrics_to_evaluate
+    it's a list we need to loop through
+    each entry looks like this
+    {
+        'name': 'string_length',
+        'type': 'function',
+        'kwargs': {},
+        'depends_on': []
+    }
+    """
+    # we'll keep the results in a list
+    # for each new metric, if it has dependencies, we'll need to make sure they're met - otherwise we won't run it
+    evaluated_metrics = []
+    # METRICS IN ORDER
+    # print(self.metrics_to_evaluate)
+    for metric_to_evaluate in object.metrics_to_evaluate:
+        # print("\nEVAL")
+        # print(evaluated_metrics)
+        # see if there's a dependency
+        dependencies_are_all_met = True
+        # If there are no dependencies, this loop won't execute
+        # and the metric will be evaluated
+        if len(metric_to_evaluate.get("depends_on")) > 0:
 
-                # we determine whether a given metric is a match if it matches
-                # 1 - the id
-                # 2 - the metric_name
-                # 3 - the metric_min_value
-                # 4 - the metric_max_value
-                # not meeting ANY of them will short-circuit the loop and cause the eval to not evaluate
-                # check all dependencies
-                for dependency in metric_to_evaluate.get("depends_on"):
+            # here, we have a metric with 1+ dependencies
+            # ALL of these dependencies must be satisfied
 
-                    # for each dependency, assume it's not met
-                    # if it's in the list AND its values meet the criteria, it's met
-                    dependency_is_met = False
-                    # if a specific metric_name was specified, you need to match exactly:
-                    if "metric_name" in dependency:
-                        for em in evaluated_metrics:
-                            # print("em", em)
-                            # print("dependency", dependency)
-                            # I think the 'depends_on' should have all fields populated at this point
-                            if (
-                                em["id"] == dependency["parent_id"]
-                                and em["metric_name"] == dependency["metric_name"]
-                                and em["metric_value"] >= dependency["metric_min_value"]
-                                and em["metric_value"] <= dependency["metric_max_value"]
-                            ):
-                                # this specific dependency was met - can quit looking
-                                dependency_is_met = True
-                                break
-                    else:
-                        # if no specific metric_name was specified, you just need to match ANY metric_name
-                        # on the other criteria
-                        for em in evaluated_metrics:
-                            # print("em", em)
-                            # print("dependency", dependency)
-                            # I think the 'depends_on' should have all fields populated at this point
-                            if (
-                                em["id"] == dependency["parent_id"]
-                                # and em["metric_name"] == dependency["metric_name"]
-                                and em["metric_value"] >= dependency["metric_min_value"]
-                                and em["metric_value"] <= dependency["metric_max_value"]
-                            ):
-                                # this specific dependency was met - can quit looking
-                                dependency_is_met = True
-                                break
-                    if not dependency_is_met:
-                        dependencies_are_all_met = False
-                        # if even one dependency is not met - don't do the evaluation
-                        break
-            if dependencies_are_all_met:
-                # pass through arguments, but add 'self' as the turn
-                # ONLY call if dependencies are ALL met
-                # TODO - maybe in the future we'll want to add the computed value from
-                # the dependency through as an argument here
-                evaluated_metrics += compute_metric(object, **metric_to_evaluate)
-            else:
-                pass
-                # print(f"\nNot runing metric because dependency was not met:")
-                # print(metric_to_evaluate)
-        return evaluated_metrics
+            # we determine whether a given metric is a match if it matches
+            # 1 - the id
+            # 2 - the metric_name
+            # 3 - the metric_min_value
+            # 4 - the metric_max_value
+            # not meeting ANY of them will short-circuit the loop and cause the eval to not evaluate
+            # check all dependencies
+            for dependency in metric_to_evaluate.get("depends_on"):
+
+                # for each dependency, assume it's not met
+                # if it's in the list AND its values meet the criteria, it's met
+                dependency_is_met = False
+                # if a specific metric_name was specified, you need to match exactly:
+                if "metric_name" in dependency:
+                    for em in evaluated_metrics:
+                        # print("em", em)
+                        # print("dependency", dependency)
+                        # I think the 'depends_on' should have all fields populated at this point
+                        if (
+                            em["id"] == dependency["parent_id"]
+                            and em["metric_name"] == dependency["metric_name"]
+                            and em["metric_value"] >= dependency["metric_min_value"]
+                            and em["metric_value"] <= dependency["metric_max_value"]
+                        ):
+                            # this specific dependency was met - can quit looking
+                            dependency_is_met = True
+                            break
+                else:
+                    # if no specific metric_name was specified, you just need to match ANY metric_name
+                    # on the other criteria
+                    for em in evaluated_metrics:
+                        # print("em", em)
+                        # print("dependency", dependency)
+                        # I think the 'depends_on' should have all fields populated at this point
+                        if (
+                            em["id"] == dependency["parent_id"]
+                            # and em["metric_name"] == dependency["metric_name"]
+                            and em["metric_value"] >= dependency["metric_min_value"]
+                            and em["metric_value"] <= dependency["metric_max_value"]
+                        ):
+                            # this specific dependency was met - can quit looking
+                            dependency_is_met = True
+                            break
+                if not dependency_is_met:
+                    dependencies_are_all_met = False
+                    # if even one dependency is not met - don't do the evaluation
+                    break
+        if dependencies_are_all_met:
+            # pass through arguments, but add 'self' as the turn
+            # ONLY call if dependencies are ALL met
+            # TODO - maybe in the future we'll want to add the computed value from
+            # the dependency through as an argument here
+            evaluated_metrics += compute_metric(object, **metric_to_evaluate)
+        else:
+            pass
+            # print(f"\nNot runing metric because dependency was not met:")
+            # print(metric_to_evaluate)
+    return evaluated_metrics
 
 
 def compute_metric(
     object: Union[Thread, Turn, Message, ToolCall],
     evaluation_name: str,
     evaluation_type: str,
-    metric_level: str, 
+    metric_level: str,
     kwargs: dict,
     context_only: bool = None,
     last_instance_only: bool = None,
@@ -170,7 +171,7 @@ def compute_function_metric(
         # Check whether the metric_function has a string or a list input as the first thing.
         # If so, need to extract the content first.
         if input_type is str:
-            # This should apply only for Message, Turn, or Thread types. 
+            # This should apply only for Message, Turn, or Thread types.
             # For Turn and Thread, concatenates all together
             input = None
             if context_only:
@@ -181,17 +182,17 @@ def compute_function_metric(
                 input = join_all_contents_to_string(object.get_content())
             metrics_result = metric_function(input, **metric_kwargs)
         elif input_type is list:
-            #This should apply for the Turn and Thread types only
+            # This should apply for the Turn and Thread types only
             if context_only:
-                metrics_result = metric_function(
-                   object.get_context(), **metric_kwargs
-                )
+                metrics_result = metric_function(object.get_context(), **metric_kwargs)
             else:
                 # this is on a single turn - pass in the parsed list
                 metrics_result = metric_function(object.get_content(), **metric_kwargs)
         elif input_type is dict:
-            #This should apply for the ToolCall type only
-            metrics_result = metric_function(object.get_dict_representation(), **metric_kwargs)
+            # This should apply for the ToolCall type only
+            metrics_result = metric_function(
+                object.get_dict_representation(), **metric_kwargs
+            )
         else:
             # Must be a Thread/Turn/Message/ToolCall [verified in validation of setup]
             metrics_result = metric_function(object, **metric_kwargs)
@@ -219,7 +220,7 @@ def compute_function_metric(
 
         # conditional depending on the type
         # if (
-        #     input_type is Turn or 
+        #     input_type is Turn or
         #     input_type is ForwardRef('Turn') or
         #     ForwardRef('Turn') in get_args(input_type)
         # ):
@@ -323,37 +324,39 @@ def compute_rubric_metric(
     # format input for rubric
     conversation, context, turn = object.format_input_for_rubric()
     # conversation : all turns; context: all turns without the last entry; completion: only the last entry
-    # use three keywords: 
-    # #{conversation} -- The whole conversation 
-    # #{context} -- The previous turns without the current entry 
-    # #{turn} -- Only the current turn / message / toolcall depending on the metric_level 
+    # use three keywords:
+    # #{conversation} -- The whole conversation
+    # #{context} -- The previous turns without the current entry
+    # #{turn} -- Only the current turn / message / toolcall depending on the metric_level
     # for the future: add {compeltion} under the condition of do_completion == True
-    
-    # Add verfication steps before populating the rubric 
-    # case 1: {conversation} and {context} should not go together 
+
+    # Add verfication steps before populating the rubric
+    # case 1: {conversation} and {context} should not go together
     # case 2: {completion} and {turn} should not go together
     # case 3: if there is a {completion}, do_completion should be true
-    
+
     if "{conversation}" in prompt and "{context}" in prompt:
-        raise Exception("Your rubric should not have both {conversation} and {context}. Please check the README file for more information about how to write FlexEval rubrics.")
-    
+        raise Exception(
+            "Your rubric should not have both {conversation} and {context}. Please check the README file for more information about how to write FlexEval rubrics."
+        )
+
     if "{completion}" in prompt and "{turn}" in prompt:
-        raise Exception("Your rubric should not have both {turn} and {completion}. Please check the README file for more information about how to write FlexEval rubrics.")
-    
+        raise Exception(
+            "Your rubric should not have both {turn} and {completion}. Please check the README file for more information about how to write FlexEval rubrics."
+        )
+
     if "{completion}" in prompt and not object.evalsetrun.do_completion:
-        raise Exception("Your rubric has {completion}, but in your test specification for this rubric evaluation, do_completion is not True. Please check the README file for more information about how to write FlexEval rubrics.")
-      
+        raise Exception(
+            "Your rubric has {completion}, but in your test specification for this rubric evaluation, do_completion is not True. Please check the README file for more information about how to write FlexEval rubrics."
+        )
+
     populated_prompt = prompt.format(
-            conversation=conversation,
-            context=context,
-            turn=turn
-        )
-    # with do_completion == True, only the completion is evaluated with or without the context. 
+        conversation=conversation, context=context, turn=turn
+    )
+    # with do_completion == True, only the completion is evaluated with or without the context.
     if object.evalsetrun.do_completion and object.is_completion:
-            populated_prompt = prompt.format(
-            completion=turn  
-        )
-    
+        populated_prompt = prompt.format(completion=turn)
+
     choice_scores = rubrics.get(rubric_name).get("choice_scores")
     # get rubric grader
     grader_completion_function = json.loads(object.evalsetrun.grader_llm)
@@ -428,17 +431,18 @@ Reasoning:""".strip()
         }
     return [result]
 
+
 def add_all_metrics_to_objects(iterable_of_objects, metrics):
-    '''
+    """
     Adds all metric instances in metrics_for_level to each instance of
     an evaluable object (e.g., Turn, Thread, Message, or ToolCall) in
-    iterable_of_objects. This addition is done by appending to the 
+    iterable_of_objects. This addition is done by appending to the
     `metrics_to_evaluate` field, which all instances in iterable_of_objects
     should have.
 
     :param iterable_of_objects: list of objects that have a metrics_to_evaluate field
     :param metrics: list of metric instances to add to each object
-    '''
+    """
     for object in iterable_of_objects:
         # Field metrics_to_evaluate initialized in constructor
         # metric dependencies happen WITHIN turns, rather than across
@@ -448,13 +452,14 @@ def add_all_metrics_to_objects(iterable_of_objects, metrics):
         # Keeping this as a loop to do the rubric_count appropriately
         object.metrics_to_evaluate = object.metrics_to_evaluate + metrics
 
+
 def count_rubric_metrics(iterable_of_objects):
-    '''
+    """
     Returns the total number of rubric type metrics in
     the metrics_to_evaluate field in each object.
 
     :param iterable_of_objects: list of objects that have a metrics_to_evaluate field
-    '''
+    """
     rubric_count = 0
     for object in iterable_of_objects:
         for metric_instance in object.metrics_to_evaluate:
@@ -462,14 +467,13 @@ def count_rubric_metrics(iterable_of_objects):
                 rubric_count += 1
     return rubric_count
 
+
 def join_all_contents_to_string(content):
-    '''
+    """
     content is a list of dictionaries whose keys include 'content'.
     Returns a string with all the 'content' entries concatenated together,
     separated by newline.
-    '''
+    """
     if isinstance(content, list):
-                    content = "\n".join(
-                        [item.get("content", "") for item in content]
-                    )
+        content = "\n".join([item.get("content", "") for item in content])
     return content
