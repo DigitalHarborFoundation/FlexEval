@@ -32,7 +32,6 @@ class Message(BaseModel):
     turn = pw.ForeignKeyField(Turn, null=True, backref="messages")
 
     role = pw.TextField()  # user or assistant - 'tools' are counted as assistants
-    content = pw.TextField()
     context = pw.TextField(null=True)  # Previous messages
 
     # helpers

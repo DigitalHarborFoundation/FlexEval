@@ -554,6 +554,7 @@ class TestSuite02_langgraph(unittest.TestCase):
         )
         self.assertAlmostEqual(metric[0][0], 2)
 
+
     def test_simple_condition_is_always_met(self):
         # STEP 1 - find all cases where string_length >= 50
         # STEP 2 - every single one of those cases should also have a flesch_reading_ease entry for the same turn

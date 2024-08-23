@@ -73,3 +73,4 @@ for i in range(2):
         for m in response["messages"]:
             print("Role:", m.type)
             print(f"Content: '{m.content}'\n")
+
