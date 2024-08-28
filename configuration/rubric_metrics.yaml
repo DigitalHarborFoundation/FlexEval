@@ -160,8 +160,7 @@ is_student_acting_as_tutor:
 is_pedagogically_appropriate_plot:
   notes: |-
     this looks at the conversation involving a toolcall message and decide whether the plot is pedagogically appropriate or not.
-    this is a conditiona, e.g. p(plot is pedagogically appropriate or not | turn was an assistatn turn & turn contains a toolcall message)
-    IMPORTANT: this should only be evaluated on ASSISTANT TURNS
+    this is a conditiona, e.g. p(plot is pedagogically appropriate | turn was an assistatn turn & turn contains a toolcall message)
 
   prompt: |-
     Your Role:
@@ -220,4 +219,65 @@ is_pedagogically_appropriate_plot:
       IMPORTANT:After your reasoning, print the choice string of "YES" or "NO" on a separate line with NO OTHER TEXT on that line.
   choice_scores:
     "YES": 1
+    "NO": 0
+
+is_accurate_plot:
+  notes: |-
+    this looks at the conversation involving a toolcall message and decide whether the plot is accurate or not.
+    this is a conditiona, e.g. p(plot is accurate | turn was an assistatn turn & turn contains a toolcall message)
+
+  prompt: |-
+    Your Role:
+      You are a helpful assistant with solid knowledge in K-12 math instruction. 
+
+    Context:
+      A K-12 student learns math using an online tutoring system. 
+      During the session, the student (user) interacts with the tutor (assistant) on some math problems. 
+      To aid understanding, the tutor sometimes generates a plot to illustrate the math concepts more clearly.
+
+    Data:
+      The conversation data between the student and the tutor is provided below. It includes the context of the tutor's message (stored in [Context]) and the tutor's current message (stored in [Turn]). 
+      
+      [BEGIN DATA]
+      ***
+      [Context]: {context}
+      
+      [Turn]: {turn}
+      ***
+      [END DATA]
+
+    Your Task:
+      The tutor's current message contains a plot.
+      Determine whether the plot is accurate or not based on the conversational context. 
+
+    Rubric
+      Use the following rubric to evaluate the plot in the tutor's message in [Turn] based on the contextual information in [Context]:
+
+      __start rubric__
+
+      Accurate Plots:
+        - Accurately represent the data and mathematical concepts described in the context.
+        - Points, lines, and curves are precisely placed.
+        - All elements, including labels, titles, axis captions, and units, are correctly used and appropriately scaled.
+      
+      Inaccurate Plots:
+        - Contain inaccuracies in representing data and mathematical concepts.
+        - Some data points, lines, and curves are incorrectly placed.
+        - Some elements, such as labels, titles, axis captions, and units, are inaccurately used or scaled.
+
+      If the plot in question is accurate, print "YES". Otherwise, print "NO".
+
+      Note:
+      If it is hard to decide whether the plot is accurate or not, print "UNCLEAR".
+
+      __end rubric__
+
+    Output:
+      First, report your reasoning for your decision. 
+      Second, print your decision as the choice string of "YES" or "NO" or "UNCLEAR".
+
+      IMPORTANT:After your reasoning, print the choice string of "YES" or "NO" or "UNCLEAR" on a separate line with NO OTHER TEXT on that line.
+  choice_scores:
+    "YES": 1
+    "UNCLEAR": 0.5
     "NO": 0
