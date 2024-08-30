@@ -118,6 +118,29 @@ def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
     return counter
 
 
+def message_matches_regex(message: Message, expression: str) -> dict:
+    """Determines whether a message matches a regular expression specified by the user
+
+    Outputs True if the message content matches, and false otherwise.
+    """
+
+    # Compile the regular expression R
+    pattern = re.compile(expression)
+
+    # Use the fullmatch method to check if the entire string X matches the pattern
+    match = pattern.fullmatch(message.content)
+
+    # Return True if there is a match, otherwise False
+    return match is not None
+
+
+def tool_was_called(object: Union[Thread, Turn, Message]) -> float:
+    """Returns 1 if a tool was called, and 0 otherwise"""
+    for tc in object.toolcalls:
+        return 1
+    return 0
+
+
 def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> dict:
     """
     Counts how many times a ToolCall was used to call functions, with metric names
@@ -166,28 +189,31 @@ def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
     return results
 
 
-def count_role_entries(
-    turn_or_thread: list,
-) -> list:
+def count_llm_models(thread: Thread) -> dict:
+    """Provides a count of messages in the thread produced by each LLM model.
+    Useful for quantifying which LLM generated the results - and agents can have more than 1 type.
     """
-    Calculate the number of conversational actions for each role. Excludes the system prompt.
-    An action is counted even if the content for that action was blank (e.g., a blank message
+    results = {}
+    for message in thread.messages:
+        results["model"] = results.get("model", 0) + 1
+    return results
+
+
+def count_messages_per_role(object: Union[Thread, Turn]) -> list:
+    """
+    Calculate the number of conversational messages for each role. Excludes the system prompt.
+    A message is counted even if the content for that action was blank (e.g., a blank message
     associated with a tool call).
 
     Args:
-        turn_or_thread (list): List of dictionaries with the role and content from each
-                                message in the turn or thread.
+        Turn or Thread
 
     Returns:
-        List[Dict[str, Any]]: A list of dicts with role/value entries indicating the number of turns for each role
+        dict: A dictionary with roles as keys roles and values as counts of messages
     """
-    roles = set([i["role"] for i in turn_or_thread])
-    results = []
-    for role in roles:
-        # get just the turns for the role
-        turns = [i for i in turn_or_thread if i["role"] == role]
-        # get the number of turns
-        results.append({"name": role, "value": len(turns)})
+    results = {}
+    for message in object.messages:
+        results[message.role] = results.get(message.role, 0) + 1
     return results
 
 

@@ -54,9 +54,6 @@ def create_metrics_graph(user_metrics: dict) -> List[Any]:
                 all_metrics=user_metrics_with_ids, child=metric_dict
             )
             metric_dict["depends_on"] = depends_on_with_parent_ids
-            # print("\n")
-            # print("parent", parent_metrics)
-            # print("depends", depends_on_with_parent_ids)
 
             child_metric_str, evaluation_name = get_metric_info(metric_dict)
 
@@ -104,8 +101,6 @@ def create_metrics_graph(user_metrics: dict) -> List[Any]:
     graph_string = "Metric Dependencies:"
     for edge in G.edges():
         graph_string += f"\n{'' if edge[1] == 'root' else edge[1]} -> {edge[0]}"
-    # print("GRAPH STRING")
-    # print(graph_string)
     assert nx.is_directed_acyclic_graph(
         G
     ), "The set of metric dependencies must be acyclic! You have cyclical dependencies. {graph_string}"
@@ -115,18 +110,8 @@ def create_metrics_graph(user_metrics: dict) -> List[Any]:
     # This is the order in which metrics will be evaluated
     # and the conditions under which they will be evaluated
     topological_order = list(nx.topological_sort(G))
-    # print("\n")
-    # for n in topological_order:
-    #     print(n)
-    # print("\n")
-    # for k in metric_graph_dict:
-    #     print(k)
-    metric_graph = [metric_graph_dict[node] for node in topological_order]
-    import sys
 
-    # print("FINAL")
-    # print(metric_graph)
-    # sys.exit()
+    metric_graph = [metric_graph_dict[node] for node in topological_order]
     return metric_graph
 
 
@@ -170,14 +155,9 @@ def get_parent_metrics(all_metrics: dict, child: dict):
                 # assume the candidate is a match unless demonstrated otherwise
                 matches = True
 
-                # print("\n")
-                # print("requirement", requirement)
-                # print("candidate", candidate)
-
                 # if it's not the right type, don't match it
                 if "type" in requirement and candidate_type not in allowed_types:
                     matches = False
-                    # print("here1")
 
                 # if the level of this metric doesn't match the level
                 # of the child, don't match it - we only allow dependencies at the
@@ -195,15 +175,8 @@ def get_parent_metrics(all_metrics: dict, child: dict):
                         # print("here2")
                 if matches:
                     candidate_parents.append(candidate)
-                    # for k, v in candidate.items():
-                    #     if k not in requirement and k != "depends_on":
-                    #         requirement[k] = v
-                    # print("HELP")
-                    # print(requirement)
-                    # print(candidate)
                     requirement["parent_id"] = candidate["id"]
                     depends_on_with_id_added.append(requirement)
-        # print("candidate_parents", candidate_parents)
         assert (
             len(candidate_parents) > 0
         ), f"We were unable to locate any match for the `depends_on` entry `{json.dumps(requirement,indent=4)}` in the metric `{json.dumps(child,indent=4)}`. The full set of parent candidates is `{json.dumps(all_metrics,indent=4)}`."
@@ -217,6 +190,7 @@ def get_parent_metrics(all_metrics: dict, child: dict):
 
 def apply_defaults(schema, data, path=None):
     # Initialize path as an empty list if None. This will store the navigation path in the schema.
+
     if path is None:
         path = []
 
@@ -252,17 +226,9 @@ def apply_defaults(schema, data, path=None):
                         data[key] = subschema["default"]
 
         if path == ["metrics", "function"]:
-            # for functions, metric_name will be set at runtime
-            # # if metric_name isn't already set -- set it to function_name
-            # if "metric_name" not in data:
-            #     data["metric_name"] = data["name"]
             data["type"] = "function"
         if path == ["metrics", "rubric"]:
             data["type"] = "rubric"
-            # for rubrics, there will only ever be one metric per run
-            # so we already know the metric_name
-            # no - set this later for reasons
-            # data["metric_name"] = data["name"]
 
         return data
 

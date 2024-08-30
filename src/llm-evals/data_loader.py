@@ -244,14 +244,16 @@ def load_langgraph_sqlite(dataset, filename):
                 assert (
                     tool_call_id in tool_responses_dict
                 ), f"Found a tool call without a tool response! id: {tool_call_id}"
+                # get matching message - should now be accessible through thread now?
+                matching_message = [
+                    m for m in thread.messages if tool_call_id in m.tool_call_ids
+                ][0]
                 ToolCall.create(
                     evalsetrun=dataset.evalsetrun,
                     dataset=dataset,
                     thread=thread,
-                    # get matching message - should now be accessible through thread now?
-                    message=[
-                        m for m in thread.messages if tool_call_id in m.tool_call_ids
-                    ][0],
+                    turn=matching_message.turn,
+                    message=matching_message,
                     function_name=tool_call_vals.get("name"),
                     args=json.dumps(tool_call_vals.get("args")),
                     tool_call_id=tool_call_id,
