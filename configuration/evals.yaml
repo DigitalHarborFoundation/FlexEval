@@ -97,8 +97,6 @@ example:
 
 example-langgraph-no-rubrics:
   data:
-    #- /Users/tom-dhf/git/pedagogical-plots/src/langgraph/checkpoint.db
-    #- /Users/arafferty/git/pedagogical-plots/src/langgraph/checkpoint-older.db
     - /Users/arafferty/git/pedagogical-plots/src/langgraph/checkpoint.db
   do_completion: False
 
@@ -170,35 +168,6 @@ example-langgraph-no-rubrics:
       
       - name: count_role_entries
         metric_level: Turn
-
-
-      # - name: count_tool_calls
-      #   depends_on:
-      #     - name: is_role
-      #       kwargs:
-      #         role: assistant
-      #       metric_name: assistant
-      #       metric_min_value: 1
-
-      # - name: value_counts_by_tool_name
-      #   kwargs:
-      #     json_key: latex
-      #   depends_on:
-      #     - name: is_role
-      #       kwargs:
-      #         role: assistant
-      #       metric_name: assistant
-      #       metric_min_value: 1
-
-      # - name: count_role_entries_in_turn
-
-      # # - name: openai_moderation_api #run for every turn by default
-      # #   context_only: false #this is the default
-
-      # # - name: openai_moderation_api
-      # #   context_only: true
-
-      # - name: flesch_kincaid_grade
 
 cl-no-rubrics:
   data:
@@ -288,3 +257,4 @@ terry_test_rubric:
     kwargs:
       model_name: gpt-4o
       api_key_name: OPENAI_API_KEY
+

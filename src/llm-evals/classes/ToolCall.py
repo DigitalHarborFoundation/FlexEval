@@ -34,6 +34,9 @@ class ToolCall(BaseModel):
 
     function_name = pw.TextField()
     args = pw.TextField()
+    additional_kwargs = (
+        pw.TextField()
+    )  # holds any additional info we want to save with a tool call
     tool_call_id = pw.TextField()
     response_content = pw.TextField()
 

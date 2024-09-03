@@ -347,18 +347,27 @@ def count_errors(object: Union[Thread, Turn, Message, ToolCall]) -> dict:
         "javascript_errors": 1
     }
     """
+    x = 1
+
     if isinstance(object, ToolCall):
         return {
             i: 1
-            for i in object.additional_kwargs
-            if (i.endswith("_errors") and object.additional_kwargs[i] is not None)
+            for i in json.loads(object.additional_kwargs)
+            if (
+                i.endswith("_errors")
+                and json.loads(object.additional_kwargs)[i] is not None
+            )
         }
     else:
         results = {}
         for toolcall in object.toolcalls:
-            keys = [i for i in toolcall.additional_kwargs if i.endswith("_errors")]
+            keys = [
+                i
+                for i in json.loads(toolcall.additional_kwargs)
+                if i.endswith("_errors")
+            ]
             for key in keys:
-                if toolcall.additional_kwargs.get(key, None) is not None:
+                if json.loads(toolcall.additional_kwargs).get(key, None) is not None:
                     results[key] = results.get(key, 0) + 1
         return results
 

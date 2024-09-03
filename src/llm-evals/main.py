@@ -326,6 +326,13 @@ if __name__ == "__main__":
         type=str,
         help="Path to the evaluation file evals.yaml you want to run. Deafult is configuration/evals.yaml.",
     )
+
+    parser.add_argument(
+        "--clear_tables",
+        action="store_true",
+        help="Set this flag to drop existing tables in the results database before running. Useful during development.",
+    )
+
     parser.add_argument(
         "--config_path",
         type=str,
