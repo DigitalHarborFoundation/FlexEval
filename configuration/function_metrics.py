@@ -334,87 +334,33 @@ def openai_moderation_api(turn: str, **kwargs) -> dict:
     return response.results[0].model_dump(exclude_unset=True)["category_scores"]
 
 
-def function_has_error(turn: list) -> int:
-    """Returns the number of rendering errors if the turn is a function call
-    or None otherwise
+def count_errors(object: Union[Thread, Turn, Message, ToolCall]) -> dict:
+    """If a Thread, counts the errors of each type in the thread.
+    If a Turn, Message, or ToolCall, ditto.
+
+    It does this by iterating through ToolCalls and identifying whether there are
+    entries like "*_errors" in tool_call.additional_kwargs
+
+    If a ToolCall, returns 1 if there is an error of each type
+    {
+        "python_errors": 3,
+        "javascript_errors": 1
+    }
     """
-    if turn.get("role", None) == "tool":
-        ct = 0
-        for element in turn.get("content", []):
-            if "error" in element.get("type", ""):
-                try:
-                    errors = json.loads(element.get("text", "[]"))
-                    ct += len(errors)
-                except:
-                    pass
-        return ct
+    if isinstance(object, ToolCall):
+        return {
+            i: 1
+            for i in object.additional_kwargs
+            if (i.endswith("_errors") and object.additional_kwargs[i] is not None)
+        }
     else:
-        return None
-
-
-def error_count(error_list: list) -> int:
-    """
-    Used in rendering_error_count function to identify and count any plot rendering errors
-
-    Args:
-        error_list (list): the list in the conversation containing plot rendering error information
-
-    Returns:
-        int: a count number of the errors
-    """
-    error_count = 0
-    for error_dict in error_list:
-        for key, value in error_dict.items():
-            if key == "text" and value != "[]" and len(value) > 2:
-                error_count += 1
-    return error_count
-
-
-def rendering_error_count(conversation: list) -> dict:
-    """
-    Process a conversation to identify and count plot rendering errors if any
-
-    Args:
-    conversation (list): an entire conversation as a list
-
-    Returns:
-    dict: {
-            'expression_error_count': value,
-            'javascript_log_error_count': value
-        }
-    """
-    try:
-        tool_call_list = [item for item in conversation if item.get("role") == "tool"]
-
-        if not tool_call_list:
-            expression_error_count = 0
-            javascript_log_error_count = 0
-
-        else:
-            # extract the values for the targeted errors
-            for tool_call in tool_call_list:
-                content = tool_call["content"]
-                expression_errors = [
-                    item for item in content if item.get("type") == "expression_errors"
-                ]
-                javascript_log_errors = [
-                    item
-                    for item in content
-                    if item.get("type") == "javascript_log_errors"
-                ]
-                # count the errors
-                expression_error_count = error_count(expression_errors)
-                javascript_log_error_count = error_count(javascript_log_errors)
-
-        result = {
-            "expression_error_count": expression_error_count,
-            "javascript_log_error_count": javascript_log_error_count,
-        }
-
-        return result
-
-    except (KeyError, IndexError, TypeError, ValueError) as e:
-        print(f"An error occurred: {e}")
+        results = {}
+        for toolcall in object.toolcalls:
+            keys = [i for i in toolcall.additional_kwargs if i.endswith("_errors")]
+            for key in keys:
+                if toolcall.additional_kwargs.get(key, None) is not None:
+                    results[key] = results.get(key, 0) + 1
+        return results
 
 
 def count_tokens(object: Union[Thread, Turn, Message]) -> dict:
