@@ -15,6 +15,8 @@ import copy
 import helpers
 
 from configuration import completion_functions
+from configuration import function_metrics
+import inspect
 
 
 class Message(BaseModel):

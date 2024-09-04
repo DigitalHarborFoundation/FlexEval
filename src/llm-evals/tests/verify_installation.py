@@ -158,6 +158,18 @@ class TestConfiguration(unittest.TestCase):
         # Validate against schema
         jsonschema.validate(instance=data, schema=schema)
 
+    def test_metrics_type_is_rubric_or_function(self):
+        """
+        Test if the metrics types provided are either 'function' or 'rubric'
+        """
+        for metric_type in (
+            self.user_evals[self.eval_suite_name].get("metrics").keys()
+        ):            
+            assert metric_type in [
+                'function',
+                'rubric'
+                ], f"Unrecognized metric type '{metric_type}'. Use either function or rubric"
+
     def test_function_metrics_exist(self):
         """
         Test that all function metrics specified in eval config exist and are called with appropriate args.

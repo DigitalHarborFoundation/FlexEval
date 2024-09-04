@@ -89,7 +89,7 @@ def is_role(object: Union[Turn, Message], role: str) -> dict:
 def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
     """
     Counts the occurrences of particular values in the text content of tool call in the conversation.
-    Assumes the roll will be tool, and that kwargs contains the argument json_key. values associated with
+    Assumes the role will be tool, and that kwargs contains the argument json_key. values associated with
     that json_key for a specific tool name are separately aggregated with counts.
 
     Args:
@@ -196,6 +196,30 @@ def count_llm_models(thread: Thread) -> dict:
     results = {}
     for message in thread.messages:
         results["model"] = results.get("model", 0) + 1
+    return results
+
+def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> list:
+    # Extract ToolCall objects based on the type of object being passed in
+    toolcalls = []
+    if isinstance(object, (Thread, Turn)):
+        for message in object.messages:
+            toolcalls += [toolcall for toolcall in message.toolcalls]
+    elif isinstance(object, Message):
+        toolcalls += [toolcall for toolcall in object.toolcalls]
+    else: # Must be just a tool call
+        toolcalls.append(object)
+    
+    # Count the toolcalls
+    toolcall_counts = {}
+    for toolcall in toolcalls:
+        if toolcall.function_name not in toolcall_counts:
+            toolcall_counts[toolcall.function_name] = 0
+        toolcall_counts[toolcall.function_name] = toolcall_counts[toolcall.function_name] + 1
+    
+    # Convert to a list of name: value dictionaries
+    results = []
+    for toolcall_name, toolcall_count in toolcall_counts.items():
+        results.append({"name": toolcall_name, "value": toolcall_count})
     return results
 
 
