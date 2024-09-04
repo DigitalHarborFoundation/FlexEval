@@ -12,11 +12,8 @@ from classes.Dataset import Dataset
 from classes.Turn import Turn
 from playhouse.shortcuts import model_to_dict
 import copy
-import helpers
 
 from configuration import completion_functions
-from configuration import function_metrics
-import inspect
 
 
 class Message(BaseModel):
@@ -152,7 +149,7 @@ class Message(BaseModel):
         output_minus_completion = ""
         for i in input[:-1]:
             output_minus_completion += f"{i['role']}: {i['content']}\n"
-        completion = f"{input[-1]['role']}: {input[-1]['content']}\n"
+        completion = f"{input[-1]['content']}"
         output = output_minus_completion + completion
 
         tool_call_text = ""

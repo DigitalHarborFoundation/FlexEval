@@ -85,16 +85,3 @@ Function output: {response_content}
                     content.append(toolcall.get_dict_representation())
 
         return content
-
-    # def get_turn_components(self):
-    #     return json.dumps(input)
-
-    # def get_ideals(self):
-    #     return json.loads(self.ideals)
-
-    # def tally_tokens(self):
-    #     input_list = json.loads(self.input)
-    #     self.completion_tokens, self.prompt_tokens = 0, 0
-    #     for entry in input_list:
-    #         self.completion_tokens += entry.get("completion_tokens", 0)
-    #         self.prompt_tokens += entry.get("prompt_tokens", 0)

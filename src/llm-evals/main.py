@@ -167,7 +167,10 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)
 
-    # Now compute metircs in parallel
+    #######################################################
+    #################  Compute Metrics  ###################
+    #######################################################
+
     try:
         # Set up a ThreadPoolExecutor to manage threading
         n_workers = runner.configuration.get("max_workers", 1)
@@ -199,7 +202,6 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
             if metric_level not in metrics_by_level:
                 metrics_by_level[metric_level] = []
             metrics_by_level[metric_level].append(metric_instance)
-
         # TODO: if we go back to supporting completions, this will likely need to change
         threads_to_evaluate = [thread for thread in evalsetrun.threads]
         messages_to_evaluate = [message for message in evalsetrun.messages]
@@ -224,7 +226,12 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
         )
         if n_workers == 1:
             metrics = []
+            # del object_lists_by_level["Thread"]
+            # del object_lists_by_level["Turn"]
+            # del object_lists_by_level["Message"]
+            # del object_lists_by_level["ToolCall"]
             for level, object_list in object_lists_by_level.items():
+                runner.logger.info(f"Computing metrics for level: {level}")
                 for object in object_list:
                     cur_metrics = compute_metrics.compute_metrics(object)
                     for m in cur_metrics:

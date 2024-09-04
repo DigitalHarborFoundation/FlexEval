@@ -155,11 +155,14 @@ class Turn(BaseModel):
         return content
 
     def format_input_for_rubric(self):
+        """This is the 'public' method that returns the info for this Turn"""
         input = self.get_formatted_prompt()
         output_minus_completion = ""
         for i in input[:-1]:
+            # this outputs user: XYZ, or assistant: 123
             output_minus_completion += f"{i['role']}: {i['content']}\n"
-        completion = f"{input[-1]['role']}: {input[-1]['content']}\n"
+        # This doesn't need prefix e.g. `user:`, as that's included in the template
+        completion = f"{input[-1]['content']}"
         output = output_minus_completion + completion
 
         tool_call_text = ""

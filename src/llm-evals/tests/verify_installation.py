@@ -162,13 +162,29 @@ class TestConfiguration(unittest.TestCase):
         """
         Test if the metrics types provided are either 'function' or 'rubric'
         """
-        for metric_type in (
-            self.user_evals[self.eval_suite_name].get("metrics").keys()
-        ):            
+        for metric_type in self.user_evals[self.eval_suite_name].get("metrics").keys():
             assert metric_type in [
-                'function',
-                'rubric'
-                ], f"Unrecognized metric type '{metric_type}'. Use either function or rubric"
+                "function",
+                "rubric",
+            ], f"Unrecognized metric type '{metric_type}'. Use either function or rubric"
+
+    def test_metrics_have_correct_keys(self):
+        allowed_keys = [
+            "name",
+            "metric_level",
+            "depends_on",
+            "notes",
+            "kwargs",
+            "context_only",
+            "last_instance_only",
+            "type",
+        ]
+        for metric_type in self.user_evals[self.eval_suite_name].get("metrics").keys():
+            for metric in self.user_evals[self.eval_suite_name]["metrics"][metric_type]:
+                for key in metric:
+                    assert (
+                        key in allowed_keys
+                    ), f"Unrecognized key `{key}` for metric {metric}. Must be one of {allowed_keys}"
 
     def test_function_metrics_exist(self):
         """

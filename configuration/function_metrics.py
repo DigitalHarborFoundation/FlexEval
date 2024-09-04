@@ -181,8 +181,8 @@ def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
     for arg_name, arg_value in toolcall_args.items():
         try:
             numeric_val = float(arg_value)
-            key = toolcall.function_name + "_" + arg_name
-            results.append({"name": key, "value": numeric_val})
+            # key = toolcall.function_name + "_" + arg_name
+            results.append({"name": arg_name, "value": numeric_val})
         except:
             pass
 
@@ -195,8 +195,10 @@ def count_llm_models(thread: Thread) -> dict:
     """
     results = {}
     for message in thread.messages:
-        results["model"] = results.get("model", 0) + 1
+        if message.model_name is not None:
+            results[message.model_name] = results.get(message.model_name, 0) + 1
     return results
+
 
 def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> list:
     # Extract ToolCall objects based on the type of object being passed in
@@ -206,16 +208,18 @@ def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> 
             toolcalls += [toolcall for toolcall in message.toolcalls]
     elif isinstance(object, Message):
         toolcalls += [toolcall for toolcall in object.toolcalls]
-    else: # Must be just a tool call
+    else:  # Must be just a tool call
         toolcalls.append(object)
-    
+
     # Count the toolcalls
     toolcall_counts = {}
     for toolcall in toolcalls:
         if toolcall.function_name not in toolcall_counts:
             toolcall_counts[toolcall.function_name] = 0
-        toolcall_counts[toolcall.function_name] = toolcall_counts[toolcall.function_name] + 1
-    
+        toolcall_counts[toolcall.function_name] = (
+            toolcall_counts[toolcall.function_name] + 1
+        )
+
     # Convert to a list of name: value dictionaries
     results = []
     for toolcall_name, toolcall_count in toolcall_counts.items():
