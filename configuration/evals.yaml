@@ -257,3 +257,4 @@ terry_test_rubric:
     kwargs:
       model_name: gpt-4o
       api_key_name: OPENAI_API_KEY
+      
