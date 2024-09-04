@@ -15,6 +15,8 @@ import copy
 import helpers
 
 from configuration import completion_functions
+from configuration import function_metrics
+import inspect
 
 
 class Message(BaseModel):
@@ -417,7 +419,7 @@ def compute_function_metric(
             return result_list
         else:
             raise Exception(
-                f"The metric type returned from `{metric_function}` is not a supported type. It must be one of `list`, `int`, `float`, or `dict`. You supplied `{type(metric_result)}`."
+                f"The metric type returned from `{metric_function}` is not a supported type. It must be one of `list`, `int`, `float`, or `dict`. You supplied `{type(metrics_result)}`."
             )
     else:
         raise Exception(

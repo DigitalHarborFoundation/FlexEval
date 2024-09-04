@@ -138,22 +138,18 @@ example-langgraph-no-rubrics:
       - name: count_tool_calls_by_name
         metric_level: ToolCall
 
+
       - name: count_tool_calls_by_name
         metric_level: Thread
       
       - name: count_tool_calls_by_name
         metric_level: Message
-
-      - name: count_tool_calls_by_name
-        metric_level: Turn
-
-      # - name: count_tool_calls
-      #   depends_on:
-      #     - name: is_role
-      #       kwargs:
-      #         role: assistant
-      #       metric_name: assistant
-      #       metric_min_value: 1
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
 
       - name: count_tool_calls_by_name
         metric_level: Turn
@@ -226,11 +222,9 @@ cl-no-rubrics:
 
       - name: flesch_kincaid_grade
 
-
 terry_test_rubric:
   data:
-    # - ../../data/test-cases/checkpoint.db
-    - /Users/baptistemp/Documents/code/CarnergieLearning/static_CL_data/checkpoint.db
+    - ../../data/test-cases/checkpoint.db
 
   do_completion: False
 
@@ -243,36 +237,23 @@ terry_test_rubric:
 
   metrics:
     function:
-      - name: is_role
-        metric_level: Turn
-        kwargs:
-          role: user
-
       - name: string_length
-        metric_level: Turn
-
+        metric_level: Thread
     rubric:
       - name: is_request_for_plot
         context_only: false
-        metric_level: Turn
-        depends_on:
-          - name: is_role
-            kwargs:
-              role: user
-            metric_name: user
-            metric_min_value: 1
+        metric_level: Message
 
-  # completion_llm:
-  #   function_name: open_ai_completion
-  #   include_system_prompt: False
-  #   kwargs:
-  #     model_name: gpt-3.5-turbo
-  #     api_key_name: OPENAI_API_KEY
-  #     n: 2
+  completion_llm:
+    function_name: open_ai_completion
+    include_system_prompt: False
+    kwargs:
+      model_name: gpt-3.5-turbo
+      api_key_name: OPENAI_API_KEY
+      n: 2
 
   grader_llm:
     function_name: open_ai_completion
     kwargs:
-      model_name: gpt-4o-mini
+      model_name: gpt-4o
       api_key_name: OPENAI_API_KEY
-

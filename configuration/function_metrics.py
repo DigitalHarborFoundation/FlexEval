@@ -89,7 +89,7 @@ def is_role(object: Union[Turn, Message], role: str) -> dict:
 def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
     """
     Counts the occurrences of particular values in the text content of tool call in the conversation.
-    Assumes the roll will be tool, and that kwargs contains the argument json_key. values associated with
+    Assumes the role will be tool, and that kwargs contains the argument json_key. values associated with
     that json_key for a specific tool name are separately aggregated with counts.
 
     Args:
