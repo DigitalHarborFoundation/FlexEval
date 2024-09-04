@@ -154,7 +154,7 @@ class EvalRunner(Model):
             self.all_evaluations = yaml.safe_load(file)
             assert (
                 self.eval_name in self.all_evaluations
-            ), f"You specified a evaluation called `{self.eval_name}` in the file `{os.path.abspath(self.configuration.get('evals_path'))}`. Available evaluations are `{list(self.all_evaluations.keys())}`"
+            ), f"You specified an evaluation called `{self.eval_name}` in the file `{os.path.abspath(self.configuration.get('evals_path'))}`. Available evaluations are `{list(self.all_evaluations.keys())}`"
             self.eval = self.all_evaluations.get(self.eval_name)
 
         # if the current eval has a 'config' entry, overwrite configuration options with its entries
