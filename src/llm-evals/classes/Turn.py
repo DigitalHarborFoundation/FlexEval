@@ -1,8 +1,6 @@
 import os
-from pathlib import Path
 import sys
 
-import pydantic
 import json
 import peewee as pw
 from classes.BaseModel import BaseModel
@@ -11,13 +9,10 @@ from classes.Dataset import Dataset
 from classes.Thread import Thread
 from playhouse.shortcuts import model_to_dict
 import copy
-import helpers
 
-# from configuration import function_metrics
+# add configuration folder to path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 from configuration import completion_functions
-import inspect
-import string
-from typing import ForwardRef, get_args
 
 
 class Turn(BaseModel):
