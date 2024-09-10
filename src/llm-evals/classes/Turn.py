@@ -167,16 +167,22 @@ class Turn(BaseModel):
 
         tool_call_text = ""
         for tc in self.toolcalls:
-            tool_call_text += """
+            printme = True
+            # if there's a property called tc.additional_kwargs and it evalues to False...don't print
+            if hasattr(tc, "additional_kwargs"):
+                if not json.loads(tc.additional_kwargs).get("print", False):
+                    printme = False
+            if printme:
+                tool_call_text += """
 
-Function name: {function_name}
-Input arguments: {args}
-Function output: {response_content}
-""".format(
-                function_name=tc.function_name,
-                args=tc.args,
-                response_content=tc.response_content,
-            )
+    Function name: {function_name}
+    Input arguments: {args}
+    Function output: {response_content}
+    """.format(
+                    function_name=tc.function_name,
+                    args=tc.args,
+                    response_content=tc.response_content,
+                )
 
         # output - all turns
         # output_minus_completion - all turns except the last
