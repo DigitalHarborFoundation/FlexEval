@@ -121,17 +121,19 @@ def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
 def message_matches_regex(message: Message, expression: str) -> dict:
     """Determines whether a message matches a regular expression specified by the user
 
-    Outputs True if the message content matches, and false otherwise.
+    Outputs the number of matches detected using Pattern.findall()
     """
 
     # Compile the regular expression R
     pattern = re.compile(expression)
 
     # Use the fullmatch method to check if the entire string X matches the pattern
-    match = pattern.fullmatch(message.content)
+    match = pattern.findall(message.content)
 
-    # Return True if there is a match, otherwise False
-    return match is not None
+    if match:
+        return {expression: len(match)}
+    else:
+        return {expression: 0}
 
 
 def tool_was_called(object: Union[Thread, Turn, Message]) -> float:

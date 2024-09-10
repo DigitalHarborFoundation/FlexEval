@@ -247,9 +247,6 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
                     metrics += cur_metrics
 
         else:
-
-            # if we want the dependencies to be obeyed, we must
-
             with ThreadPoolExecutor(max_workers=n_workers) as executor:
                 futures = []
                 for level, object_list in object_lists_by_level.items():
