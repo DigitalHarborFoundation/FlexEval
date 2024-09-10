@@ -376,6 +376,7 @@ First, write out in a step by step manner your reasoning to be sure that your co
 
 Reasoning:""".strip()
         DEFAULT_EXTRACT_ANSWER_TEMPLATE = "\nGiven the above reasoning, the answer in the format requested by the question is:"
+        # This is the call to the grader completion function!
         completion = completion_function(
             conversation_history=[
                 {"role": "system", "content": "You are a helpful assistant."},
