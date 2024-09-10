@@ -60,6 +60,35 @@ def open_ai_completion(
     return raw_response.model_dump(exclude_unset=True)
 
 
+def open_ai_completion_async(
+    conversation_history: List[Dict[str, Any]],
+    model_name: str,
+    api_key_name: str,
+    n: int = 1,
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    """
+    Generate a completion for a given conversation history using OpenAI's chat completion API.
+
+    Args:
+        conversation_history (List[Dict[str, Any]]): The conversation history as a list of message dictionaries.
+        model_name (str): The name of the OpenAI model to use for the completion.
+        api_key_name (str): The environment variable name where the API key is stored.
+        n (int, optional): The number of completion choices to generate. Defaults to 1.
+        **kwargs (Any): Additional keyword arguments to pass to the OpenAI API client.
+
+    Returns:
+        Dict[str, Any]: The response from the OpenAI API with unset fields excluded.
+    """
+    client = OpenAI(api_key=os.getenv(api_key_name))
+
+    raw_response = client.chat.completions.create(
+        model=model_name, messages=conversation_history, n=int(n), **kwargs
+    )
+
+    return raw_response.model_dump(exclude_unset=True)
+
+
 def jan_completion(conversation_history, model_name, endpoint, **kwargs):
     # Example: reuse your existing OpenAI setup
 
