@@ -37,7 +37,6 @@ class Turn(BaseModel):
         super().__init__(**kwargs)
         self.metrics_to_evaluate = []
 
-
     def get_completion(self, include_system_prompt=False):
         # only get a completion if this is the final turn - we probably don't want to branch from mid-conversation
         if self.is_final_turn_in_input:
@@ -49,7 +48,9 @@ class Turn(BaseModel):
             if hasattr(completion_functions, completion_fn_name) and hasattr(
                 completion_functions, completion_fn_name
             ):
-                completion_function = getattr(completion_functions, completion_fn_name, None)
+                completion_function = getattr(
+                    completion_functions, completion_fn_name, None
+                )
                 completion = completion_function(
                     conversation_history=self.get_formatted_prompt(
                         include_system_prompt=False
@@ -107,62 +108,78 @@ class Turn(BaseModel):
             return None
 
     def get_context(self, include_system_prompt=False):
-        '''
+        """
         Context is the context of the first message in the turn
-        '''
+        """
         context = ""
         for message in self.messages:
             context = message.context
             break
         context = json.loads(context)
         if not include_system_prompt:
-            context = [cur_dict for cur_dict in context if cur_dict.get('role') != 'system']
+            context = [
+                cur_dict for cur_dict in context if cur_dict.get("role") != "system"
+            ]
         return context
-    
 
     def get_formatted_prompt(self, include_system_prompt=False):
         formatted_prompt = []
         if include_system_prompt:
             formatted_prompt.append({"role": "system", "content": self.system_prompt})
-        #context = json.loads(self.context)
+        # context = json.loads(self.context)
         context = self.get_context()
 
         if len(context) > 0:
             formatted_prompt += context  # TODO - we might just want a subset of this
-        
+
         formatted_prompt += self.get_content()
         # for t in json.loads(self.turn):
         #     formatted_prompt.append({"role": t["role"], "content": t["content"]})
         return formatted_prompt
-    
+
     def get_content(self, include_toolcalls=True):
-        '''
-        Content is a list of dictionaries where each dictionary 
+        """
+        Content is a list of dictionaries where each dictionary
         contains the role and content of messages and tool calls
         in the turn. Each tool call appears after the message it's
         associated with. If toolcalls are not desired, pass False
         to include_toolcalls.
-        '''
+        """
         content = []
         for message in self.messages:
             content.append({"role": message.role, "content": message.content})
             if include_toolcalls:
                 for toolcall in message.toolcalls:
                     content.append(toolcall.get_dict_representation())
- 
+
         return content
 
     def format_input_for_rubric(self):
+        """This is the 'public' method that returns the info for this Turn"""
         input = self.get_formatted_prompt()
         output_minus_completion = ""
         for i in input[:-1]:
+            # this outputs user: XYZ, or assistant: 123
             output_minus_completion += f"{i['role']}: {i['content']}\n"
-        completion = f"{input[-1]['role']}: {input[-1]['content']}\n"
+        # This doesn't need prefix e.g. `user:`, as that's included in the template
+        completion = f"{input[-1]['content']}"
         output = output_minus_completion + completion
+
+        tool_call_text = ""
+        for tc in self.toolcalls:
+            tool_call_text += """
+
+Function name: {function_name}
+Input arguments: {args}
+Function output: {response_content}
+""".format(
+                function_name=tc.function_name,
+                args=tc.args,
+                response_content=tc.response_content,
+            )
+
         # output - all turns
         # output_minus_completion - all turns except the last
         # completion - last turn
-        return output, output_minus_completion, completion
-    
-    
-
+        # tool_call_text - all tool calls
+        return output, output_minus_completion, completion, tool_call_text

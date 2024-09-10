@@ -27,10 +27,7 @@ def compute_metrics(object: Union[Thread, Turn, Message, ToolCall]):
     # for each new metric, if it has dependencies, we'll need to make sure they're met - otherwise we won't run it
     evaluated_metrics = []
     # METRICS IN ORDER
-    # print(self.metrics_to_evaluate)
     for metric_to_evaluate in object.metrics_to_evaluate:
-        # print("\nEVAL")
-        # print(evaluated_metrics)
         # see if there's a dependency
         dependencies_are_all_met = True
         # If there are no dependencies, this loop won't execute
@@ -55,9 +52,8 @@ def compute_metrics(object: Union[Thread, Turn, Message, ToolCall]):
                 # if a specific metric_name was specified, you need to match exactly:
                 if "metric_name" in dependency:
                     for em in evaluated_metrics:
-                        # print("em", em)
-                        # print("dependency", dependency)
                         # I think the 'depends_on' should have all fields populated at this point
+
                         if (
                             em["id"] == dependency["parent_id"]
                             and em["metric_name"] == dependency["metric_name"]
@@ -110,6 +106,7 @@ def compute_metric(
     last_instance_only: bool = None,
     depends_on: list = None,
     id: int = None,
+    notes: str = None,  # just a placeholder
 ) -> list:
     if evaluation_type == "function":
         metrics = compute_function_metric(
@@ -322,17 +319,17 @@ def compute_rubric_metric(
     prompt = rubrics.get(rubric_name).get("prompt", "")
 
     # format input for rubric
-    conversation, context, turn = object.format_input_for_rubric()
+    conversation, context, content, tool_calls = object.format_input_for_rubric()
     # conversation : all turns; context: all turns without the last entry; completion: only the last entry
     # use three keywords:
     # #{conversation} -- The whole conversation
     # #{context} -- The previous turns without the current entry
-    # #{turn} -- Only the current turn / message / toolcall depending on the metric_level
+    # #{content} -- Only the current turn / message / toolcall depending on the metric_level
     # for the future: add {compeltion} under the condition of do_completion == True
 
     # Add verfication steps before populating the rubric
     # case 1: {conversation} and {context} should not go together
-    # case 2: {completion} and {turn} should not go together
+    # case 2: {completion} and {content} should not go together
     # case 3: if there is a {completion}, do_completion should be true
 
     if "{conversation}" in prompt and "{context}" in prompt:
@@ -340,9 +337,9 @@ def compute_rubric_metric(
             "Your rubric should not have both {conversation} and {context}. Please check the README file for more information about how to write FlexEval rubrics."
         )
 
-    if "{completion}" in prompt and "{turn}" in prompt:
+    if "{completion}" in prompt and "{content}" in prompt:
         raise Exception(
-            "Your rubric should not have both {turn} and {completion}. Please check the README file for more information about how to write FlexEval rubrics."
+            "Your rubric should not have both {content} and {completion}. Please check the README file for more information about how to write FlexEval rubrics."
         )
 
     if "{completion}" in prompt and not object.evalsetrun.do_completion:
@@ -351,13 +348,18 @@ def compute_rubric_metric(
         )
 
     populated_prompt = prompt.format(
-        conversation=conversation, context=context, turn=turn
+        conversation=conversation,
+        context=context,
+        content=content,
+        tool_calls=tool_calls,
     )
+
     # with do_completion == True, only the completion is evaluated with or without the context.
     if object.evalsetrun.do_completion and object.is_completion:
-        populated_prompt = prompt.format(completion=turn)
+        populated_prompt = prompt.format(completion=content)
 
     choice_scores = rubrics.get(rubric_name).get("choice_scores")
+
     # get rubric grader
     grader_completion_function = json.loads(object.evalsetrun.grader_llm)
     grader_completion_fn_name = grader_completion_function.get("function_name", None)

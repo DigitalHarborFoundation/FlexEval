@@ -89,7 +89,7 @@ def is_role(object: Union[Turn, Message], role: str) -> dict:
 def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
     """
     Counts the occurrences of particular values in the text content of tool call in the conversation.
-    Assumes the roll will be tool, and that kwargs contains the argument json_key. values associated with
+    Assumes the role will be tool, and that kwargs contains the argument json_key. values associated with
     that json_key for a specific tool name are separately aggregated with counts.
 
     Args:
@@ -116,6 +116,29 @@ def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
                             counter[key] = counter.get(key, 0) + 1
 
     return counter
+
+
+def message_matches_regex(message: Message, expression: str) -> dict:
+    """Determines whether a message matches a regular expression specified by the user
+
+    Outputs True if the message content matches, and false otherwise.
+    """
+
+    # Compile the regular expression R
+    pattern = re.compile(expression)
+
+    # Use the fullmatch method to check if the entire string X matches the pattern
+    match = pattern.fullmatch(message.content)
+
+    # Return True if there is a match, otherwise False
+    return match is not None
+
+
+def tool_was_called(object: Union[Thread, Turn, Message]) -> float:
+    """Returns 1 if a tool was called, and 0 otherwise"""
+    for tc in object.toolcalls:
+        return 1
+    return 0
 
 
 def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> dict:
@@ -158,36 +181,67 @@ def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
     for arg_name, arg_value in toolcall_args.items():
         try:
             numeric_val = float(arg_value)
-            key = toolcall.function_name + "_" + arg_name
-            results.append({"name": key, "value": numeric_val})
+            # key = toolcall.function_name + "_" + arg_name
+            results.append({"name": arg_name, "value": numeric_val})
         except:
             pass
 
     return results
 
 
-def count_role_entries(
-    turn_or_thread: list,
-) -> list:
+def count_llm_models(thread: Thread) -> dict:
+    """Provides a count of messages in the thread produced by each LLM model.
+    Useful for quantifying which LLM generated the results - and agents can have more than 1 type.
     """
-    Calculate the number of conversational actions for each role. Excludes the system prompt.
-    An action is counted even if the content for that action was blank (e.g., a blank message
+    results = {}
+    for message in thread.messages:
+        if message.model_name is not None:
+            results[message.model_name] = results.get(message.model_name, 0) + 1
+    return results
+
+
+def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> list:
+    # Extract ToolCall objects based on the type of object being passed in
+    toolcalls = []
+    if isinstance(object, (Thread, Turn)):
+        for message in object.messages:
+            toolcalls += [toolcall for toolcall in message.toolcalls]
+    elif isinstance(object, Message):
+        toolcalls += [toolcall for toolcall in object.toolcalls]
+    else:  # Must be just a tool call
+        toolcalls.append(object)
+
+    # Count the toolcalls
+    toolcall_counts = {}
+    for toolcall in toolcalls:
+        if toolcall.function_name not in toolcall_counts:
+            toolcall_counts[toolcall.function_name] = 0
+        toolcall_counts[toolcall.function_name] = (
+            toolcall_counts[toolcall.function_name] + 1
+        )
+
+    # Convert to a list of name: value dictionaries
+    results = []
+    for toolcall_name, toolcall_count in toolcall_counts.items():
+        results.append({"name": toolcall_name, "value": toolcall_count})
+    return results
+
+
+def count_messages_per_role(object: Union[Thread, Turn]) -> list:
+    """
+    Calculate the number of conversational messages for each role. Excludes the system prompt.
+    A message is counted even if the content for that action was blank (e.g., a blank message
     associated with a tool call).
 
     Args:
-        turn_or_thread (list): List of dictionaries with the role and content from each
-                                message in the turn or thread.
+        Turn or Thread
 
     Returns:
-        List[Dict[str, Any]]: A list of dicts with role/value entries indicating the number of turns for each role
+        dict: A dictionary with roles as keys roles and values as counts of messages
     """
-    roles = set([i["role"] for i in turn_or_thread])
-    results = []
-    for role in roles:
-        # get just the turns for the role
-        turns = [i for i in turn_or_thread if i["role"] == role]
-        # get the number of turns
-        results.append({"name": role, "value": len(turns)})
+    results = {}
+    for message in object.messages:
+        results[message.role] = results.get(message.role, 0) + 1
     return results
 
 
@@ -308,87 +362,42 @@ def openai_moderation_api(turn: str, **kwargs) -> dict:
     return response.results[0].model_dump(exclude_unset=True)["category_scores"]
 
 
-def function_has_error(turn: list) -> int:
-    """Returns the number of rendering errors if the turn is a function call
-    or None otherwise
+def count_errors(object: Union[Thread, Turn, Message, ToolCall]) -> dict:
+    """If a Thread, counts the errors of each type in the thread.
+    If a Turn, Message, or ToolCall, ditto.
+
+    It does this by iterating through ToolCalls and identifying whether there are
+    entries like "*_errors" in tool_call.additional_kwargs
+
+    If a ToolCall, returns 1 if there is an error of each type
+    {
+        "python_errors": 3,
+        "javascript_errors": 1
+    }
     """
-    if turn.get("role", None) == "tool":
-        ct = 0
-        for element in turn.get("content", []):
-            if "error" in element.get("type", ""):
-                try:
-                    errors = json.loads(element.get("text", "[]"))
-                    ct += len(errors)
-                except:
-                    pass
-        return ct
+    x = 1
+
+    if isinstance(object, ToolCall):
+        return {
+            i: 1
+            for i in json.loads(object.additional_kwargs)
+            if (
+                i.endswith("_errors")
+                and json.loads(object.additional_kwargs)[i] is not None
+            )
+        }
     else:
-        return None
-
-
-def error_count(error_list: list) -> int:
-    """
-    Used in rendering_error_count function to identify and count any plot rendering errors
-
-    Args:
-        error_list (list): the list in the conversation containing plot rendering error information
-
-    Returns:
-        int: a count number of the errors
-    """
-    error_count = 0
-    for error_dict in error_list:
-        for key, value in error_dict.items():
-            if key == "text" and value != "[]" and len(value) > 2:
-                error_count += 1
-    return error_count
-
-
-def rendering_error_count(conversation: list) -> dict:
-    """
-    Process a conversation to identify and count plot rendering errors if any
-
-    Args:
-    conversation (list): an entire conversation as a list
-
-    Returns:
-    dict: {
-            'expression_error_count': value,
-            'javascript_log_error_count': value
-        }
-    """
-    try:
-        tool_call_list = [item for item in conversation if item.get("role") == "tool"]
-
-        if not tool_call_list:
-            expression_error_count = 0
-            javascript_log_error_count = 0
-
-        else:
-            # extract the values for the targeted errors
-            for tool_call in tool_call_list:
-                content = tool_call["content"]
-                expression_errors = [
-                    item for item in content if item.get("type") == "expression_errors"
-                ]
-                javascript_log_errors = [
-                    item
-                    for item in content
-                    if item.get("type") == "javascript_log_errors"
-                ]
-                # count the errors
-                expression_error_count = error_count(expression_errors)
-                javascript_log_error_count = error_count(javascript_log_errors)
-
-        result = {
-            "expression_error_count": expression_error_count,
-            "javascript_log_error_count": javascript_log_error_count,
-        }
-
-        return result
-
-    except (KeyError, IndexError, TypeError, ValueError) as e:
-        print(f"An error occurred: {e}")
+        results = {}
+        for toolcall in object.toolcalls:
+            keys = [
+                i
+                for i in json.loads(toolcall.additional_kwargs)
+                if i.endswith("_errors")
+            ]
+            for key in keys:
+                if json.loads(toolcall.additional_kwargs).get(key, None) is not None:
+                    results[key] = results.get(key, 0) + 1
+        return results
 
 
 def count_tokens(object: Union[Thread, Turn, Message]) -> dict:

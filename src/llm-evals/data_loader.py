@@ -95,6 +95,7 @@ def load_langgraph_sqlite(dataset, filename):
             # tool call variables
             tool_calls_dict = {}
             tool_responses_dict = {}
+            tool_addional_kwargs_dict = {}
             for completion_row in completion_list:
                 # checkpoint is full state history
                 checkpoint = json.loads(completion_row["checkpoint"])
@@ -169,7 +170,20 @@ def load_langgraph_sqlite(dataset, filename):
                         # iterate through list of message updates
                         if "messages" in value:
                             for message in value["messages"]:
-                                content = message.get("kwargs", {}).get("content", None)
+                                if role == "user":
+                                    content = (
+                                        message.get("kwargs", {})
+                                        .get("content", {})
+                                        .get("content", None)
+                                    )
+                                elif role == "assistant":
+                                    content = message.get("kwargs", {}).get(
+                                        "content", None
+                                    )
+                                else:
+                                    raise Exception(
+                                        "`role` should be either user or assistant."
+                                    )
                                 Message.create(
                                     evalsetrun=dataset.evalsetrun,
                                     dataset=dataset,
@@ -231,6 +245,7 @@ def load_langgraph_sqlite(dataset, filename):
 
                                 # record tool call info so we can match them up later
                                 if message.get("kwargs", {}).get("type") == "tool":
+                                    # this should have a mapping between tool_call_id and the RESPONSE to to the tool call
                                     tool_responses_dict[
                                         message.get("kwargs", {}).get("tool_call_id")
                                     ] = message.get("kwargs", {}).get("content", "")
@@ -238,27 +253,47 @@ def load_langgraph_sqlite(dataset, filename):
                                     for tool_call in message.get("kwargs", {}).get(
                                         "tool_calls", []
                                     ):
+                                        # this should have all the info about the tool calls, including additional_kwargs
+                                        # but NOT their responses
                                         tool_calls_dict[tool_call["id"]] = tool_call
+                                        tool_addional_kwargs_dict[tool_call["id"]] = (
+                                            message.get("kwargs", {}).get(
+                                                "additional_kwargs", {}
+                                            )
+                                        )
+
+            # Add turns to each message
+            # Need to do this before dealing with tool calls, since we
+            # associated turns with tool calls via messages during the .create() method
+            add_turns(thread)
+
             ## Match up tool calls and make an object for each match
             for tool_call_id, tool_call_vals in tool_calls_dict.items():
+                # DEBUG
+                # tool_call_id is defined
+
                 assert (
                     tool_call_id in tool_responses_dict
                 ), f"Found a tool call without a tool response! id: {tool_call_id}"
+                # get matching message - should now be accessible through thread now?
+                matching_message = [
+                    m for m in thread.messages if tool_call_id in m.tool_call_ids
+                ][0]
+
                 ToolCall.create(
                     evalsetrun=dataset.evalsetrun,
                     dataset=dataset,
                     thread=thread,
-                    # get matching message - should now be accessible through thread now?
-                    message=[
-                        m for m in thread.messages if tool_call_id in m.tool_call_ids
-                    ][0],
+                    turn=matching_message.turn,
+                    message=matching_message,
                     function_name=tool_call_vals.get("name"),
                     args=json.dumps(tool_call_vals.get("args")),
+                    additional_kwargs=json.dumps(
+                        tool_addional_kwargs_dict.get(tool_call_id)
+                    ),
                     tool_call_id=tool_call_id,
                     response_content=tool_responses_dict.get(tool_call_id),
                 )
-
-            add_turns(thread)
 
             ## Add system prompt if available?
 
