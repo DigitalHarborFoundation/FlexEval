@@ -1,6 +1,6 @@
 # Guidelines on Writing and Using Rubrics in FlexEval
 
-FlexEval allows users to write their own rubrics to guide the grader LLM in grading conversational turns or entire conversations to approximate human judgment. To use this functionality, users need to 1) write rubrics in `configuration/rubric_metrics`.yaml, and 2) set test specifications for the rubric metric in `configuration/eval`.yaml. Read below for more details.
+FlexEval allows users to write their own rubrics to guide the grader LLM in grading conversational turns or entire conversations to approximate human judgment. To use this functionality, users need to 1) write rubrics in `configuration/rubric_metrics.yaml`, and 2) set test specifications for the rubric metric in `configuration/eval.yaml`. Read below for more details.
 
 ## A General Template for FlexEval Rubrics
 
@@ -16,8 +16,8 @@ The name of your rubric:
       Decide the grader LLM's task (e.g., "Check the student message and decide whether the student is asking for a plot or not.")
 
     Data:
-	Give some background information about the data first (e.g., "The data includes a student message extracted from a conversation between the student and a tutor...").
-	Then specify what you want to include as data using key words (wrapped in curly braces, e.g., {turn}) in the data block marked by [BEGIN DATA] and [END DATA]. For more details about these key words, proceed to read "Key Words in Data Block".
+      Give some background information about the data first (e.g., "The data includes a student message extracted from a conversation between the student and a tutor...").
+      Then specify what you want to include as data using key words (wrapped in curly braces, e.g., {turn}) in the data block marked by [BEGIN DATA] and [END DATA]. For more details about these key words, proceed to read "Key Words in Data Block".
 
       [BEGIN DATA]
       ***
@@ -25,12 +25,13 @@ The name of your rubric:
       ***
       [END DATA]
 
-    __start rubric__
-    Provide details of the rubric for the classification task here.
-    __end rubric__
+    Rubric:
+       __start rubric__
+      Provide details of the rubric for the classification task here.
+      __end rubric__
 
     Output:
-	Specify what to output and how the output should look like. For example, you can follow the approach of "chain-of-thought then classify" (*cot classify* for short, e.g., "First, report your reasoning for your decision. Second, print your decision.")
+      Specify what to output and how the output should look like. For example, you can follow the approach of "chain-of-thought then classify" (*cot classify* for short, e.g., "First, report your reasoning for your decision. Second, print your decision.")
 
   choice_scores:
    Provide a mapping of the output and their corresponding scores, such as below:
@@ -56,7 +57,7 @@ Key words in the data block as demonstrated in the template above are used for p
 
 ## Parameters for Rubric Metric in Test Specification
 
-In configuration/evals.yaml, you can use two parameters to specify how the rubric metric should be conducted, namely, "metric_level" and "depends_on".
+In `configuration/evals.yaml`, you can use two parameters to specify how the rubric metric should be conducted, namely, `metric_level` and `depends_on`.
 
 - `metric_level`: This parameter determines on which level (e.g., turn, message, toolcall) should the rubric metric be conducted.
 - `depends_on`: This parameter describes a condition for the rubric metric to be conducted. In the following example, the depends_on parameter speficies that the rubric metric "is_pedagogically_appropriate_plot" is only run when the result of the function metric "is_role" is "assitant".
