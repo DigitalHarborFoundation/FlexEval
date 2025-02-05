@@ -7,7 +7,8 @@ from classes.Thread import Thread
 from classes.Turn import Turn
 from classes.Message import Message
 from classes.ToolCall import ToolCall
-
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from langchain.load.dump import dumps
 
 def load_jsonl(dataset, filename):
 
@@ -64,6 +65,7 @@ def load_jsonl(dataset, filename):
 
 
 def load_langgraph_sqlite(dataset, filename):
+    serializer = JsonPlusSerializer()
 
     with sqlite3.connect(filename) as conn:
         # Set the row factory to sqlite3.Row
@@ -98,7 +100,9 @@ def load_langgraph_sqlite(dataset, filename):
             tool_addional_kwargs_dict = {}
             for completion_row in completion_list:
                 # checkpoint is full state history
-                checkpoint = json.loads(completion_row["checkpoint"])
+                checkpoint = serializer.loads_typed(
+                                            (completion_row["type"], completion_row["checkpoint"])
+                                        )
                 # metadata is the state update for that row
                 metadata = json.loads(completion_row["metadata"])
                 # IDs from langgraph
@@ -135,15 +139,16 @@ def load_langgraph_sqlite(dataset, filename):
                         # this will be a dictionary we can add to
                         # key is 'input', as in human input
                         update_dict["input"] = {"messages": []}
-                        for msg in metadata["writes"]["messages"]:
-                            message = {}
-                            message["id"] = [
-                                "HumanMessage"
-                            ]  # LangGraph has a list here
-                            message["kwargs"] = {}
-                            message["kwargs"]["content"] = msg
-                            message["kwargs"]["type"] = "human"
-                            update_dict["input"]["messages"].append(message)
+                        # print("metadata keys:", metadata["writes"].keys())
+                        # for msg in metadata["writes"]["messages"]:
+                        #     message = {}
+                        #     message["id"] = [
+                        #         "HumanMessage"
+                        #     ]  # LangGraph has a list here
+                        #     message["kwargs"] = {}
+                        #     message["kwargs"]["content"] = msg
+                        #     message["kwargs"]["type"] = "human"
+                        #     update_dict["input"]["messages"].append(message)
                         # will be used below
                         role = "user"
                         system_prompt = None
@@ -169,7 +174,12 @@ def load_langgraph_sqlite(dataset, filename):
                     for node, value in update_dict.items():
                         # iterate through list of message updates
                         if "messages" in value:
-                            for message in value["messages"]:
+                            if isinstance(value["messages"],dict):
+                                # Make this a list to iterate through - 4 Feb 2025 - used to be a list previously
+                                messagelist = [value["messages"]]
+                            else:
+                                messagelist = value["messages"]
+                            for message in messagelist:
                                 if role == "user":
                                     content = (
                                         message.get("kwargs", {})
@@ -227,7 +237,7 @@ def load_langgraph_sqlite(dataset, filename):
                                     langgraph_parent_checkpoint_id=completion_row[
                                         "parent_checkpoint_id"
                                     ],
-                                    langgraph_checkpoint=completion_row["checkpoint"],
+                                    langgraph_checkpoint=dumps(checkpoint),#Have to re-dump this because of the de-serialization#completion_row["checkpoint"],
                                     langgraph_metadata=completion_row["metadata"],
                                     langgraph_node=node,
                                     langgraph_message_type=message["id"][-1],
