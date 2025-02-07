@@ -10,6 +10,7 @@ from classes.ToolCall import ToolCall
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langchain.load.dump import dumps
 
+
 def load_jsonl(dataset, filename):
 
     with open(filename, "r") as infile:
@@ -76,6 +77,10 @@ def load_langgraph_sqlite(dataset, filename):
         cursor = conn.cursor()
         verify_checkpoints_table_exists(cursor)
 
+        # Sync database
+        query = "PRAGMA wal_checkpoint(FULL);"
+        cursor.execute(query)
+
         # Make threads (aka conversations)
         query = "select distinct thread_id from checkpoints"
         cursor.execute(query)
@@ -101,8 +106,8 @@ def load_langgraph_sqlite(dataset, filename):
             for completion_row in completion_list:
                 # checkpoint is full state history
                 checkpoint = serializer.loads_typed(
-                                            (completion_row["type"], completion_row["checkpoint"])
-                                        )
+                    (completion_row["type"], completion_row["checkpoint"])
+                )
                 # metadata is the state update for that row
                 metadata = json.loads(completion_row["metadata"])
                 # IDs from langgraph
@@ -174,7 +179,7 @@ def load_langgraph_sqlite(dataset, filename):
                     for node, value in update_dict.items():
                         # iterate through list of message updates
                         if "messages" in value:
-                            if isinstance(value["messages"],dict):
+                            if isinstance(value["messages"], dict):
                                 # Make this a list to iterate through - 4 Feb 2025 - used to be a list previously
                                 messagelist = [value["messages"]]
                             else:
@@ -237,7 +242,9 @@ def load_langgraph_sqlite(dataset, filename):
                                     langgraph_parent_checkpoint_id=completion_row[
                                         "parent_checkpoint_id"
                                     ],
-                                    langgraph_checkpoint=dumps(checkpoint),#Have to re-dump this because of the de-serialization#completion_row["checkpoint"],
+                                    langgraph_checkpoint=dumps(
+                                        checkpoint
+                                    ),  # Have to re-dump this because of the de-serialization#completion_row["checkpoint"],
                                     langgraph_metadata=completion_row["metadata"],
                                     langgraph_node=node,
                                     langgraph_message_type=message["id"][-1],
