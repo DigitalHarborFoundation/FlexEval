@@ -424,7 +424,7 @@ Reasoning:""".strip()
             "metric_level": metric_level,
             "metric_value": choice_scores[score],
             "rubric_prompt": populated_prompt,
-            "rubric_completion": completion["choices"][0]["message"]["content"],
+            "rubric_completion": completion_text,
             "rubric_model": completion.get("model", None),
             "rubric_completion_tokens": completion.get("usage", {}).get(
                 "completion_tokens", 0

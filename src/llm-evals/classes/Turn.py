@@ -131,6 +131,8 @@ class Turn(BaseModel):
         # for t in json.loads(self.turn):
         #     formatted_prompt.append({"role": t["role"], "content": t["content"]})
         return formatted_prompt
+    
+    
 
     def get_content(self, include_toolcalls=True):
         """
@@ -153,11 +155,15 @@ class Turn(BaseModel):
         """This is the 'public' method that returns the info for this Turn"""
         input = self.get_formatted_prompt()
         output_minus_completion = ""
-        for i in input[:-1]:
+            
+        for i in self.get_context():#input[:-1]:
             # this outputs user: XYZ, or assistant: 123
             output_minus_completion += f"{i['role']}: {i['content']}\n"
         # This doesn't need prefix e.g. `user:`, as that's included in the template
-        completion = f"{input[-1]['content']}"
+        completion = ""
+        for msg in self.get_content():
+            completion += f"{msg['content']}\n"
+        #completion = f"{self.get_content()['content']}"
         output = output_minus_completion + completion
 
         tool_call_text = ""

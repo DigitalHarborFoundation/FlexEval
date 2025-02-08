@@ -97,7 +97,8 @@ example:
 
 example-langgraph-no-rubrics:
   data:
-    - /Users/arafferty/git/pedagogical-plots/src/langgraph/checkpoint.db
+    - ../../data/plotting-feb-2025/checkpoint-06022024-AIED-small.sqlite
+    #- /Users/arafferty/git/pedagogical-plots/src/langgraph/checkpoint.db
   do_completion: False
 
   name: dependency example
@@ -163,16 +164,15 @@ example-langgraph-no-rubrics:
       - name: count_numeric_tool_call_params_by_name
         metric_level: ToolCall
       
-      - name: count_role_entries
-        metric_level: Thread
+      # - name: count_role_entries
+      #   metric_level: Thread
       
-      - name: count_role_entries
-        metric_level: Turn
+      # - name: count_role_entries
+      #   metric_level: Turn
 
 cl-no-rubrics:
   data:
-    - ../../data/test-cases/auto-conversations-cl.jsonl
-
+    - ../../data/plotting-feb-2025/checkpoint-06022024-AIED-small.sqlite
   do_completion: False
 
   name: my-test
@@ -185,6 +185,8 @@ cl-no-rubrics:
   metrics:
     function:
       - name: string_length
+        metric_level: Thread
+
 
       - name: count_emojis
 
@@ -224,8 +226,7 @@ cl-no-rubrics:
 
 terry_test_rubric:
   data:
-    - ../../data/test-cases/checkpoint.db
-
+    - ../../data/plotting-feb-2025/checkpoint-06022024-AIED-small.sqlite
   do_completion: False
 
   name: Terry testing rubric metrics
@@ -239,22 +240,37 @@ terry_test_rubric:
     function:
       - name: string_length
         metric_level: Thread
+
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
     rubric:
       - name: is_request_for_plot
         context_only: false
-        metric_level: Message
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
 
-  completion_llm:
-    function_name: open_ai_completion
-    include_system_prompt: False
-    kwargs:
-      model_name: gpt-3.5-turbo
-      api_key_name: OPENAI_API_KEY
-      n: 2
+  # completion_llm:
+  #   function_name: open_ai_completion
+  #   include_system_prompt: False
+  #   kwargs:
+  #     model_name: gpt-3.5-turbo
+  #     api_key_name: OPENAI_API_KEY
+  #     n: 2
 
   grader_llm:
     function_name: open_ai_completion
     kwargs:
-      model_name: gpt-4o
+      model_name: gpt-4o-mini
       api_key_name: OPENAI_API_KEY
       
