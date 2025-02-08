@@ -145,16 +145,22 @@ def load_langgraph_sqlite(dataset, filename):
                         # key is 'input', as in human input
                         update_dict["input"] = {"messages": []}
                         # print("metadata keys:", metadata["writes"].keys())
-                        # for msg in metadata["writes"]["messages"]:
-                        #     message = {}
-                        #     message["id"] = [
-                        #         "HumanMessage"
-                        #     ]  # LangGraph has a list here
-                        #     message["kwargs"] = {}
-                        #     message["kwargs"]["content"] = msg
-                        #     message["kwargs"]["type"] = "human"
-                        #     update_dict["input"]["messages"].append(message)
-                        # will be used below
+                        # the very first message in input in a thread seems to include
+                        # the system prompt, not a message that was sent by the user
+                        messagecount = 0
+                        for msg in metadata["writes"]["__start__"]["messages"]:
+                            if messagecount == 0 and metadata["step"] == -1:
+                                messagecount += 1
+                                continue
+                            message = {}
+                            message["id"] = [
+                                "HumanMessage"
+                            ]  # LangGraph has a list here
+                            message["kwargs"] = {}
+                            message["kwargs"]["content"] = msg
+                            message["kwargs"]["type"] = "human"
+                            update_dict["input"]["messages"].append(message)
+                        #will be used below
                         role = "user"
                         system_prompt = None
                     # machine input condition
@@ -189,6 +195,7 @@ def load_langgraph_sqlite(dataset, filename):
                                     content = (
                                         message.get("kwargs", {})
                                         .get("content", {})
+                                        .get("kwargs", {})
                                         .get("content", None)
                                     )
                                 elif role == "assistant":
