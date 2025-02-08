@@ -103,6 +103,9 @@ def load_langgraph_sqlite(dataset, filename):
             tool_calls_dict = {}
             tool_responses_dict = {}
             tool_addional_kwargs_dict = {}
+            # system prompt reset for every thread
+            system_prompt = None
+
             for completion_row in completion_list:
                 # checkpoint is full state history
                 checkpoint = serializer.loads_typed(
@@ -146,32 +149,37 @@ def load_langgraph_sqlite(dataset, filename):
                         update_dict["input"] = {"messages": []}
                         # print("metadata keys:", metadata["writes"].keys())
                         # the very first message in input in a thread seems to include
-                        # the system prompt, not a message that was sent by the user
+                        # the system prompt, not a message that was sent by the user.
+                        # the system promptdoesn't seem to be set anywhere else, so
+                        # using that as the system prompt for the thread.
                         messagecount = 0
                         for msg in metadata["writes"]["__start__"]["messages"]:
                             if messagecount == 0 and metadata["step"] == -1:
-                                messagecount += 1
-                                continue
-                            message = {}
-                            message["id"] = [
-                                "HumanMessage"
-                            ]  # LangGraph has a list here
-                            message["kwargs"] = {}
-                            message["kwargs"]["content"] = msg
-                            message["kwargs"]["type"] = "human"
-                            update_dict["input"]["messages"].append(message)
+                                system_prompt = msg["kwargs"]["content"]
+                                messagecount += 1;
+                            else:
+                                message = {}
+                                message["id"] = [
+                                    "HumanMessage"
+                                ]  # LangGraph has a list here
+                                message["kwargs"] = {}
+                                message["kwargs"]["content"] = msg
+                                message["kwargs"]["type"] = "human"
+                                update_dict["input"]["messages"].append(message)
                         #will be used below
                         role = "user"
-                        system_prompt = None
+                        
                     # machine input condition
                     elif metadata.get("source") == "loop":
                         # This already has a list of messages with kwargs, etc
                         update_dict = metadata.get("writes")
                         # I think 'system_prompt' is empty by default and not stored here unless
                         # it's included in the LangGraph state
-                        system_prompt = checkpoint.get("channel_values", {}).get(
+                        checkpoint_system_prompt = checkpoint.get("channel_values", {}).get(
                             "system_prompt"
                         )
+                        if checkpoint_system_prompt is not None:
+                            system_prompt = checkpoint_system_prompt
                         role = "assistant"
                     else:
                         raise Exception(
