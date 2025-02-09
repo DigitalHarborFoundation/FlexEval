@@ -131,7 +131,7 @@ is_student_acting_as_tutor:
     Output:
       First, report your reasoning for your decision. 
       Second, print your decision.
-      IMPORTANT:After your reasoning, print the choice string of "YES" or "NO" on a separate line with NO OTHER TEXT on that line.
+      IMPORTANT: After your reasoning, print the choice string of "YES" or "NO" on a separate line with NO OTHER TEXT on that line.
   choice_scores:
     "YES": 1
     "NO": 0
@@ -149,38 +149,87 @@ is_pedagogically_appropriate_plot:
       To aid understanding, the tutor (assisstant) sometimes generates a plot to illustrate the math concepts more clearly.
 
     Your Task:
-      Sometimes the student (user) changes their role and acts as if they are the tutor. When this happens, the student (user)
-      will say things like "Do you want me to graph it?", "Do you want to see a graph?", "Would you like me to explain?", "OK, let's break it down...", "Take a deep breath..."
-      Your job is to determine whether the conversation below contains one or more student (user) outputs of this type.
-      Usually, this does not happen, but you are checking to see whether it does.
+      Your job is to determine whether the final plot generated in the conversation is pedagogically appropriate given the context of the previous conversation.
+      A plot is pedagogically appropriate if it seems likely to be helpful for the student's (user's) learning and is relevant to the current topic of conversation.
 
     Data:
-      The following contains a conversation between the student (user) and the tutor (assistant). 
+      The following contains a conversation between the student (user) and the tutor (assistant). The final output is the plot. 
       
       [BEGIN DATA]
       ***
       [Input]: {context}
 
-      [Output]: {completion}
+      [Output]: {content}
       ***
       [END DATA]
 
-    __start rubric__
-    If the student (user) ever changes roles and starts acting as if it were the tutor, print "YES".
-    If the student (user) never changes roles and start acting as if it were the tutor, print "NO".
+    Use the following rubric to evaluate the tutor's (assistant's) comment in [Output] only.
 
-    Note:
-    If a student turn is ambiguous, you can assume they are not acting as the tutor.
+    __start rubric__
+    C. Inappropriate
+    Characteristics: The plot is not pedagogically appropriate for the current conversation, and is unlikely to help the student learn.
+    Indicators: Plot is unrelated to the previous conversation; plot does not illustrate key features of the problem under discussion; current conversation is not about something that can be helpfully plotted.
+
+    B. Somewhat appropriate
+    Characteristics: The plot is somewhat pedagogically appropriate, giving some insight into the problem but in a way that is less conducive to learning than it could have been.
+    Indicators: Plot is related to the previous conversation; plot solves part of the problem for the student rather than allowing the student to solve it; plot has some helpful features but is missing other helpful features.
+
+    A. Appropriate
+    Characteristics: The plot is pedagogically appropriate, helping the student to better understand the problem and improve their math understanding.
+    Indicators: Plot is directly related to the previous conversation; plot illustrates key features of the problem or of the topic under discussion; the discussion is currently about a topic that can be graphed and the plot represents that topic.
+
     __end rubric__
 
     Output:
       First, report your reasoning for your decision. 
       Second, print your decision.
-      IMPORTANT:After your reasoning, print the choice string of "YES" or "NO" on a separate line with NO OTHER TEXT on that line.
+      IMPORTANT: After your reasoning, print the choice string of "A", "B", or "C" on a separate line with NO OTHER TEXT on that line.
 
   choice_scores:
     "A": 1
-    "B": .75
-    "C": .5
-    "D": .25
-    "F": 0
+    "B": .5
+    "C": 0
+
+
+plot_matches_description:
+  notes: |-
+    want to get at something like "The text description by the tutor did not match the generated plot"
+  prompt: |-
+    Your Role:
+      You are a helpful assistant. You have solid knowledge in K-12 math instruction. 
+
+    Context:
+      A K-12 student learns math using an online tutoring system. 
+      During the session, the student (user) asks the tutor (assistant) for help with some math problems. 
+      To aid understanding, the tutor (assisstant) sometimes generates a plot to illustrate the math concepts more clearly.
+
+    Your Task:
+      Before generating a plot, the tutor (assistant) generates a description of the plot they want to generate.
+      Your job is to determine whether the plot the tutor (assistant) generates actually matches the description. 
+
+
+    Data:
+      The following contains messages from the tutor (assistant).
+      The messages include the tutor's (assistant's) description of the plot to generate, and shortly afterwards, it contains the generated plot
+      
+      [BEGIN DATA]
+      ***
+      {content}
+      ***
+      [END DATA]
+
+    __start rubric__
+    If the generated plot is fully consistent with the tutor's (assistant's) description, print "YES". 
+    If the generated plot is somewhat consistent with the tutor's (assistant's) description, print "SOMEWHAT". 
+    If the generated plot is not consistent with the tutor's (assistant's) description, print "NO". 
+    __end rubric__
+
+    Output:
+      First, report your reasoning for your decision. 
+      Second, print your decision.
+      IMPORTANT: After your reasoning, print the choice string of "YES", "SOMEWHAT", or "NO" on a separate line with NO OTHER TEXT on that line.
+
+  choice_scores:
+    "YES": 1
+    "SOMEWHAT": .5
+    "NO": 0

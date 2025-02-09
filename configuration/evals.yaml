@@ -139,6 +139,9 @@ example-langgraph-no-rubrics:
       - name: count_tool_calls_by_name
         metric_level: ToolCall
 
+      - name: count_tool_calls
+        metric_level: Turn
+
 
       - name: count_tool_calls_by_name
         metric_level: Thread
@@ -163,6 +166,9 @@ example-langgraph-no-rubrics:
 
       - name: count_numeric_tool_call_params_by_name
         metric_level: ToolCall
+      
+      - name: count_llm_models
+        metric_level: Thread
       
       # - name: count_role_entries
       #   metric_level: Thread
@@ -248,6 +254,9 @@ terry_test_rubric:
       - name: is_role
         kwargs:
           role: user
+      
+      - name: count_tool_calls
+        metric_level: Turn
 
     rubric:
       - name: is_request_for_plot
@@ -258,6 +267,30 @@ terry_test_rubric:
             kwargs:
               role: assistant
             metric_name: assistant
+            metric_min_value: 1
+
+      - name: is_student_acting_as_tutor
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: user
+            metric_name: user
+            metric_min_value: 1
+
+      - name: is_pedagogically_appropriate_plot
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls
+            metric_min_value: 1
+      
+      - name: plot_matches_description
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls
             metric_min_value: 1
 
   # completion_llm:
