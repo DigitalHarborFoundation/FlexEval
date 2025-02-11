@@ -86,6 +86,18 @@ def is_role(object: Union[Turn, Message], role: str) -> dict:
     return {role: int(object.role == role)}
 
 
+def is_langgraph_type(object: Union[Message], type: str) -> dict:
+    """
+    Return 1 is the langgraph type for this Message matches the passed in type,
+    and 0 otherwise.
+
+    Args:
+    object: the Message
+    type: a string with the desired type to check against
+    """
+    return {type: int(object.langgraph_type == type)}
+
+
 def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
     """
     Counts the occurrences of particular values in the text content of tool call in the conversation.
@@ -134,6 +146,25 @@ def message_matches_regex(message: Message, expression: str) -> dict:
         return {expression: len(match)}
     else:
         return {expression: 0}
+
+def count_of_parts_matching_regex(object:  Union[Thread, Turn, Message], expression: str) -> int:
+    """Determines the total number of messages in this object
+     matching a regular expression specified by the user. Ignores tool calls in object.
+
+    Outputs the sum of the number of matches detected using Pattern.findall() across
+    all entries in the object.
+    """
+    total_matches = {expression: 0}
+    if isinstance(object, (Thread, Turn)):
+        messages_to_match = object.messages
+    else:
+        messages_to_match = [object]
+
+    for message in messages_to_match:
+        total_matches[expression] += message_matches_regex(message, expression)[expression]
+
+    return total_matches
+
 
 
 def tool_was_called(object: Union[Thread, Turn, Message]) -> float:
@@ -242,7 +273,7 @@ def count_tool_calls(object: Union[Thread, Turn, Message]) -> dict:
 #     return results
 
 
-def count_messages_per_role(object: Union[Thread, Turn]) -> list:
+def count_messages_per_role(object: Union[Thread, Turn], use_langgraph_roles=False) -> list:
     """
     Calculate the number of conversational messages for each role. Excludes the system prompt.
     A message is counted even if the content for that action was blank (e.g., a blank message
@@ -256,7 +287,11 @@ def count_messages_per_role(object: Union[Thread, Turn]) -> list:
     """
     results = {}
     for message in object.messages:
-        results[message.role] = results.get(message.role, 0) + 1
+        if use_langgraph_roles:
+            role = message.langgraph_type
+        else:
+            role = message.role
+        results[role] = results.get(role, 0) + 1
     return results
 
 

@@ -60,10 +60,11 @@ is_request_for_plot:
     Context:
       A K-12 student learns math using an online tutoring system. 
       During the session, the student (user) asks the tutor (assistant) for help with some math problems. 
-      To aid understanding, the tutor (assisstant) sometimes generates a plot to illustrate the math concepts more clearly.
+      To aid understanding, the tutor (assistant) sometimes generates a plot to illustrate the math concepts more clearly.
 
     Your Task:
-      Decide whether a student (user) is asking for a plot at the end of a conversation.
+      Decide whether a student (user) is asking for a plot at the end of a conversation. The request for a plot might occur in the very last message from a student (user) or before that. 
+      If the student (user) asked for a plot earlier in the conversation and the tutor (assistant) already generated the plot, do NOT treat it as a request for a plot unless the student (user) has made a new request that has not yet been fulfilled.
 
     Data:
       The following contains a conversation between the student user and the tutor assistant. 
@@ -78,17 +79,17 @@ is_request_for_plot:
       [END DATA]
 
     __start rubric__
-    If the student is asking for a plot at the end of the conversation, print "YES".
-    If the student is not asking for a plot at the end of the conversation, print "NO".
+    If the student (user) is asking for a plot at the end of the conversation, print "YES".
+    If the student (user) is not asking for a plot at the end of the conversation, print "NO".
     Note:
-    If the student/user acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?", do NOT treat it as a request for plots, and instead answer "NO". 
+    If the student (user) acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?", do NOT treat it as a request for a plot, and instead answer "NO". 
 
     __end rubric__
 
     Output:
       First, report your reasoning for your decision. 
       Second, print your decision.
-      IMPORTANT:After your reasoning, print the choice string of "YES" or "NO" on a separate line with NO OTHER TEXT on that line.
+      IMPORTANT: After your reasoning, print the choice string of "YES" or "NO" on a separate line with NO OTHER TEXT on that line.
   choice_scores:
     "YES": 1
     "NO": 0
@@ -125,7 +126,8 @@ is_student_acting_as_tutor:
     If the student (user) never changes roles and start acting as if it were the tutor, print "NO".
 
     Note:
-    If a student turn is ambiguous, you can assume they are not acting as the tutor.
+    If a student (user) turn is ambiguous, you can assume they are not acting as the tutor.
+    If a student (user) simply asks the tutor to graph something for the student (user), that is not sufficient evidence that the student (user) is acting as a tutor.
     __end rubric__
 
     Output:
@@ -210,7 +212,7 @@ plot_matches_description:
 
     Data:
       The following contains messages from the tutor (assistant).
-      The messages include the tutor's (assistant's) description of the plot to generate, and shortly afterwards, it contains the generated plot
+      The messages include the tutor's (assistant's) description of the plot to generate, and shortly afterwards, it contains the generated plot in JSON.
       
       [BEGIN DATA]
       ***
@@ -219,9 +221,12 @@ plot_matches_description:
       [END DATA]
 
     __start rubric__
-    If the generated plot is fully consistent with the tutor's (assistant's) description, print "YES". 
-    If the generated plot is somewhat consistent with the tutor's (assistant's) description, print "SOMEWHAT". 
-    If the generated plot is not consistent with the tutor's (assistant's) description, print "NO". 
+    YES: If the generated plot is fully consistent with the tutor's (assistant's) description, print "YES". 
+    SOMEWHAT: If the generated plot is somewhat consistent with the tutor's (assistant's) description, print "SOMEWHAT". A plot that is SOMEWHAT consistent might contain some but not all of the features in the description or might differ slightly in what is represented compared to the description. 
+    NO: If the generated plot is not consistent with the tutor's (assistant's) description, print "NO". A plot that is not consistent has many features that are not consistent with the description or graphs something very different from the description.
+
+    Note:
+    If there is not a generated plot represented as JSON, then print "NO".
     __end rubric__
 
     Output:
@@ -233,3 +238,63 @@ plot_matches_description:
     "YES": 1
     "SOMEWHAT": .5
     "NO": 0
+
+
+plot_bounds_are_sufficiently_large:
+  notes: |-
+    this looks at a plot and asks whether the bounds are sufficiently large to include the relevant information in the graph - include the important features
+    IMPORTANT: this should only be evaluated on ASSISTANT TURNS where a plot exists
+  prompt: |-
+    Your Role:
+      You are a helpful assistant. You have solid knowledge in K-12 math instruction. 
+
+    Context:
+      A K-12 student learns math using an online tutoring system. 
+      During the session, the student (user) asks the tutor (assistant) for help with some math problems. 
+      To aid understanding, the tutor (assistant) sometimes generates a plot to illustrate the math concepts more clearly.
+
+    Your Task:
+      In this turn, there are toolcall's describing a plot and including code to generate the plot.
+      Decide whether the bounds in the plot are sufficiently large for the plot that is generated.
+      Bounds are sufficiently large if they allow the student (user) to see the overall shape of the plot and include important features like the x-intercept(s) and the y-intercept(s).
+      It is okay if the bounds are larger than necessary.
+      The bounds in the plot are listed as the properties "top", "bottom", "right", and "left" in a JSON dictionary. 
+      The values or equations being plotted are also present in the JSON.
+      If the JSON plot includes different data than the text description, you should focus on whether the bounds are sufficiently large for the value(s) or equation(s) that are plotted in the JSON plot.
+      If there are multiple JSON plots, your answer should reflect whether the bounds for all plots are sufficiently large.
+
+    Data:
+      The following contains messages from the tutor (assistant).
+      The messages include the tutor's (assistant's) description of the plot to generate, and shortly afterwards, it contains the generated plot in JSON.
+     
+      
+      [BEGIN DATA]
+      ***
+      {content}
+
+      ***
+      [END DATA]
+
+    __start rubric__
+      YES: If the bounds for the plot are sufficiently large, print "YES". 
+      
+      SOMEWHAT: If most of the bounds for the plot are sufficiently large, but one is a bit too small to fully visualize the shape of the graph, print "SOMEWHAT".
+      
+      NO: If some of the bounds are definitely not sufficiently large, print "NO".
+      
+      UNSURE: If some of the bounds are sufficiently large but you're unsure about whether others are sufficiently large, print "UNSURE". 
+ 
+      Note:
+      If you can't identify the bounds of the plot, print "UNSURE".
+      If all of the bounds are 0 or -0 for one or more plots, then print "UNSURE", as the actual plot bounds are not represented in the JSON in this case.
+    __end rubric__
+
+    Output:
+      First, report your reasoning for your decision. 
+      Second, print your decision.
+      IMPORTANT: After your reasoning, print the choice string of "YES", "SOMEWHAT", "NO", or "UNSURE" on a separate line with NO OTHER TEXT on that line.
+  choice_scores:
+    "YES": 1
+    "SOMEWHAT": .5
+    "NO": 0
+    "UNSURE": -1

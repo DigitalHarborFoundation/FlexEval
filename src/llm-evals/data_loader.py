@@ -273,7 +273,7 @@ def load_langgraph_sqlite(dataset, filename):
                                 )
 
                                 # update the context for the next Message
-                                context.append({"role": role, "content": content})
+                                context.append({"role": role, "content": content, "langgraph_role": message["id"][-1]})
 
                                 # record tool call info so we can match them up later
                                 if message.get("kwargs", {}).get("type") == "tool":

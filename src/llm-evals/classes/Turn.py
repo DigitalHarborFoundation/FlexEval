@@ -134,7 +134,7 @@ class Turn(BaseModel):
     
     
 
-    def get_content(self, include_toolcalls=True):
+    def get_content(self, include_toolcalls=True, include_tool_messages=True):
         """
         Content is a list of dictionaries where each dictionary
         contains the role and content of messages and tool calls
@@ -144,25 +144,31 @@ class Turn(BaseModel):
         """
         content = []
         for message in self.messages:
-            content.append({"role": message.role, "content": message.content})
+            if include_tool_messages or message.langgraph_message_type != "ToolMessage":
+                content.append({"role": message.role, "content": message.content})
             if include_toolcalls:
                 for toolcall in message.toolcalls:
                     content.append(toolcall.get_dict_representation())
 
         return content
 
-    def format_input_for_rubric(self):
+    def format_input_for_rubric(self, include_system_prompt=False, include_tool_messages=False):
         """This is the 'public' method that returns the info for this Turn"""
         input = self.get_formatted_prompt()
         output_minus_completion = ""
+        if include_system_prompt:
+            output_minus_completion.append({"role": "system", "content": self.system_prompt})
+
             
-        for i in self.get_context():#input[:-1]:
+        for msg in self.get_context():#input[:-1]:
             # this outputs user: XYZ, or assistant: 123
-            output_minus_completion += f"{i['role']}: {i['content']}\n"
-        # This doesn't need prefix e.g. `user:`, as that's included in the template
+            if len(msg['content']) > 0 and (include_tool_messages or msg['langgraph_role'] != "tool"):
+                output_minus_completion += f"{msg['role']}: {msg['content']}\n"
+        # Including role as prefix to account for both tool and assistant
         completion = ""
-        for msg in self.get_content():
-            completion += f"{msg['content']}\n"
+        for msg in self.get_content(include_tool_messages=include_tool_messages):
+            if len(msg['content']) > 0:
+                completion += f"{msg['role']}: {msg['content']}\n"
         #completion = f"{self.get_content()['content']}"
         output = output_minus_completion + completion
 
