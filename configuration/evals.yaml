@@ -169,6 +169,16 @@ example-langgraph-no-rubrics:
       
       - name: count_llm_models
         metric_level: Thread
+
+      - name: message_matches_regex
+        kwargs:
+          expression: "Please use the appropriate available tools to generate the requested plot or diagram."
+        metric_level: Message
+      
+      - name: count_of_parts_matching_regex
+        kwargs:
+          expression: "Please use the appropriate available tools to generate the requested plot or diagram."
+        metric_level: Turn
       
       # - name: count_role_entries
       #   metric_level: Thread
@@ -230,17 +240,17 @@ cl-no-rubrics:
 
       - name: flesch_kincaid_grade
 
-terry_test_rubric:
+plotting_some_rubrics:
   data:
-    - ../../data/plotting-feb-2025/checkpoint-06022024-AIED-small.sqlite
+    - ../../data/plotting-feb-2025/checkpoint-06022024-AIED.sqlite
   do_completion: False
 
-  name: Terry testing rubric metrics
+  name: Plotting evaluation evals
   notes: my notes
 
   #anything in here will overwrite entries in src/llm-evals/config.yaml
   config:
-    max_workers: 1
+    max_workers: 6
 
   metrics:
     function:
@@ -254,8 +264,129 @@ terry_test_rubric:
       - name: is_role
         kwargs:
           role: user
+
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: user
+      
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: assistant
+      
+      - name: is_langgraph_type
+        metric_level: Message
+        kwargs:
+          type: ai
+
+      - name: string_length
+        metric_level: Turn
+
+      - name: string_length
+        metric_level: Message
+
+      - name: count_tool_calls_by_name
+        metric_level: ToolCall
       
       - name: count_tool_calls
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+
+      - name: count_tool_calls_by_name
+        metric_level: Thread
+      
+      - name: count_tool_calls_by_name
+        metric_level: Message
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: count_tool_calls_by_name
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: count_numeric_tool_call_params_by_name
+        metric_level: ToolCall
+      
+      - name: count_llm_models
+        metric_level: Thread
+
+      - name: message_matches_regex
+        kwargs:
+          expression: "Please use the appropriate available tools to generate the requested plot or diagram."
+        metric_level: Message
+        # metric_name: "ToolMessage_text_indicator"
+
+      - name: message_matches_regex
+        kwargs:
+          expression: "desmos"
+        metric_level: Message
+
+      - name: message_matches_regex
+        kwargs:
+          expression: "functions\\..*\\{"
+        metric_level: Message
+        # metric_name: "function_call_in_content"
+        depends_on:
+          - name: is_langgraph_type
+            kwargs:
+              type: ai
+            metric_name: ai
+            metric_min_value: 1
+      
+      - name: message_matches_regex
+        kwargs:
+          expression: "exception"
+        metric_level: Message
+        # metric_name: "exception_in_content"
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: count_of_parts_matching_regex
+        kwargs:
+          expression: "Please use the appropriate available tools to generate the requested plot or diagram"
+        metric_level: Turn
+        # metric_name: "contains_plot_description"
+
+      - name: count_messages_per_role
+        kwargs:
+          use_langgraph_roles: true
+        metric_level: Thread
+
+      - name: count_tokens
+        metric_level: Turn
+
+      - name: count_errors
+        metric_level: Thread
+
+      - name: message_matches_regex
+        kwargs: 
+          expression: "An error occurred while processing your request"
+        metric_level: Message
+        # metric_name: "error_in_content"
+      
+      - name: count_of_parts_matching_regex
+        kwargs:
+          expression: "An error occurred while processing your request"
         metric_level: Turn
 
     rubric:
@@ -292,6 +423,23 @@ terry_test_rubric:
         depends_on:
           - name: count_tool_calls
             metric_min_value: 1
+          - name: count_of_parts_matching_regex
+            kwargs:
+              expression: "An error occurred while processing your request"
+            metric_name: "An error occurred while processing your request"
+            metric_max_value: 0
+
+      - name: plot_bounds_are_sufficiently_large
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls
+            metric_min_value: 1
+          - name: count_of_parts_matching_regex
+            kwargs:
+              expression: "An error occurred while processing your request"
+            metric_name: "An error occurred while processing your request"
+            metric_max_value: 0
 
   # completion_llm:
   #   function_name: open_ai_completion
@@ -304,6 +452,6 @@ terry_test_rubric:
   grader_llm:
     function_name: open_ai_completion
     kwargs:
-      model_name: gpt-4o-mini
+      model_name: o3-mini
       api_key_name: OPENAI_API_KEY
       
