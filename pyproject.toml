@@ -1,7 +1,7 @@
 [project]
 name = "FlexEval"
 version = "0.1.0"
-description = "Demo of UV + GitHub Actions"
+description = "FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
