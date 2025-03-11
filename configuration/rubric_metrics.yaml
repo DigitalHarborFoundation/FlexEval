@@ -218,7 +218,7 @@ is_plot_generated_upon_request_correct:
 #     then evaluates:
 #     if the conversation would benefit from a plot to help the student's understanding
 
-no_plot_after_student_requested: // easy, as above
+no_plot_after_student_requested:
   notes: |-
     Use the conversation context and the current assistant turn content:
     then evaluates:
@@ -277,7 +277,7 @@ no_plot_after_student_requested: // easy, as above
 
 # Should we create a global technical error function; based on human testing feedback:
 # like merging 'An error occurred' message regex matching / desmos code was output / other technical errors.
-desmos_code_rendered_on_toolcall: // OK
+desmos_code_rendered_on_toolcall:
   notes: |-
     Consider all Turns from assistants with tool calls
     Evaluates if some desmos code was rendered instead of / on top of actual plot.
@@ -323,8 +323,7 @@ desmos_code_rendered_on_toolcall: // OK
     "NO": 0  
 
 
-plot_text_description_no_match: // interesting one - on tool calls
-### same as below?
+# plot_text_description_no_match:
 
 
 yeasayer_completion:
