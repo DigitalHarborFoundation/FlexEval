@@ -11,7 +11,7 @@ import networkx as nx
 import peewee as pw
 import pydantic
 import yaml
-from classes.BaseModel import BaseModel
+from flexeval.classes.BaseModel import BaseModel
 
 
 class EvalSetRun(BaseModel):

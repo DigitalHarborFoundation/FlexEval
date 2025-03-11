@@ -1,6 +1,6 @@
 """These tests run every time main.run() is called.
 
-They check to make sure FlexEval is configured properly. In particular, 
+They check to make sure FlexEval is configured properly. In particular,
 they check the evals.yaml file you're using and the specific evaluation you're running
 and they make sure
 1. functions exists that match your function metric names
@@ -19,18 +19,17 @@ import os
 import sys
 import types
 import unittest
-from typing import (Any, AnyStr, Dict, ForwardRef, List, Union, get_args,
-                    get_origin)
+from typing import Any, AnyStr, Dict, ForwardRef, List, Union, get_args, get_origin
 
 import dotenv
 import helpers
 import jsonschema
 import networkx as nx
 import yaml
-from classes.Message import Message
-from classes.Thread import Thread
-from classes.ToolCall import ToolCall
-from classes.Turn import Turn
+from flexeval.classes.Message import Message
+from flexeval.classes.Thread import Thread
+from flexeval.classes.ToolCall import ToolCall
+from flexeval.classes.Turn import Turn
 from openai import OpenAI
 
 from configuration import function_metrics

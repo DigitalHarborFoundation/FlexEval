@@ -5,11 +5,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import compute_metrics
 import dotenv
 import yaml
-from classes.Dataset import Dataset
-from classes.EvalRunner import EvalRunner
-from classes.EvalSetRun import EvalSetRun
-from classes.Metric import Metric
-from classes.Turn import Turn
+from flexeval.classes.Dataset import Dataset
+from flexeval.classes.EvalRunner import EvalRunner
+from flexeval.classes.EvalSetRun import EvalSetRun
+from flexeval.classes.Metric import Metric
+from flexeval.classes.Turn import Turn
 
 # Levels of abstraction -
 # Dataset

@@ -3,10 +3,10 @@ import json
 import sqlite3
 from typing import OrderedDict
 
-from classes.Message import Message
-from classes.Thread import Thread
-from classes.ToolCall import ToolCall
-from classes.Turn import Turn
+from flexeval.classes.Message import Message
+from flexeval.classes.Thread import Thread
+from flexeval.classes.ToolCall import ToolCall
+from flexeval.classes.Turn import Turn
 from langchain.load.dump import dumps
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 

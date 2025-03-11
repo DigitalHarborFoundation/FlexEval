@@ -2,31 +2,65 @@ import copy
 import json
 import os
 import sys
+from pathlib import Path
 
 import peewee as pw
-from classes.BaseModel import BaseModel
-from classes.Dataset import Dataset
-from classes.EvalSetRun import EvalSetRun
-from classes.Thread import Thread
+import pydantic
+from flexeval.classes.BaseModel import BaseModel
+from flexeval.classes.Dataset import Dataset
+from flexeval.classes.EvalSetRun import EvalSetRun
+from flexeval.classes.Thread import Thread
+from flexeval.classes.Turn import Turn
 from playhouse.shortcuts import model_to_dict
 
-# add configuration folder to path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 from configuration import completion_functions
 
 
-class Turn(BaseModel):
-    """Holds a single turn
-    In a conversational exchange, each 'Turn' holds information
-    from 1 or more outputs from the same source or role in sequence
+class Message(BaseModel):
+    """Holds a single component of a single turn
+    Corresponds to one output of a node in LangGraph
+    or one Turn in jsonl
     """
 
     id = pw.IntegerField(primary_key=True)
 
-    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="turns")
-    dataset = pw.ForeignKeyField(Dataset, backref="turns")
-    thread = pw.ForeignKeyField(Thread, backref="turns")
-    role = pw.TextField()
+    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="messages")
+    dataset = pw.ForeignKeyField(Dataset, backref="messages")
+    thread = pw.ForeignKeyField(Thread, backref="messages")
+    # must be null=True because we're adding it after create()
+    turn = pw.ForeignKeyField(Turn, null=True, backref="messages")
+
+    role = pw.TextField()  # user or assistant - 'tools' are counted as assistants
+    content = pw.TextField()
+    context = pw.TextField(null=True)  # Previous messages
+
+    # helpers
+    system_prompt = pw.TextField(null=True)
+    is_flexeval_completion = pw.BooleanField(null=True)
+    is_final_turn_in_input = pw.BooleanField(null=True)
+    langgraph_print = pw.TextField(null=True)
+
+    # language model stats
+    tool_callslanggraph_print = pw.TextField(null=True)
+    tool_call_ids = pw.TextField(null=True)
+    n_tool_calls = pw.IntegerField(null=True)
+    prompt_tokens = pw.IntegerField(null=True)
+    completion_tokens = pw.IntegerField(null=True)
+    model_name = pw.TextField(null=True)
+
+    # langgraph metadata
+    langgraph_ts = pw.TextField(null=True)
+    langgraph_step = pw.IntegerField(null=True)
+    langgraph_thread_id = pw.TextField(null=True)
+    langgraph_checkpoint_id = pw.TextField(null=True)
+    langgraph_parent_checkpoint_id = pw.TextField(null=True)
+    langgraph_node = pw.TextField(null=True)
+    langgraph_message_type = pw.TextField(null=True)
+    langgraph_type = pw.TextField(null=True)
+    langgraph_invocation_id = pw.TextField(null=True)
+    # putting these at the end so the database is easier to browse
+    langgraph_checkpoint = pw.TextField(null=True)
+    langgraph_metadata = pw.TextField(null=True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -40,6 +74,7 @@ class Turn(BaseModel):
             completion_function_kwargs = completion_config.get("kwargs", None)
 
             # Check if the function name exists in the global namespace and call it
+
             if hasattr(completion_functions, completion_fn_name) and hasattr(
                 completion_functions, completion_fn_name
             ):
@@ -61,12 +96,7 @@ class Turn(BaseModel):
                 completion = None
 
             # "completion" will be the output of an existing completion function
-            # We need to make the message object
-            # and probably also a turn object
-
-            # which means it'll have a structure like this
-            # TODO - make this a requirement of the completion functions?
-            #       - make the completion function just return content?
+            # which generally means it'll have a structure like this
             # {"choices": [{"message": {"content": "hi", "role": "assistant"}}]}
             result = model_to_dict(self, exclude=[self.id])
             result["evalsetrun"] = self.evalsetrun
@@ -102,97 +132,52 @@ class Turn(BaseModel):
         else:
             return None
 
-    def get_context(self, include_system_prompt=False):
-        """
-        Context is the context of the first message in the turn
-        """
-        context = ""
-        for message in self.messages:
-            context = message.context
-            break
-        context = json.loads(context)
-        if not include_system_prompt:
-            context = [
-                cur_dict for cur_dict in context if cur_dict.get("role") != "system"
-            ]
-        return context
-
     def get_formatted_prompt(self, include_system_prompt=False):
         formatted_prompt = []
         if include_system_prompt:
             formatted_prompt.append({"role": "system", "content": self.system_prompt})
-        # context = json.loads(self.context)
-        context = self.get_context()
-
+        context = json.loads(self.context)
         if len(context) > 0:
             formatted_prompt += context  # TODO - we might just want a subset of this
-
-        formatted_prompt += self.get_content()
+        formatted_prompt.append({"role": self.role, "content": self.content})
         # for t in json.loads(self.turn):
         #     formatted_prompt.append({"role": t["role"], "content": t["content"]})
         return formatted_prompt
-    
-    
 
-    def get_content(self, include_toolcalls=True, include_tool_messages=True):
-        """
-        Content is a list of dictionaries where each dictionary
-        contains the role and content of messages and tool calls
-        in the turn. Each tool call appears after the message it's
-        associated with. If toolcalls are not desired, pass False
-        to include_toolcalls.
-        """
-        content = []
-        for message in self.messages:
-            if include_tool_messages or message.langgraph_message_type != "ToolMessage":
-                content.append({"role": message.role, "content": message.content})
-            if include_toolcalls:
-                for toolcall in message.toolcalls:
-                    content.append(toolcall.get_dict_representation())
-
-        return content
-
-    def format_input_for_rubric(self, include_system_prompt=False, include_tool_messages=False):
-        """This is the 'public' method that returns the info for this Turn"""
+    def format_input_for_rubric(self):
         input = self.get_formatted_prompt()
         output_minus_completion = ""
-        if include_system_prompt:
-            output_minus_completion.append({"role": "system", "content": self.system_prompt})
-
-            
-        for msg in self.get_context():#input[:-1]:
-            # this outputs user: XYZ, or assistant: 123
-            if len(msg['content']) > 0 and (include_tool_messages or msg['langgraph_role'] != "tool"):
-                output_minus_completion += f"{msg['role']}: {msg['content']}\n"
-        # Including role as prefix to account for both tool and assistant
-        completion = ""
-        for msg in self.get_content(include_tool_messages=include_tool_messages):
-            if len(msg['content']) > 0:
-                completion += f"{msg['role']}: {msg['content']}\n"
-        #completion = f"{self.get_content()['content']}"
+        for i in input[:-1]:
+            output_minus_completion += f"{i['role']}: {i['content']}\n"
+        completion = f"{input[-1]['content']}"
         output = output_minus_completion + completion
 
         tool_call_text = ""
         for tc in self.toolcalls:
-            printme = True
-            # if there's a property called tc.additional_kwargs and it evalues to False...don't print
-            if hasattr(tc, "additional_kwargs"):
-                if not json.loads(tc.additional_kwargs).get("print", False):
-                    printme = False
-            if printme:
-                tool_call_text += """
+            tool_call_text += """
 
-    Function name: {function_name}
-    Input arguments: {args}
-    Function output: {response_content}
-    """.format(
-                    function_name=tc.function_name,
-                    args=tc.args,
-                    response_content=tc.response_content,
-                )
+Function name: {function_name}
+Input arguments: {args}
+Function output: {response_content}
+""".format(
+                function_name=tc.function_name,
+                args=tc.args,
+                response_content=tc.response_content,
+            )
 
         # output - all turns
         # output_minus_completion - all turns except the last
         # completion - last turn
         # tool_call_text - all tool calls
         return output, output_minus_completion, completion, tool_call_text
+
+    def get_content(self):
+        return self.content
+
+    def get_context(self, include_system_prompt=False):
+        context = json.loads(self.context)
+        if not include_system_prompt:
+            context = [
+                cur_dict for cur_dict in context if cur_dict.get("role") != "system"
+            ]
+        return context

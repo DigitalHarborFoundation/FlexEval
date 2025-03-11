@@ -1,8 +1,8 @@
 import json
 
 import peewee as pw
-from classes.BaseModel import BaseModel
-from classes.EvalSetRun import EvalSetRun
+from flexeval.classes.BaseModel import BaseModel
+from flexeval.classes.EvalSetRun import EvalSetRun
 
 
 class Dataset(BaseModel):

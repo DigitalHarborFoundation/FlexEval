@@ -10,15 +10,17 @@ from pathlib import Path
 import helpers
 import jsonschema
 import yaml
-from classes.Dataset import Dataset
-from classes.EvalSetRun import EvalSetRun
-from classes.Message import Message
-from classes.Metric import Metric
-# from classes.TurnMetric import TurnMetric
-from classes.Thread import Thread
-from classes.ToolCall import ToolCall
-# from classes.DatasetRow import DatasetRow
-from classes.Turn import Turn
+from flexeval.classes.Dataset import Dataset
+from flexeval.classes.EvalSetRun import EvalSetRun
+from flexeval.classes.Message import Message
+from flexeval.classes.Metric import Metric
+
+# from flexeval.classes.TurnMetric import TurnMetric
+from flexeval.classes.Thread import Thread
+from flexeval.classes.ToolCall import ToolCall
+
+# from flexeval.classes.DatasetRow import DatasetRow
+from flexeval.classes.Turn import Turn
 from helpers import apply_defaults
 from peewee import *
 

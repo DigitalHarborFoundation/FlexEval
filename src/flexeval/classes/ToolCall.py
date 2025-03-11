@@ -7,12 +7,12 @@ from pathlib import Path
 import helpers
 import peewee as pw
 import pydantic
-from classes.BaseModel import BaseModel
-from classes.Dataset import Dataset
-from classes.EvalSetRun import EvalSetRun
-from classes.Message import Message
-from classes.Thread import Thread
-from classes.Turn import Turn
+from flexeval.classes.BaseModel import BaseModel
+from flexeval.classes.Dataset import Dataset
+from flexeval.classes.EvalSetRun import EvalSetRun
+from flexeval.classes.Message import Message
+from flexeval.classes.Thread import Thread
+from flexeval.classes.Turn import Turn
 from playhouse.shortcuts import model_to_dict
 
 from configuration import completion_functions
