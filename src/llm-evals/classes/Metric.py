@@ -1,22 +1,22 @@
-import os
-from pathlib import Path
-import sys
+import copy
 import inspect
-import string
-import pydantic
 import json
-import peewee as pw
-from classes.BaseModel import BaseModel
-from classes.EvalSetRun import EvalSetRun
-from classes.Dataset import Dataset
+import os
+import string
+import sys
+from pathlib import Path
 
+import peewee as pw
+import pydantic
+from classes.BaseModel import BaseModel
+from classes.Dataset import Dataset
+from classes.EvalSetRun import EvalSetRun
+from classes.Message import Message
 # from classes.DatasetRow import DatasetRow
 from classes.Thread import Thread
-from classes.Turn import Turn
-from classes.Message import Message
 from classes.ToolCall import ToolCall
+from classes.Turn import Turn
 from playhouse.shortcuts import model_to_dict
-import copy
 
 
 class Metric(BaseModel):

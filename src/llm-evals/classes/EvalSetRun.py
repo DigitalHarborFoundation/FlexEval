@@ -1,16 +1,17 @@
-import logging
-from datetime import datetime
-import peewee as pw
-import yaml
-import unittest
-import os
-from pathlib import Path
-import sys
-from classes.BaseModel import BaseModel
-import pydantic
 import json
-import networkx as nx
+import logging
+import os
+import sys
+import unittest
+from datetime import datetime
+from pathlib import Path
+
 import helpers
+import networkx as nx
+import peewee as pw
+import pydantic
+import yaml
+from classes.BaseModel import BaseModel
 
 
 class EvalSetRun(BaseModel):

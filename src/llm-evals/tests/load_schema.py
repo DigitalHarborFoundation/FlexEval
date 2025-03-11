@@ -1,8 +1,9 @@
-import jsonschema
-from jsonschema import validate
 import json
-import yaml
 import os
+
+import jsonschema
+import yaml
+from jsonschema import validate
 
 # Define the schema
 with open("../eval_schema.json", "r") as infile:

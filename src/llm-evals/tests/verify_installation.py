@@ -12,26 +12,28 @@ Any misconfiguration should be caught here. If an evaluation fails due to miscon
 and it's not caught here, that's a bug - and we should add a test here
 """
 
-import unittest
-import os
-from openai import OpenAI
-import yaml
-import sys
-import dotenv
-import networkx as nx
-import helpers
-import json
-import jsonschema
 import importlib
 import inspect
-from typing import List, Dict, Any, Union, AnyStr, ForwardRef, get_origin, get_args
+import json
+import os
+import sys
 import types
+import unittest
+from typing import (Any, AnyStr, Dict, ForwardRef, List, Union, get_args,
+                    get_origin)
 
-from configuration import function_metrics
-from classes.Turn import Turn
+import dotenv
+import helpers
+import jsonschema
+import networkx as nx
+import yaml
 from classes.Message import Message
 from classes.Thread import Thread
 from classes.ToolCall import ToolCall
+from classes.Turn import Turn
+from openai import OpenAI
+
+from configuration import function_metrics
 
 dotenv.load_dotenv()
 

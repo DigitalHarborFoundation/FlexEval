@@ -1,15 +1,15 @@
 import argparse
-import yaml
+import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-import json
+import compute_metrics
+import dotenv
+import yaml
+from classes.Dataset import Dataset
 from classes.EvalRunner import EvalRunner
 from classes.EvalSetRun import EvalSetRun
-from classes.Dataset import Dataset
-from classes.Turn import Turn
 from classes.Metric import Metric
-import dotenv
-import compute_metrics
+from classes.Turn import Turn
 
 # Levels of abstraction -
 # Dataset

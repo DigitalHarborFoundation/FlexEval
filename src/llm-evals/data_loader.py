@@ -1,14 +1,14 @@
-import json
 import copy
+import json
 import sqlite3
-
 from typing import OrderedDict
-from classes.Thread import Thread
-from classes.Turn import Turn
+
 from classes.Message import Message
+from classes.Thread import Thread
 from classes.ToolCall import ToolCall
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from classes.Turn import Turn
 from langchain.load.dump import dumps
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 
 def load_jsonl(dataset, filename):
@@ -156,7 +156,7 @@ def load_langgraph_sqlite(dataset, filename):
                         for msg in metadata["writes"]["__start__"]["messages"]:
                             if messagecount == 0 and metadata["step"] == -1:
                                 system_prompt = msg["kwargs"]["content"]
-                                messagecount += 1;
+                                messagecount += 1
                             else:
                                 message = {}
                                 message["id"] = [
@@ -166,18 +166,18 @@ def load_langgraph_sqlite(dataset, filename):
                                 message["kwargs"]["content"] = msg
                                 message["kwargs"]["type"] = "human"
                                 update_dict["input"]["messages"].append(message)
-                        #will be used below
+                        # will be used below
                         role = "user"
-                        
+
                     # machine input condition
                     elif metadata.get("source") == "loop":
                         # This already has a list of messages with kwargs, etc
                         update_dict = metadata.get("writes")
                         # I think 'system_prompt' is empty by default and not stored here unless
                         # it's included in the LangGraph state
-                        checkpoint_system_prompt = checkpoint.get("channel_values", {}).get(
-                            "system_prompt"
-                        )
+                        checkpoint_system_prompt = checkpoint.get(
+                            "channel_values", {}
+                        ).get("system_prompt")
                         if checkpoint_system_prompt is not None:
                             system_prompt = checkpoint_system_prompt
                         role = "assistant"
@@ -273,7 +273,13 @@ def load_langgraph_sqlite(dataset, filename):
                                 )
 
                                 # update the context for the next Message
-                                context.append({"role": role, "content": content, "langgraph_role": message["id"][-1]})
+                                context.append(
+                                    {
+                                        "role": role,
+                                        "content": content,
+                                        "langgraph_role": message["id"][-1],
+                                    }
+                                )
 
                                 # record tool call info so we can match them up later
                                 if message.get("kwargs", {}).get("type") == "tool":

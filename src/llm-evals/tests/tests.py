@@ -17,9 +17,9 @@
 # - if I try to use a function that doesn't exist, it fails but gives a useful error message
 
 
+import os
 import unittest
 
-import os
 from run import run
 
 

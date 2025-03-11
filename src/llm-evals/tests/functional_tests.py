@@ -8,11 +8,11 @@ Then run
 
 """
 
+import os
+import sqlite3
+import sys
 import unittest
 
-import os
-import sys
-import sqlite3
 import pandas as pd
 
 sys.path.append("../")

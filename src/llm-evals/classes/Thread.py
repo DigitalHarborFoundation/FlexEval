@@ -1,9 +1,10 @@
+import copy
+import json
+
+import peewee as pw
 from classes.BaseModel import BaseModel
 from classes.Dataset import Dataset
 from classes.EvalSetRun import EvalSetRun
-import json
-import peewee as pw
-import copy
 
 
 class Thread(BaseModel):

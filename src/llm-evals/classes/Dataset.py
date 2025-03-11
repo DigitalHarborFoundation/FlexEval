@@ -1,7 +1,8 @@
+import json
+
+import peewee as pw
 from classes.BaseModel import BaseModel
 from classes.EvalSetRun import EvalSetRun
-import json
-import peewee as pw
 
 
 class Dataset(BaseModel):

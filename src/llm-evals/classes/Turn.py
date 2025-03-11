@@ -1,14 +1,14 @@
+import copy
+import json
 import os
 import sys
 
-import json
 import peewee as pw
 from classes.BaseModel import BaseModel
-from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
+from classes.EvalSetRun import EvalSetRun
 from classes.Thread import Thread
 from playhouse.shortcuts import model_to_dict
-import copy
 
 # add configuration folder to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))

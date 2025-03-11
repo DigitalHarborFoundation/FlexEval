@@ -1,18 +1,16 @@
-from typing import Annotated
-from typing_extensions import TypedDict
+import os
 from datetime import datetime
+from typing import Annotated
 
+from dotenv import load_dotenv
+from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
-from langchain_core.tools import tool
-from langgraph.checkpoint.sqlite import SqliteSaver
-
 from sympy import primefactors
-import os
-
-from dotenv import load_dotenv
+from typing_extensions import TypedDict
 
 load_dotenv()
 

@@ -1,15 +1,15 @@
-from classes.Turn import Turn
-from classes.Message import Message
-from classes.ToolCall import ToolCall
-from classes.Thread import Thread
-
-from configuration import function_metrics
-from configuration import completion_functions
-import inspect
-import string
-from typing import Union, ForwardRef, get_args
 import copy
+import inspect
 import json
+import string
+from typing import ForwardRef, Union, get_args
+
+from classes.Message import Message
+from classes.Thread import Thread
+from classes.ToolCall import ToolCall
+from classes.Turn import Turn
+
+from configuration import completion_functions, function_metrics
 
 
 def compute_metrics(object: Union[Thread, Turn, Message, ToolCall]):

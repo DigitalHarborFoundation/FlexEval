@@ -1,19 +1,19 @@
-import os
-from pathlib import Path
-import sys
-
-import pydantic
+import copy
 import json
+import os
+import sys
+from pathlib import Path
+
+import helpers
 import peewee as pw
+import pydantic
 from classes.BaseModel import BaseModel
-from classes.EvalSetRun import EvalSetRun
 from classes.Dataset import Dataset
+from classes.EvalSetRun import EvalSetRun
 from classes.Message import Message
 from classes.Thread import Thread
 from classes.Turn import Turn
 from playhouse.shortcuts import model_to_dict
-import copy
-import helpers
 
 from configuration import completion_functions
 

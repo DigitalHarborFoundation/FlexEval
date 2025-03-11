@@ -1,4 +1,5 @@
 import os
+
 import peewee as pw
 from playhouse.sqliteq import SqliteQueueDatabase
 

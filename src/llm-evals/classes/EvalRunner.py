@@ -1,28 +1,26 @@
-import logging
-from datetime import datetime
-from peewee import *
-import yaml
-import unittest
-import os
-from pathlib import Path
-import sys
-import sqlite3
 import json
-import jsonschema
+import logging
+import os
+import sqlite3
+import sys
+import unittest
+from datetime import datetime
+from pathlib import Path
+
 import helpers
-
-from classes.EvalSetRun import EvalSetRun
+import jsonschema
+import yaml
 from classes.Dataset import Dataset
-
-# from classes.DatasetRow import DatasetRow
-from classes.Turn import Turn
-
+from classes.EvalSetRun import EvalSetRun
+from classes.Message import Message
+from classes.Metric import Metric
 # from classes.TurnMetric import TurnMetric
 from classes.Thread import Thread
-from classes.Metric import Metric
-from classes.Message import Message
 from classes.ToolCall import ToolCall
+# from classes.DatasetRow import DatasetRow
+from classes.Turn import Turn
 from helpers import apply_defaults
+from peewee import *
 
 
 class EvalRunner(Model):
