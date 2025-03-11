@@ -173,3 +173,11 @@ src/llm-evals/evals_sync/
 *.db
 *.db-*
 .*
+
+
+
+# notebooks
+*.ipynb
+
+# sqlite data
+*.sqlite
