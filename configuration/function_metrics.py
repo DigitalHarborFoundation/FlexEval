@@ -86,6 +86,18 @@ def is_role(object: Union[Turn, Message], role: str) -> dict:
     return {role: int(object.role == role)}
 
 
+def is_langgraph_type(object: Union[Message], type: str) -> dict:
+    """
+    Return 1 is the langgraph type for this Message matches the passed in type,
+    and 0 otherwise.
+
+    Args:
+    object: the Message
+    type: a string with the desired type to check against
+    """
+    return {type: int(object.langgraph_type == type)}
+
+
 def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
     """
     Counts the occurrences of particular values in the text content of tool call in the conversation.
@@ -134,6 +146,25 @@ def message_matches_regex(message: Message, expression: str) -> dict:
         return {expression: len(match)}
     else:
         return {expression: 0}
+
+def count_of_parts_matching_regex(object:  Union[Thread, Turn, Message], expression: str) -> int:
+    """Determines the total number of messages in this object
+     matching a regular expression specified by the user. Ignores tool calls in object.
+
+    Outputs the sum of the number of matches detected using Pattern.findall() across
+    all entries in the object.
+    """
+    total_matches = {expression: 0}
+    if isinstance(object, (Thread, Turn)):
+        messages_to_match = object.messages
+    else:
+        messages_to_match = [object]
+
+    for message in messages_to_match:
+        total_matches[expression] += message_matches_regex(message, expression)[expression]
+
+    return total_matches
+
 
 
 def tool_was_called(object: Union[Thread, Turn, Message]) -> float:
@@ -201,35 +232,48 @@ def count_llm_models(thread: Thread) -> dict:
             results[message.model_name] = results.get(message.model_name, 0) + 1
     return results
 
-
-def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> list:
+def count_tool_calls(object: Union[Thread, Turn, Message]) -> dict:
+    '''
+    Provides a count of how many total tools calls there are in this Thread/Turn/Message.
+    Differs from count_tool_calls_by_name because it does not return the names of the tool calls.
+    '''
     # Extract ToolCall objects based on the type of object being passed in
     toolcalls = []
     if isinstance(object, (Thread, Turn)):
         for message in object.messages:
             toolcalls += [toolcall for toolcall in message.toolcalls]
-    elif isinstance(object, Message):
+    else: # must be a Message
         toolcalls += [toolcall for toolcall in object.toolcalls]
-    else:  # Must be just a tool call
-        toolcalls.append(object)
+    return len(toolcalls)
+                     
+# def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> list:
+#     # Extract ToolCall objects based on the type of object being passed in
+#     toolcalls = []
+#     if isinstance(object, (Thread, Turn)):
+#         for message in object.messages:
+#             toolcalls += [toolcall for toolcall in message.toolcalls]
+#     elif isinstance(object, Message):
+#         toolcalls += [toolcall for toolcall in object.toolcalls]
+#     else:  # Must be just a tool call
+#         toolcalls.append(object)
 
-    # Count the toolcalls
-    toolcall_counts = {}
-    for toolcall in toolcalls:
-        if toolcall.function_name not in toolcall_counts:
-            toolcall_counts[toolcall.function_name] = 0
-        toolcall_counts[toolcall.function_name] = (
-            toolcall_counts[toolcall.function_name] + 1
-        )
+#     # Count the toolcalls
+#     toolcall_counts = {}
+#     for toolcall in toolcalls:
+#         if toolcall.function_name not in toolcall_counts:
+#             toolcall_counts[toolcall.function_name] = 0
+#         toolcall_counts[toolcall.function_name] = (
+#             toolcall_counts[toolcall.function_name] + 1
+#         )
 
-    # Convert to a list of name: value dictionaries
-    results = []
-    for toolcall_name, toolcall_count in toolcall_counts.items():
-        results.append({"name": toolcall_name, "value": toolcall_count})
-    return results
+#     # Convert to a list of name: value dictionaries
+#     results = []
+#     for toolcall_name, toolcall_count in toolcall_counts.items():
+#         results.append({"name": toolcall_name, "value": toolcall_count})
+#     return results
 
 
-def count_messages_per_role(object: Union[Thread, Turn]) -> list:
+def count_messages_per_role(object: Union[Thread, Turn], use_langgraph_roles=False) -> list:
     """
     Calculate the number of conversational messages for each role. Excludes the system prompt.
     A message is counted even if the content for that action was blank (e.g., a blank message
@@ -243,7 +287,11 @@ def count_messages_per_role(object: Union[Thread, Turn]) -> list:
     """
     results = {}
     for message in object.messages:
-        results[message.role] = results.get(message.role, 0) + 1
+        if use_langgraph_roles:
+            role = message.langgraph_type
+        else:
+            role = message.role
+        results[role] = results.get(role, 0) + 1
     return results
 
 

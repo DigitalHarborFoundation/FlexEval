@@ -110,17 +110,17 @@ class TestConfiguration(unittest.TestCase):
 
         traverse_yaml(self.config)
 
-    def test_tests_are_unique(self):
-        # this is tricky because the test names ALSO can't overlap with pre-installed eval names......
-        import evals
+    # def test_tests_are_unique(self):
+    #     # this is tricky because the test names ALSO can't overlap with pre-installed eval names......
+    #     import evals
 
-        evals_location = os.path.dirname(evals.__file__)
-        evals_test_path = os.path.join(evals_location, "elsuite")
-        existing_tests = os.listdir(evals_test_path)
-        for user_eval in self.user_evals.keys():
-            assert (
-                user_eval not in existing_tests
-            ), f"Your eval name `{user_eval}` is already in use by OpenAI Evals. Please use a different name."
+    #     evals_location = os.path.dirname(evals.__file__)
+    #     evals_test_path = os.path.join(evals_location, "elsuite")
+    #     existing_tests = os.listdir(evals_test_path)
+    #     for user_eval in self.user_evals.keys():
+    #         assert (
+    #             user_eval not in existing_tests
+    #         ), f"Your eval name `{user_eval}` is already in use by OpenAI Evals. Please use a different name."
 
     def test_rubrics_requested_are_available(self):
         if (

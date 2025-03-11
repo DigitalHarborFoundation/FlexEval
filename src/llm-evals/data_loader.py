@@ -7,6 +7,8 @@ from classes.Thread import Thread
 from classes.Turn import Turn
 from classes.Message import Message
 from classes.ToolCall import ToolCall
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from langchain.load.dump import dumps
 
 
 def load_jsonl(dataset, filename):
@@ -64,6 +66,7 @@ def load_jsonl(dataset, filename):
 
 
 def load_langgraph_sqlite(dataset, filename):
+    serializer = JsonPlusSerializer()
 
     with sqlite3.connect(filename) as conn:
         # Set the row factory to sqlite3.Row
@@ -73,6 +76,10 @@ def load_langgraph_sqlite(dataset, filename):
         # Create a cursor object
         cursor = conn.cursor()
         verify_checkpoints_table_exists(cursor)
+
+        # Sync database
+        query = "PRAGMA wal_checkpoint(FULL);"
+        cursor.execute(query)
 
         # Make threads (aka conversations)
         query = "select distinct thread_id from checkpoints"
@@ -96,9 +103,14 @@ def load_langgraph_sqlite(dataset, filename):
             tool_calls_dict = {}
             tool_responses_dict = {}
             tool_addional_kwargs_dict = {}
+            # system prompt reset for every thread
+            system_prompt = None
+
             for completion_row in completion_list:
                 # checkpoint is full state history
-                checkpoint = json.loads(completion_row["checkpoint"])
+                checkpoint = serializer.loads_typed(
+                    (completion_row["type"], completion_row["checkpoint"])
+                )
                 # metadata is the state update for that row
                 metadata = json.loads(completion_row["metadata"])
                 # IDs from langgraph
@@ -135,27 +147,39 @@ def load_langgraph_sqlite(dataset, filename):
                         # this will be a dictionary we can add to
                         # key is 'input', as in human input
                         update_dict["input"] = {"messages": []}
-                        for msg in metadata["writes"]["messages"]:
-                            message = {}
-                            message["id"] = [
-                                "HumanMessage"
-                            ]  # LangGraph has a list here
-                            message["kwargs"] = {}
-                            message["kwargs"]["content"] = msg
-                            message["kwargs"]["type"] = "human"
-                            update_dict["input"]["messages"].append(message)
-                        # will be used below
+                        # print("metadata keys:", metadata["writes"].keys())
+                        # the very first message in input in a thread seems to include
+                        # the system prompt, not a message that was sent by the user.
+                        # the system promptdoesn't seem to be set anywhere else, so
+                        # using that as the system prompt for the thread.
+                        messagecount = 0
+                        for msg in metadata["writes"]["__start__"]["messages"]:
+                            if messagecount == 0 and metadata["step"] == -1:
+                                system_prompt = msg["kwargs"]["content"]
+                                messagecount += 1;
+                            else:
+                                message = {}
+                                message["id"] = [
+                                    "HumanMessage"
+                                ]  # LangGraph has a list here
+                                message["kwargs"] = {}
+                                message["kwargs"]["content"] = msg
+                                message["kwargs"]["type"] = "human"
+                                update_dict["input"]["messages"].append(message)
+                        #will be used below
                         role = "user"
-                        system_prompt = None
+                        
                     # machine input condition
                     elif metadata.get("source") == "loop":
                         # This already has a list of messages with kwargs, etc
                         update_dict = metadata.get("writes")
                         # I think 'system_prompt' is empty by default and not stored here unless
                         # it's included in the LangGraph state
-                        system_prompt = checkpoint.get("channel_values", {}).get(
+                        checkpoint_system_prompt = checkpoint.get("channel_values", {}).get(
                             "system_prompt"
                         )
+                        if checkpoint_system_prompt is not None:
+                            system_prompt = checkpoint_system_prompt
                         role = "assistant"
                     else:
                         raise Exception(
@@ -169,11 +193,17 @@ def load_langgraph_sqlite(dataset, filename):
                     for node, value in update_dict.items():
                         # iterate through list of message updates
                         if "messages" in value:
-                            for message in value["messages"]:
+                            if isinstance(value["messages"], dict):
+                                # Make this a list to iterate through - 4 Feb 2025 - used to be a list previously
+                                messagelist = [value["messages"]]
+                            else:
+                                messagelist = value["messages"]
+                            for message in messagelist:
                                 if role == "user":
                                     content = (
                                         message.get("kwargs", {})
                                         .get("content", {})
+                                        .get("kwargs", {})
                                         .get("content", None)
                                     )
                                 elif role == "assistant":
@@ -227,7 +257,9 @@ def load_langgraph_sqlite(dataset, filename):
                                     langgraph_parent_checkpoint_id=completion_row[
                                         "parent_checkpoint_id"
                                     ],
-                                    langgraph_checkpoint=completion_row["checkpoint"],
+                                    langgraph_checkpoint=dumps(
+                                        checkpoint
+                                    ),  # Have to re-dump this because of the de-serialization#completion_row["checkpoint"],
                                     langgraph_metadata=completion_row["metadata"],
                                     langgraph_node=node,
                                     langgraph_message_type=message["id"][-1],
@@ -241,7 +273,7 @@ def load_langgraph_sqlite(dataset, filename):
                                 )
 
                                 # update the context for the next Message
-                                context.append({"role": role, "content": content})
+                                context.append({"role": role, "content": content, "langgraph_role": message["id"][-1]})
 
                                 # record tool call info so we can match them up later
                                 if message.get("kwargs", {}).get("type") == "tool":
