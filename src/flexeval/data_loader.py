@@ -1,8 +1,10 @@
 import copy
 import json
 import sqlite3
+import pathlib
 from typing import OrderedDict
 
+from flexeval.classes.Dataset import Dataset
 from flexeval.classes.Message import Message
 from flexeval.classes.Thread import Thread
 from flexeval.classes.ToolCall import ToolCall
@@ -11,7 +13,7 @@ from langchain.load.dump import dumps
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 
-def load_jsonl(dataset, filename):
+def load_jsonl(dataset: Dataset, filename: str | pathlib.Path):
 
     with open(filename, "r") as infile:
         contents = infile.read()  # will be a big string

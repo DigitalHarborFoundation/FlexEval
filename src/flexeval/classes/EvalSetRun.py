@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-import helpers
+from flexeval import helpers
 import networkx as nx
 import peewee as pw
 import pydantic

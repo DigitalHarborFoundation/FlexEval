@@ -6,10 +6,10 @@ import json
 from typing import Union
 import datetime
 
-from classes.Turn import Turn
-from classes.Message import Message
-from classes.Thread import Thread
-from classes.ToolCall import ToolCall
+from flexeval.classes.Turn import Turn
+from flexeval.classes.Message import Message
+from flexeval.classes.Thread import Thread
+from flexeval.classes.ToolCall import ToolCall
 
 
 ## ~.~ function templates starts ~.~
@@ -147,7 +147,10 @@ def message_matches_regex(message: Message, expression: str) -> dict:
     else:
         return {expression: 0}
 
-def count_of_parts_matching_regex(object:  Union[Thread, Turn, Message], expression: str) -> int:
+
+def count_of_parts_matching_regex(
+    object: Union[Thread, Turn, Message], expression: str
+) -> int:
     """Determines the total number of messages in this object
      matching a regular expression specified by the user. Ignores tool calls in object.
 
@@ -161,10 +164,11 @@ def count_of_parts_matching_regex(object:  Union[Thread, Turn, Message], express
         messages_to_match = [object]
 
     for message in messages_to_match:
-        total_matches[expression] += message_matches_regex(message, expression)[expression]
+        total_matches[expression] += message_matches_regex(message, expression)[
+            expression
+        ]
 
     return total_matches
-
 
 
 def tool_was_called(object: Union[Thread, Turn, Message]) -> float:
@@ -232,20 +236,22 @@ def count_llm_models(thread: Thread) -> dict:
             results[message.model_name] = results.get(message.model_name, 0) + 1
     return results
 
+
 def count_tool_calls(object: Union[Thread, Turn, Message]) -> dict:
-    '''
+    """
     Provides a count of how many total tools calls there are in this Thread/Turn/Message.
     Differs from count_tool_calls_by_name because it does not return the names of the tool calls.
-    '''
+    """
     # Extract ToolCall objects based on the type of object being passed in
     toolcalls = []
     if isinstance(object, (Thread, Turn)):
         for message in object.messages:
             toolcalls += [toolcall for toolcall in message.toolcalls]
-    else: # must be a Message
+    else:  # must be a Message
         toolcalls += [toolcall for toolcall in object.toolcalls]
     return len(toolcalls)
-                     
+
+
 # def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> list:
 #     # Extract ToolCall objects based on the type of object being passed in
 #     toolcalls = []
@@ -273,7 +279,9 @@ def count_tool_calls(object: Union[Thread, Turn, Message]) -> dict:
 #     return results
 
 
-def count_messages_per_role(object: Union[Thread, Turn], use_langgraph_roles=False) -> list:
+def count_messages_per_role(
+    object: Union[Thread, Turn], use_langgraph_roles=False
+) -> list:
     """
     Calculate the number of conversational messages for each role. Excludes the system prompt.
     A message is counted even if the content for that action was blank (e.g., a blank message
@@ -326,12 +334,12 @@ def count_emojis(turn: str) -> Union[int, float]:
     """
     emoji_pattern = re.compile(
         "["
-        "\U0001F600-\U0001F64F"  # emoticons
-        "\U0001F300-\U0001F5FF"  # symbols & pictographs
-        "\U0001F680-\U0001F6FF"  # transport & map symbols
-        "\U0001F1E0-\U0001F1FF"  # flags (iOS)
-        "\U00002702-\U000027B0"  # Dingbats
-        "\U000024C2-\U0001F251"
+        "\U0001f600-\U0001f64f"  # emoticons
+        "\U0001f300-\U0001f5ff"  # symbols & pictographs
+        "\U0001f680-\U0001f6ff"  # transport & map symbols
+        "\U0001f1e0-\U0001f1ff"  # flags (iOS)
+        "\U00002702-\U000027b0"  # Dingbats
+        "\U000024c2-\U0001f251"
         "]+",
         flags=re.UNICODE,
     )

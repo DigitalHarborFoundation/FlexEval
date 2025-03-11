@@ -22,7 +22,7 @@ import unittest
 from typing import Any, AnyStr, Dict, ForwardRef, List, Union, get_args, get_origin
 
 import dotenv
-import helpers
+from flexeval import helpers
 import jsonschema
 import networkx as nx
 import yaml

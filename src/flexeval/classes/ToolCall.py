@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 
-import helpers
+from flexeval import helpers
 import peewee as pw
 import pydantic
 from flexeval.classes.BaseModel import BaseModel

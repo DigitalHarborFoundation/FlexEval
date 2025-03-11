@@ -43,7 +43,9 @@ class Dataset(BaseModel):
     #   turn_id
 
     def load_data(self):
-        import data_loader  # Local import as this needs to happen after the module is fully loaded
+        from flex_eval import (
+            data_loader,
+        )  # Local import as this needs to happen after the module is fully loaded
 
         if self.filename.endswith(".jsonl"):
             self.datatype = "json"

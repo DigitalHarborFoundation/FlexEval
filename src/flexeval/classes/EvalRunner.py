@@ -7,7 +7,7 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-import helpers
+from flexeval import helpers
 import jsonschema
 import yaml
 from flexeval.classes.Dataset import Dataset
