@@ -10,6 +10,7 @@ dependencies = [
     "langchain-openai>=0.3.8",
     "langgraph>=0.3.6",
     "langgraph-checkpoint-sqlite>=2.0.6",
+    "msgpack>=1.1.0",
     "networkx>=3.4.2",
     "openai>=1.66.0",
     "pandas>=2.2.3",
