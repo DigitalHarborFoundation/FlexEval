@@ -11,5 +11,10 @@ database_path: ../../data/results/results.db
 
 max_workers: 1
 
+random_seed_conversation_sampling: 42
+max_n_conversation_threads: 100
+
+
+
 # any additional environment variables
 env:
