@@ -5,7 +5,7 @@
 
 FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
 
-We describe this in more detail in our paper, located in the root of the repo.
+We describe this in more detail in our paper, located [in this repository](/EDM_2024_FlexEval.pdf).
 
 ## Why?
 
@@ -139,3 +139,9 @@ This tool is intended to be somewhat "batteries included". It supports the follo
 - a set of included metrics calculated as Python files
 
 This list will grow as we add functionality to meet LEVI team needs.
+
+## Cite this work
+
+If this work is useful to you, please cite [our EDM 2024 paper](https://educationaldatamining.org/edm2024/proceedings/2024.EDM-posters.107/2024.EDM-posters.107.pdf):
+
+>S. Thomas Christie, Baptiste Moreau-Pernet, Yu Tian, & John Whitmer. (2024). FlexEval: a customizable tool for chatbot performance evaluation and dialogue analysis. _Proceedings of the 17th International Conference on Educational Data Mining_, 903-908. Atlanta, Georgia, USA, July 2024. <https://doi.org/10.5281/zenodo.12729993>
