@@ -165,3 +165,17 @@ uv build
 ```bash
 uv run python -m unittest tests.unit
 ```
+
+### Adding or updating dependencies
+
+To add a dependency:
+
+```bash
+uv add {package_name}
+```
+
+To update dependencies:
+
+```bash
+uv lock --upgrade
+```

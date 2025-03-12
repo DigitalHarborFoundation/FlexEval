@@ -532,7 +532,7 @@ wheels = [
 
 [[package]]
 name = "langchain-core"
-version = "0.3.43"
+version = "0.3.44"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonpatch" },
@@ -543,9 +543,9 @@ dependencies = [
     { name = "tenacity" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8e/18/26255368f56d2749709fc2884c521d64471f32118ce09dfc677e0596be20/langchain_core-0.3.43.tar.gz", hash = "sha256:bec60f4f5665b536434ff747b8f23375a812e82cfa529f519b54cc1e7a94a875", size = 529403 }
+sdist = { url = "https://files.pythonhosted.org/packages/0a/76/8d3291c985829254b5aebf90e91019b88c1dabbf2b9a4ab08a7b54c142f6/langchain_core-0.3.44.tar.gz", hash = "sha256:7c0a01e78360f007cbca448178fe7e032404068e6431dbe8ce905f84febbdfa5", size = 529749 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/20/0e/ddf9f5dc46b178df5c101666bb3bc7fc526d68cd81cdd60cbe1b6b438b30/langchain_core-0.3.43-py3-none-any.whl", hash = "sha256:caa6bc1f4c6ab71d3c2e400f8b62e1cd6dc5ac2c37e03f12f3e2c60befd5b273", size = 415421 },
+    { url = "https://files.pythonhosted.org/packages/44/2d/273f028d1ee33a7ad3beb73769bad7a45d3a03d43d2721349a055a38434c/langchain_core-0.3.44-py3-none-any.whl", hash = "sha256:d989ce8bd62f1d07765acd575e6ec1254aec0cf7775aaea39fe4af8102377459", size = 415728 },
 ]
 
 [[package]]
@@ -793,7 +793,7 @@ wheels = [
 
 [[package]]
 name = "openai"
-version = "1.66.0"
+version = "1.66.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -805,9 +805,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/84/c5/3c422ca3ccc81c063955e7c20739d7f8f37fea0af865c4a60c81e6225e14/openai-1.66.0.tar.gz", hash = "sha256:8a9e672bc6eadec60a962f0b40d7d1c09050010179c919ed65322e433e2d1025", size = 396819 }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/e1/b3e1fda1aa32d4f40d4de744e91de4de65c854c3e53c63342e4b5f9c5995/openai-1.66.2.tar.gz", hash = "sha256:9b3a843c25f81ee09b6469d483d9fba779d5c6ea41861180772f043481b0598d", size = 397041 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/f1/d52960dac9519c9de64593460826a0fe2e19159389ec97ecf3e931d2e6a3/openai-1.66.0-py3-none-any.whl", hash = "sha256:43e4a3c0c066cc5809be4e6aac456a3ebc4ec1848226ef9d1340859ac130d45a", size = 566389 },
+    { url = "https://files.pythonhosted.org/packages/2c/6f/3315b3583ffe3e31c55b446cb22d2a7c235e65ca191674fffae62deb3c11/openai-1.66.2-py3-none-any.whl", hash = "sha256:75194057ee6bb8b732526387b6041327a05656d976fc21c064e21c8ac6b07999", size = 567268 },
 ]
 
 [[package]]
