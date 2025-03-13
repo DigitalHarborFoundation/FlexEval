@@ -21,7 +21,7 @@ from flexeval.classes.ToolCall import ToolCall
 
 # from flexeval.classes.DatasetRow import DatasetRow
 from flexeval.classes.Turn import Turn
-from helpers import apply_defaults
+from flexeval.helpers import apply_defaults
 from peewee import *
 
 
@@ -36,8 +36,8 @@ class EvalRunner(Model):
     def __init__(
         self,
         eval_name: str,
-        config_path: str,
-        evals_path: str = None,
+        config_path: str | Path,
+        evals_path: str | None = None,
         clear_tables: bool = False,
     ):
 
@@ -76,9 +76,10 @@ class EvalRunner(Model):
         current_date = datetime.now().strftime("%Y-%m-%d")
 
         # Create a file handler that logs debug and higher level messages to a date-based file
+        logs_path = Path(self.configuration["logs_path"])
+        logs_path.mkdir(parents=True, exist_ok=True)
         fh = logging.FileHandler(
-            Path(self.configuration["logs_path"])
-            / f"{current_date}_{self.eval_name}.log",
+            logs_path / f"{current_date}_{self.eval_name}.log",
         )
         fh.setLevel(logging.DEBUG)
 
@@ -152,22 +153,30 @@ class EvalRunner(Model):
 
         with open(self.configuration["evals_path"]) as file:
             self.all_evaluations = yaml.safe_load(file)
-            assert (
-                self.eval_name in self.all_evaluations
-            ), f"You specified an evaluation called `{self.eval_name}` in the file `{os.path.abspath(self.configuration.get('evals_path'))}`. Available evaluations are `{list(self.all_evaluations.keys())}`"
+            if self.eval_name not in self.all_evaluations:
+                raise ValueError(
+                    f"You specified an evaluation called `{self.eval_name}` in the file `{os.path.abspath(self.configuration.get('evals_path'))}`. Available evaluations are `{list(self.all_evaluations.keys())}`"
+                )
             self.eval = self.all_evaluations.get(self.eval_name)
 
         # if the current eval has a 'config' entry, overwrite configuration options with its entries
         if "config" in self.eval:
             for k, v in self.eval.get("config", {}).items():
                 if k in self.configuration:
-                    self.logger.info(f"Updating configuration setting: {k}={v}")
+                    self.logger.info(
+                        f"Updating configuration setting: {k}={v} (old={self.configuration.get(k,'unset')})"
+                    )
                     self.configuration[k] = v
         if self.evals_path is not None:
-            self.logger.info(
-                f"Updating configuration setting: evals_path={self.evals_path}"
-            )
-            self.configuration["evals_path"] = self.evals_path
+            if self.evals_path != self.configuration["evals_path"]:
+                self.logger.info(
+                    f"Updating configuration setting: evals_path={self.evals_path}"
+                )
+                self.configuration["evals_path"] = self.evals_path
+            else:
+                self.logger.debug(
+                    f"evals_path specified, but it's not different than the value provided in the configuration: {self.evals_path}"
+                )
 
         # Validate that the schema meets the required structure
         with open(self.configuration["eval_schema_path"], "r") as infile:

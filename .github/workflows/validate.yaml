@@ -27,6 +27,6 @@ jobs:
 
       - name: Run automated validation checks
         run: |
-          uv run python -m unittest tests.unit.test_data_loader
+          uv run python -m unittest discover -s tests.unit
         env:
           CURRENT_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
