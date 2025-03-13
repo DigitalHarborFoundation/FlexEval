@@ -1,7 +1,8 @@
 
 
 # paths are relative to the root of the repo
-rubric_metrics_path: '../../configuration/rubric_metrics.yaml'
+rubric_metrics_path:
+  - '../../configuration/rubric_metrics.yaml'
 evals_path: tests/evals.yaml
 env_file: .env #in same location as main.py
 logs_path: tests/logs/

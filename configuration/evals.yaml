@@ -89,6 +89,81 @@ issues-fixing-rubrics:
       api_key_name: OPENAI_API_KEY
 
 
+test-multiple-rubrics-files:
+  data:
+    - ../../data/test-cases/ckpts_livehint/checkpoint_gpt-4o-mini-2024-07-18_1540.sqlite
+
+  name: Test running rubrics from multiple files.
+  notes: If different rubric files have similar rubric names, we only consider the rubric instance in the first file found in config.yaml
+  config:
+    max_n_conversation_threads: 3
+    max_workers: 6
+
+  metrics:
+    function:
+
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: count_of_parts_matching_regex
+        kwargs:
+          expression: "An error occurred while processing your request"
+        metric_level: Turn
+    
+    rubric:
+      - name: plot_matches_description
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls
+            metric_min_value: 1
+          - name: count_of_parts_matching_regex
+            kwargs:
+              expression: "An error occurred while processing your request"
+            metric_name: "An error occurred while processing your request"
+            metric_max_value: 0
+
+      - name: is_plot_generated_upon_request_correct
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+          - name: count_tool_calls
+            metric_min_value: 1
+
+      - name: plot_matches_description_example_project
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls
+            metric_min_value: 1
+          - name: count_of_parts_matching_regex
+            kwargs:
+              expression: "An error occurred while processing your request"
+            metric_name: "An error occurred while processing your request"
+            metric_max_value: 0
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: o3-mini
+      api_key_name: OPENAI_API_KEY
+
 test-new:
   data:
     - ../../data/test-cases/example.jsonl

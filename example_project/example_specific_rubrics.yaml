@@ -1,0 +1,92 @@
+plot_matches_description_example_project:
+  notes: |-
+    want to get at something like "The text description by the tutor did not match the generated plot"
+  prompt: |-
+    Your Role:
+      You are a helpful assistant. You have solid knowledge in K-12 math instruction. 
+
+    Context:
+      A K-12 student learns math using an online tutoring system. 
+      During the session, the student (user) asks the tutor (assistant) for help with some math problems. 
+      To aid understanding, the tutor (assisstant) sometimes generates a plot to illustrate the math concepts more clearly.
+
+    Your Task:
+      Before generating a plot, the tutor (assistant) generates a description of the plot they want to generate.
+      Your job is to determine whether the plot the tutor (assistant) generates actually matches the description. 
+
+
+    Data:
+      The following contains messages from the tutor (assistant).
+      The messages include the tutor's (assistant's) description of the plot to generate, and shortly afterwards, it contains the generated plot in JSON.
+      
+      [BEGIN DATA]
+      ***
+      {content}
+      ***
+      [END DATA]
+
+    __start rubric__
+    YES: If the generated plot is fully consistent with the tutor's (assistant's) description, print "YES". 
+    SOMEWHAT: If the generated plot is somewhat consistent with the tutor's (assistant's) description, print "SOMEWHAT". A plot that is SOMEWHAT consistent might contain some but not all of the features in the description or might differ slightly in what is represented compared to the description. 
+    NO: If the generated plot is not consistent with the tutor's (assistant's) description, print "NO". A plot that is not consistent has many features that are not consistent with the description or graphs something very different from the description.
+
+    Note:
+    If there is not a generated plot represented as JSON, then print "NO".
+    __end rubric__
+
+    Output:
+      First, report your reasoning for your decision. 
+      Second, print your decision.
+      IMPORTANT: After your reasoning, print the choice string of "YES", "SOMEWHAT", or "NO" on a separate line with NO OTHER TEXT on that line.
+
+  choice_scores:
+    "YES": 1
+    "SOMEWHAT": .5
+    "NO": 0
+
+
+plot_matches_description:
+  notes: |-
+    TEST PURPOSE to evaluate whether the eval suite would consider this rubric if it's a duplicate from another rubric file placed before in the list
+  prompt: |-
+    Your Role:
+      You are a helpful assistant. You have solid knowledge in K-12 math instruction. 
+
+    Context:
+      A K-12 student learns math using an online tutoring system. 
+      During the session, the student (user) asks the tutor (assistant) for help with some math problems. 
+      To aid understanding, the tutor (assisstant) sometimes generates a plot to illustrate the math concepts more clearly.
+
+    Your Task:
+      Before generating a plot, the tutor (assistant) generates a description of the plot they want to generate.
+      Your job is to determine whether the plot the tutor (assistant) generates actually matches the description. 
+
+
+    Data:
+      The following contains messages from the tutor (assistant).
+      The messages include the tutor's (assistant's) description of the plot to generate, and shortly afterwards, it contains the generated plot in JSON.
+      
+      [BEGIN DATA]
+      ***
+      {content}
+      ***
+      [END DATA]
+
+    __start rubric__
+    CONSISTENT: If the generated plot is fully consistent with the tutor's (assistant's) description, print "CONSISTENT". 
+    SOMEWHAT: If the generated plot is somewhat consistent with the tutor's (assistant's) description, print 0.5". A plot that is SOMEWHAT consistent might contain some but not all of the features in the description or might differ slightly in what is represented compared to the description. 
+    INCONSISTENT: If the generated plot is not consistent with the tutor's (assistant's) description, print "INCONSISTENT". A plot that is not consistent has many features that are not consistent with the description or graphs something very different from the description.
+
+    Note:
+    If there is not a generated plot represented as JSON, then print "INCONSISTENT".
+    __end rubric__
+
+    Output:
+      First, report your reasoning for your decision. 
+      Second, print your decision.
+      IMPORTANT: After your reasoning, print the choice string of "CONSISTENT", "SOMEWHAT", or "INCONSISTENT" on a separate line with NO OTHER TEXT on that line.
+
+  choice_scores:
+    "CONSISTENT": 1
+    "SOMEWHAT": .5
+    "INCONSISTENT": 0

@@ -47,8 +47,15 @@ class TestConfiguration(unittest.TestCase):
             self.config = yaml.safe_load(file)
         with open(self.config["evals_path"]) as file:
             self.user_evals = yaml.safe_load(file)
-        with open(self.config["rubric_metrics_path"]) as file:
-            self.rubric_metrics = yaml.safe_load(file)
+        self.rubric_metrics = {}
+        for rf in self.config["rubric_metrics_path"]:
+            with open(rf) as file:
+                new_rubrics = yaml.safe_load(file)
+                print('DEBUG - NEW RUBRIC ', new_rubrics)
+                for key, value in new_rubrics.items():
+                    if key not in self.rubric_metrics:
+                        self.rubric_metrics[key] = value
+        
         # Apply the defaults before any testing of validity, since
         # may only be valid with these defaults
         with open(self.config["eval_schema_path"], "r") as infile:
