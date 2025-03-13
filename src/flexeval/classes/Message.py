@@ -13,6 +13,7 @@ from flexeval.classes.Thread import Thread
 from flexeval.classes.Turn import Turn
 from playhouse.shortcuts import model_to_dict
 
+# TODO remove this import from outside of the package
 from configuration import completion_functions
 
 
