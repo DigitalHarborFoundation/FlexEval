@@ -41,10 +41,19 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
         clear_tables=clear_tables,
     )
     dotenv.load_dotenv(runner.configuration["env_file"])
-
-    with open(runner.configuration["rubric_metrics_path"]) as file:
-        rubrics = yaml.safe_load(file)
-
+    
+    rubrics = {}
+    for rf in runner.configuration["rubric_metrics_path"]:
+        print('DEBUG - FOUND RUBRIC FILE', rf)
+        with open(rf) as file:
+            new_rubrics = yaml.safe_load(file)
+            for key, value in new_rubrics.items():
+                if key not in rubrics:
+                    rubrics[key] = value
+    
+    print('DEBUG - LOADED RUBRICS', rubrics)
+    
+    
     #######################################################
     ############  Create Test Run  ########################
     #######################################################
