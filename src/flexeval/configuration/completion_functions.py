@@ -22,13 +22,12 @@ with the following format:
     }
 """
 
-import logging
-from openai import OpenAI
-import os
 import json
-import requests
-from typing import List, Dict, Any
+import logging
 import os
+from typing import Any, Dict, List
+
+import requests
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)

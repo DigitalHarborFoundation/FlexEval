@@ -21,7 +21,6 @@ from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 from flexeval.helpers import apply_defaults
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -37,7 +36,7 @@ class EvalRunner(Model):
         self,
         eval_name: str,
         config_path: str | Path,
-        evals_path: str | None = None,
+        evals_path: str | Path | None = None,
         clear_tables: bool = False,
     ):
 
@@ -168,7 +167,7 @@ class EvalRunner(Model):
                     )
                     self.configuration[k] = v
         if self.evals_path is not None:
-            if self.evals_path != self.configuration["evals_path"]:
+            if str(self.evals_path) != str(self.configuration["evals_path"]):
                 self.logger.info(
                     f"Updating configuration setting: evals_path={self.evals_path}"
                 )

@@ -1,8 +1,8 @@
 import copy
 import json
+import logging
 import os
 import sys
-import logging
 
 import peewee as pw
 from playhouse.shortcuts import model_to_dict
@@ -12,10 +12,7 @@ from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.thread import Thread
 
-# add configuration folder to path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
-from configuration import completion_functions
-
+from flexeval.configuration import completion_functions
 
 logger = logging.getLogger(__name__)
 

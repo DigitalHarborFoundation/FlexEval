@@ -3,16 +3,15 @@ import json
 import logging
 
 import peewee as pw
+
+from flexeval.configuration import completion_functions
 from playhouse.shortcuts import model_to_dict
 
-# TODO remove this import from outside of the package
-from configuration import completion_functions
 from flexeval.classes.base import BaseModel
 from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.thread import Thread
 from flexeval.classes.turn import Turn
-
 
 logger = logging.getLogger(__name__)
 

@@ -21,12 +21,12 @@ from typing import ForwardRef, get_args
 import dotenv
 import jsonschema
 import yaml
+from configuration import function_metrics
 from openai import OpenAI
 
-from configuration import function_metrics
 from flexeval import helpers
 from flexeval.classes.message import Message
-from flexeval.classes.Thread import Thread
+from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 

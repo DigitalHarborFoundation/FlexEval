@@ -1,19 +1,17 @@
-import textstat
-import openai
+import datetime
+import json
 import os
 import re
-import json
+## ~.~ function templates starts ~.~
 from typing import Union
-import datetime
 
-from flexeval.classes.turn import Turn
+import openai
+import textstat
+
 from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
-
-
-## ~.~ function templates starts ~.~
-from typing import Union
+from flexeval.classes.turn import Turn
 
 # Example input types:
 # - a single message as a string

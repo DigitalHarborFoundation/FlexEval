@@ -3,7 +3,7 @@
 We'll run simple evaluations and verify the database entries look as expected
 
 Make sure your current directory is src/llm-evals
-Then run 
+Then run
 >  python -m unittest tests.functional_tests
 
 """
@@ -15,10 +15,7 @@ import unittest
 
 import pandas as pd
 
-sys.path.append("../")
-sys.path.append("../../")
-
-from main import run
+from flexeval.runner import run
 
 
 class TestSuite01(unittest.TestCase):
