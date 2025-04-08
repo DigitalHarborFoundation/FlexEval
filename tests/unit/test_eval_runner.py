@@ -5,9 +5,10 @@ import unittest
 from flexeval import data_loader
 from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_runner import EvalRunner
+from tests.unit import mixins
 
 
-class TestDataLoader(unittest.TestCase):
+class TestDataLoader(mixins.DotenvMixin, unittest.TestCase):
     def test_load_jsonl(self):
         config_path = "tests/resources/test_config.yaml"
         evals_path = "tests/resources/test_evals.yaml"

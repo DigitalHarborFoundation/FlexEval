@@ -1,6 +1,8 @@
+import sys
 import json
 import logging
 import random as rd
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import dotenv
@@ -44,18 +46,24 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
         evals_path=evals_path,
         clear_tables=clear_tables,
     )
-    dotenv.load_dotenv(runner.configuration["env_file"])
+    if "env_file" in runner.configuration:
+        if not Path(runner.configuration["env_file"]).exists():
+            logger.error(
+                f"Environment file not present at path '{runner.configuration['env_file']}'."
+            )
+            sys.exit(1)
+        dotenv.load_dotenv(runner.configuration["env_file"], verbose=True)
 
     rubrics = {}
     for rf in runner.configuration["rubric_metrics_path"]:
-        logger.debug("Found rubric file:", rf)
+        logger.debug("Found rubric file: %s", rf)
         with open(rf) as file:
             new_rubrics = yaml.safe_load(file)
             for key, value in new_rubrics.items():
                 if key not in rubrics:
                     rubrics[key] = value
 
-    logger.debug("Loaded rubrics:", rubrics)
+    logger.debug("Loaded rubrics: %s", rubrics)
 
     #######################################################
     ############  Create Test Run  ########################

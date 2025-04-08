@@ -1,4 +1,5 @@
-rubric_metrics_path: tests/resources/test_rubric_metrics.yaml
+rubric_metrics_path: 
+ - src/flexeval/configuration/rubric_metrics.yaml
 evals_path: tests/resources/test_evals.yaml
 env_file: tests/resources/unittest.env
 logs_path: .unittest/logs/

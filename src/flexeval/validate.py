@@ -1,4 +1,4 @@
-"""These tests run every time main.run() is called.
+"""These validation checks are intended to be executed time runner.run() is called.
 
 They check to make sure FlexEval is configured properly. In particular,
 they check the evals.yaml file you're using and the specific evaluation you're running
@@ -13,12 +13,12 @@ and it's not caught here, that's a bug - and we should add a test here
 """
 
 import inspect
+import logging
 import json
 import os
 import unittest
 from typing import ForwardRef, get_args
 
-import dotenv
 import jsonschema
 import yaml
 from openai import OpenAI
@@ -30,7 +30,8 @@ from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 from flexeval.configuration import function_metrics
 
-dotenv.load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 class TestConfiguration(unittest.TestCase):
@@ -39,7 +40,7 @@ class TestConfiguration(unittest.TestCase):
         self.eval_suite_name = os.getenv("EVALUATION_NAME")
         self.config_file_name = os.getenv("CONFIG_FILENAME")
         # was set before this was called
-        print("Running tests", self.eval_suite_name)
+        logger.info("Validating eval_suite_name: %s", self.eval_suite_name)
         with open(self.config_file_name) as file:
             self.config = yaml.safe_load(file)
         with open(self.config["evals_path"]) as file:
@@ -48,7 +49,7 @@ class TestConfiguration(unittest.TestCase):
         for rf in self.config["rubric_metrics_path"]:
             with open(rf) as file:
                 new_rubrics = yaml.safe_load(file)
-                print("DEBUG - NEW RUBRIC ", new_rubrics)
+                logger.debug("New rubric: %s", new_rubrics)
                 for key, value in new_rubrics.items():
                     if key not in self.rubric_metrics:
                         self.rubric_metrics[key] = value
@@ -61,17 +62,23 @@ class TestConfiguration(unittest.TestCase):
             schema, self.user_evals[self.eval_suite_name]
         )
 
+    def skip_if_no_openai_checks(self):
+        if os.getenv("SKIP_OPENAI_CHECKS", "false") == "true":
+            self.skipTest("Skipping because SKIP_OPENAI_CHECKS is set to True.")
+
     def test_env_file_exists(self):
         assert os.path.exists(
             ".env"
         ), ".env file must be defined in the root of the project folder"
 
     def test_openai_key_set(self):
+        self.skip_if_no_openai_checks()
         assert (
             os.environ.get("OPENAI_API_KEY", "") != ""
         ), "OPENAI_API_KEY must be set in the .env file"
 
     def test_openai_is_valid(self):
+        self.skip_if_no_openai_checks()
         # will raise exception if key is not set
         try:
             client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -82,7 +89,7 @@ class TestConfiguration(unittest.TestCase):
             )
 
         except Exception as e:
-            print(
+            logger.error(
                 "Your OpenAI key appears to not be valid! Double check the key in the .env file"
             )
             raise e
@@ -104,7 +111,7 @@ class TestConfiguration(unittest.TestCase):
                         f'Error: File or directory "{path}" specified in the src/llm-evals/{os.environ["CONFIG_FILENAME"]} file does not exist'
                     )
                 elif os.path.islink(path):
-                    print(f'Warning: Found a symbolic link at path "{path}"')
+                    logger.warning(f'Warning: Found a symbolic link at path "{path}"')
             elif isinstance(node, list):
                 for item in node:
                     traverse_yaml(item, base_path=os.path.join(base_path, node[0]))
