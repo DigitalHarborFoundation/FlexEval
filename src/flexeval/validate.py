@@ -13,8 +13,8 @@ and it's not caught here, that's a bug - and we should add a test here
 """
 
 import inspect
-import logging
 import json
+import logging
 import os
 import unittest
 from typing import ForwardRef, get_args
@@ -29,7 +29,6 @@ from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 from flexeval.configuration import function_metrics
-
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +69,7 @@ class TestConfiguration(unittest.TestCase):
         self.skipTest(
             "Skipping until we can validate that this constraint is reasonable."
         )
-        # Why would we require this? We would instead want to validate that config.env_file exists
+        # TODO Why would we require this? We would instead want to validate that config.env_file exists
         assert os.path.exists(
             ".env"
         ), ".env file must be defined in the root of the project folder"

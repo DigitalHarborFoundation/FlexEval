@@ -11,7 +11,6 @@ from flexeval.classes.base import BaseModel
 from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.thread import Thread
-
 from flexeval.configuration import completion_functions
 
 logger = logging.getLogger(__name__)

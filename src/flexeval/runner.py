@@ -1,9 +1,9 @@
-import sys
 import json
 import logging
 import random as rd
-from pathlib import Path
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 import dotenv
 import yaml
