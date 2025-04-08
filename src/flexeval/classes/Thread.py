@@ -1,11 +1,8 @@
-import copy
-import json
-
 import peewee as pw
 
-from flexeval.classes.BaseModel import BaseModel
-from flexeval.classes.Dataset import Dataset
-from flexeval.classes.EvalSetRun import EvalSetRun
+from flexeval.classes.base import BaseModel
+from flexeval.classes.dataset import Dataset
+from flexeval.classes.eval_set_run import EvalSetRun
 
 
 class Thread(BaseModel):

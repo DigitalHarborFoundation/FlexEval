@@ -1,21 +1,12 @@
-import copy
-import json
-import os
-import sys
-from pathlib import Path
-
 import peewee as pw
-import pydantic
 from playhouse.shortcuts import model_to_dict
 
-from configuration import completion_functions
-from flexeval import helpers
-from flexeval.classes.BaseModel import BaseModel
-from flexeval.classes.Dataset import Dataset
-from flexeval.classes.EvalSetRun import EvalSetRun
-from flexeval.classes.Message import Message
-from flexeval.classes.Thread import Thread
-from flexeval.classes.Turn import Turn
+from flexeval.classes.base import BaseModel
+from flexeval.classes.dataset import Dataset
+from flexeval.classes.eval_set_run import EvalSetRun
+from flexeval.classes.message import Message
+from flexeval.classes.thread import Thread
+from flexeval.classes.turn import Turn
 
 
 class ToolCall(BaseModel):

@@ -1,9 +1,7 @@
-import json
-
 import peewee as pw
 
-from flexeval.classes.BaseModel import BaseModel
-from flexeval.classes.EvalSetRun import EvalSetRun
+from flexeval.classes.base import BaseModel
+from flexeval.classes.eval_set_run import EvalSetRun
 
 
 class Dataset(BaseModel):
@@ -16,7 +14,7 @@ class Dataset(BaseModel):
     contents = pw.TextField(null=True)  # raw contents
 
     max_n_conversation_threads = pw.IntegerField(null=True)
-    
+
     # In line with LangGraph expectations, we assume n=1 for all outputs of LLMs
     # However, each node can append list with length 2+ to the message queue
 
@@ -46,21 +44,26 @@ class Dataset(BaseModel):
     #   turn_id
 
     def load_data(self):
-        from flex_eval import \
-            data_loader  # Local import as this needs to happen after the module is fully loaded
+        from flexeval import (
+            data_loader,
+        )  # Local import as this needs to happen after the module is fully loaded
 
         if self.filename.endswith(".jsonl"):
             self.datatype = "json"
-            data_loader.load_jsonl(dataset=self,
-                                   filename=self.filename,
-                                   max_n_conversation_threads=self.max_n_conversation_threads)
-        
+            data_loader.load_jsonl(
+                dataset=self,
+                filename=self.filename,
+                max_n_conversation_threads=self.max_n_conversation_threads,
+            )
+
         elif is_sqlite_file(self.filename):
             self.datatype = "sqlite"
-            data_loader.load_langgraph_sqlite(dataset=self,
-                                              filename=self.filename,
-                                              max_n_conversation_threads=self.max_n_conversation_threads)
-        
+            data_loader.load_langgraph_sqlite(
+                dataset=self,
+                filename=self.filename,
+                max_n_conversation_threads=self.max_n_conversation_threads,
+            )
+
         else:
             raise Exception(
                 f"Each Data File must be either a jsonl or sqlite file. You provided the file: {self.filename}"

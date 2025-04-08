@@ -12,15 +12,17 @@ import yaml
 from peewee import *
 
 from flexeval import helpers
-from flexeval.classes.Dataset import Dataset
-from flexeval.classes.EvalSetRun import EvalSetRun
-from flexeval.classes.Message import Message
-from flexeval.classes.Metric import Metric
+from flexeval.classes.dataset import Dataset
+from flexeval.classes.eval_set_run import EvalSetRun
+from flexeval.classes.message import Message
+from flexeval.classes.metric import Metric
+
 # from flexeval.classes.TurnMetric import TurnMetric
-from flexeval.classes.Thread import Thread
-from flexeval.classes.ToolCall import ToolCall
+from flexeval.classes.thread import Thread
+from flexeval.classes.tool_call import ToolCall
+
 # from flexeval.classes.DatasetRow import DatasetRow
-from flexeval.classes.Turn import Turn
+from flexeval.classes.turn import Turn
 from flexeval.helpers import apply_defaults
 
 

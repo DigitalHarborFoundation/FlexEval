@@ -1,18 +1,9 @@
 import json
-import logging
-import os
-import sys
-import unittest
 from datetime import datetime
-from pathlib import Path
 
-import networkx as nx
 import peewee as pw
-import pydantic
-import yaml
 
-from flexeval import helpers
-from flexeval.classes.BaseModel import BaseModel
+from flexeval.classes.base import BaseModel
 
 
 class EvalSetRun(BaseModel):

@@ -7,11 +7,11 @@ import warnings
 from langchain.load.dump import dumps
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
-from flexeval.classes.Dataset import Dataset
-from flexeval.classes.Message import Message
-from flexeval.classes.Thread import Thread
-from flexeval.classes.ToolCall import ToolCall
-from flexeval.classes.Turn import Turn
+from flexeval.classes.dataset import Dataset
+from flexeval.classes.message import Message
+from flexeval.classes.thread import Thread
+from flexeval.classes.tool_call import ToolCall
+from flexeval.classes.turn import Turn
 
 
 def load_jsonl(

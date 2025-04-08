@@ -1,3 +1,5 @@
+assert False, "Deprecated; delete before merging."
+
 import argparse
 import json
 import random as rd
@@ -7,11 +9,11 @@ import compute_metrics
 import dotenv
 import yaml
 
-from flexeval.classes.Dataset import Dataset
-from flexeval.classes.EvalRunner import EvalRunner
-from flexeval.classes.EvalSetRun import EvalSetRun
-from flexeval.classes.Metric import Metric
-from flexeval.classes.Turn import Turn
+from flexeval.classes.dataset import Dataset
+from flexeval.classes.eval_runner import EvalRunner
+from flexeval.classes.eval_set_run import EvalSetRun
+from flexeval.classes.metric import Metric
+from flexeval.classes.turn import Turn
 
 # Levels of abstraction -
 # Dataset
@@ -42,19 +44,18 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
         clear_tables=clear_tables,
     )
     dotenv.load_dotenv(runner.configuration["env_file"])
-    
+
     rubrics = {}
     for rf in runner.configuration["rubric_metrics_path"]:
-        print('DEBUG - FOUND RUBRIC FILE', rf)
+        print("DEBUG - FOUND RUBRIC FILE", rf)
         with open(rf) as file:
             new_rubrics = yaml.safe_load(file)
             for key, value in new_rubrics.items():
                 if key not in rubrics:
                     rubrics[key] = value
-    
-    print('DEBUG - LOADED RUBRICS', rubrics)
-    
-    
+
+    print("DEBUG - LOADED RUBRICS", rubrics)
+
     #######################################################
     ############  Create Test Run  ########################
     #######################################################
@@ -96,21 +97,29 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
 
     try:
         runner.logger.info("Loading data")
-        
-        max_n_conversation_threads = runner.configuration.get("max_n_conversation_threads", None)
-        runner.logger.info(f"Running eval with max number of conversation threads: {max_n_conversation_threads}")
-        
+
+        max_n_conversation_threads = runner.configuration.get(
+            "max_n_conversation_threads", None
+        )
+        runner.logger.info(
+            f"Running eval with max number of conversation threads: {max_n_conversation_threads}"
+        )
+
         # set random seed
         rd_seed = runner.configuration.get("random_seed_conversation_sampling", 1)
         rd.seed(rd_seed)
         runner.logger.info(f"Set random seed to {rd_seed}")
-        
+
         for filename in evalsetrun.get_datasets():
             # these will automatically be saved as a property of evalsetrun
-            Dataset.create(evalsetrun=evalsetrun,
-                           filename=filename,
-                           max_n_conversation_threads=max_n_conversation_threads)
-            runner.logger.info(f"Created dataset from {filename}. Max number of conversation threads: {max_n_conversation_threads}")
+            Dataset.create(
+                evalsetrun=evalsetrun,
+                filename=filename,
+                max_n_conversation_threads=max_n_conversation_threads,
+            )
+            runner.logger.info(
+                f"Created dataset from {filename}. Max number of conversation threads: {max_n_conversation_threads}"
+            )
 
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)

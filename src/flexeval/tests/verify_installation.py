@@ -12,28 +12,23 @@ Any misconfiguration should be caught here. If an evaluation fails due to miscon
 and it's not caught here, that's a bug - and we should add a test here
 """
 
-import importlib
 import inspect
 import json
 import os
-import sys
-import types
 import unittest
-from typing import (Any, AnyStr, Dict, ForwardRef, List, Union, get_args,
-                    get_origin)
+from typing import ForwardRef, get_args
 
 import dotenv
 import jsonschema
-import networkx as nx
 import yaml
 from openai import OpenAI
 
 from configuration import function_metrics
 from flexeval import helpers
-from flexeval.classes.Message import Message
+from flexeval.classes.message import Message
 from flexeval.classes.Thread import Thread
-from flexeval.classes.ToolCall import ToolCall
-from flexeval.classes.Turn import Turn
+from flexeval.classes.tool_call import ToolCall
+from flexeval.classes.turn import Turn
 
 dotenv.load_dotenv()
 
@@ -53,11 +48,11 @@ class TestConfiguration(unittest.TestCase):
         for rf in self.config["rubric_metrics_path"]:
             with open(rf) as file:
                 new_rubrics = yaml.safe_load(file)
-                print('DEBUG - NEW RUBRIC ', new_rubrics)
+                print("DEBUG - NEW RUBRIC ", new_rubrics)
                 for key, value in new_rubrics.items():
                     if key not in self.rubric_metrics:
                         self.rubric_metrics[key] = value
-        
+
         # Apply the defaults before any testing of validity, since
         # may only be valid with these defaults
         with open(self.config["eval_schema_path"], "r") as infile:

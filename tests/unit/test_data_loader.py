@@ -2,8 +2,8 @@ import unittest
 import tempfile
 import pathlib
 
-from flexeval.classes.Dataset import Dataset
-from flexeval.classes.EvalRunner import EvalRunner
+from flexeval.classes.dataset import Dataset
+from flexeval.classes.eval_runner import EvalRunner
 from flexeval import data_loader
 
 

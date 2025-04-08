@@ -2,13 +2,13 @@ import copy
 import inspect
 import json
 import string
-from typing import ForwardRef, Union, get_args
+from typing import Union
 
 from configuration import completion_functions, function_metrics
-from flexeval.classes.Message import Message
+from flexeval.classes.message import Message
 from flexeval.classes.Thread import Thread
-from flexeval.classes.ToolCall import ToolCall
-from flexeval.classes.Turn import Turn
+from flexeval.classes.tool_call import ToolCall
+from flexeval.classes.turn import Turn
 
 
 def compute_metrics(object: Union[Thread, Turn, Message, ToolCall]):

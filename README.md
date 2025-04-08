@@ -163,7 +163,7 @@ uv build
 ### Running the unit tests
 
 ```bash
-uv run python -m unittest tests.unit
+uv run python -m unittest discover -s tests.unit
 ```
 
 ### Adding or updating dependencies
