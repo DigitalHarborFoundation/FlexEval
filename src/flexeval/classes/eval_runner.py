@@ -16,11 +16,9 @@ from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.message import Message
 from flexeval.classes.metric import Metric
-
 # from flexeval.classes.TurnMetric import TurnMetric
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
-
 # from flexeval.classes.DatasetRow import DatasetRow
 from flexeval.classes.turn import Turn
 from flexeval.helpers import apply_defaults
