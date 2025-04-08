@@ -1,5 +1,6 @@
 import copy
 import json
+import logging
 
 import peewee as pw
 from playhouse.shortcuts import model_to_dict
@@ -11,6 +12,9 @@ from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.thread import Thread
 from flexeval.classes.turn import Turn
+
+
+logger = logging.getLogger(__name__)
 
 
 class Message(BaseModel):
@@ -85,7 +89,7 @@ class Message(BaseModel):
                     **completion_function_kwargs,
                 )
             else:
-                print(
+                logger.warning(
                     "In completion_functions.py: No callable function named "
                     + completion_fn_name
                     + " found."

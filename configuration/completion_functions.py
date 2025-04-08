@@ -1,15 +1,15 @@
-"""This file contains a list of Python functions that accept conversations as input 
+"""This file contains a list of Python functions that accept conversations as input
 and produce conversational turns (aka completions) as output.
 
 When writing a new function, the arguments must include, at minimum:
 * conversation_history - list of dictionaries with keys ("role","content"), whose values are strings
 * kwargs - dictionary of optional values that can probably be ignored
-Other arguments can be added, but then must also be specified 
-in the "completion_llm" section of the evals.yaml config. 
+Other arguments can be added, but then must also be specified
+in the "completion_llm" section of the evals.yaml config.
 
 The outputs must conform to the structure described here:
 https://platform.openai.com/docs/guides/text-generation/chat-completions-api
-with the following format: 
+with the following format:
     completion = {
         "choices": [
             {
@@ -22,6 +22,7 @@ with the following format:
     }
 """
 
+import logging
 from openai import OpenAI
 import os
 import json
@@ -29,6 +30,8 @@ import requests
 from typing import List, Dict, Any
 import os
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 
 def open_ai_completion(
@@ -135,9 +138,9 @@ def generic_rest_api_completion(
     completion = response_data["completion"]
     # Check if the request was successful
     if response.status_code == 200:
-        print("Success:", response.text)
+        logger.info("Success:", response.text)
     else:
-        print("Error:", response.text)
+        logger.info("Error:", response.text)
 
     completion = {
         "choices": [{"message": {"content": completion, "role": "assistant"}}]

@@ -2,6 +2,7 @@ import copy
 import json
 import os
 import sys
+import logging
 
 import peewee as pw
 from playhouse.shortcuts import model_to_dict
@@ -14,6 +15,9 @@ from flexeval.classes.thread import Thread
 # add configuration folder to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 from configuration import completion_functions
+
+
+logger = logging.getLogger(__name__)
 
 
 class Turn(BaseModel):
@@ -54,7 +58,7 @@ class Turn(BaseModel):
                     **completion_function_kwargs,
                 )
             else:
-                print(
+                logger.warning(
                     "In completion_functions.py: No callable function named "
                     + completion_fn_name
                     + " found."

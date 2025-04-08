@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import random as rd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -12,6 +13,9 @@ from flexeval.classes.eval_runner import EvalRunner
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.metric import Metric
 from flexeval.classes.turn import Turn
+
+
+logger = logging.getLogger(__name__)
 
 # Levels of abstraction -
 # Dataset
@@ -45,14 +49,14 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
 
     rubrics = {}
     for rf in runner.configuration["rubric_metrics_path"]:
-        print("DEBUG - FOUND RUBRIC FILE", rf)
+        logger.debug("Found rubric file:", rf)
         with open(rf) as file:
             new_rubrics = yaml.safe_load(file)
             for key, value in new_rubrics.items():
                 if key not in rubrics:
                     rubrics[key] = value
 
-    print("DEBUG - LOADED RUBRICS", rubrics)
+    logger.debug("Loaded rubrics:", rubrics)
 
     #######################################################
     ############  Create Test Run  ########################
@@ -340,16 +344,11 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
         runner.logger.removeHandler(handler)
 
 
-if __name__ == "__main__":
-    # parse arguments
-
+def main():
     ################################################################################
     ## Parse inputs and load config files
     ################################################################################
-
-    # Create the parser
     parser = argparse.ArgumentParser()
-    # Add an argument
     parser.add_argument(
         "--eval_name",
         type=str,
@@ -360,20 +359,28 @@ if __name__ == "__main__":
         type=str,
         help="Path to the evaluation file evals.yaml you want to run. Deafult is configuration/evals.yaml.",
     )
-
     parser.add_argument(
         "--clear_tables",
         action="store_true",
         help="Set this flag to drop existing tables in the results database before running. Useful during development.",
     )
-
     parser.add_argument(
         "--config_path",
         type=str,
         help="Which config file to use",
         default="config.yaml",
     )
-    # Parse the argument
+
+    # Parse passed arguments
     args = parser.parse_args()
 
+    # set up logging
+    # TODO add option to silence logging or otherwise set level of verbosity
+    logging.basicConfig(level=logging.INFO)
+
+    # Evoke run()
     run(**vars(args))
+
+
+if __name__ == "__main__":
+    main()
