@@ -6,11 +6,11 @@ import yaml
 from jsonschema import validate
 
 # Define the schema
-with open("../eval_schema.json", "r") as infile:
+with open("src/flexeval/eval_schema.json", "r") as infile:
     schema = json.load(infile)
 
 # Sample data
-with open("../../../configuration/evals.yaml", "r") as infile:
+with open("src/flexeval/configuration/evals.yaml", "r") as infile:
     temp = yaml.safe_load(infile)
 data = {}
 data["evaluation_suite"] = temp["evaluation"]

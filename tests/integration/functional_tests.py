@@ -25,8 +25,8 @@ class TestSuite01(unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_01",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -156,8 +156,8 @@ class TestSuite02(unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_02",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -311,8 +311,8 @@ class TestSuite03(unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_03",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -352,8 +352,8 @@ class TestSuite04(unittest.TestCase):
         # in this case, we'd run the evals here using subprocess or something, or maybe main.py
         run(
             eval_name="test_suite_04",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -450,8 +450,8 @@ class TestSuite01_langgraph(unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_01_langgraph",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -526,8 +526,8 @@ class TestSuite02_langgraph(unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_02_langgraph",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -705,8 +705,8 @@ class TestSuite04_langgraph(unittest.TestCase):
         # in this case, we'd run the evals here using subprocess or something, or maybe main.py
         run(
             eval_name="test_suite_04_langgraph",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -796,8 +796,8 @@ class FunctionMetricValidation(unittest.TestCase):
     def test_default_kwargs01(self):
         run(
             eval_name="test_default_kwargs_01",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
             clear_tables=True,
         )
 
@@ -808,56 +808,56 @@ class ConfigFailures(unittest.TestCase):
     def test_config_failure_01(cls):
         run(
             eval_name="config_failure_01",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
         )
 
     @unittest.expectedFailure
     def test_config_failure_02(cls):
         run(
             eval_name="config_failure_02",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
         )
 
     @unittest.expectedFailure
     def test_config_failure_03(cls):
         run(
             eval_name="config_failure_03",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
         )
 
     @unittest.expectedFailure
     def test_config_failure_04(cls):
         run(
             eval_name="config_failure_04",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
         )
 
     @unittest.expectedFailure
     def test_config_failure_05(cls):
         run(
             eval_name="config_failure_05",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
         )
 
     @unittest.expectedFailure
     def test_config_failure_06(cls):
         run(
             eval_name="config_failure_06",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
         )
 
     @unittest.expectedFailure
     def test_config_failure_07(cls):
         run(
             eval_name="config_failure_07",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
         )
 
 
@@ -869,8 +869,8 @@ class TestBasicFunctionMetrics(unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_basic_function_metrics_01",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -987,8 +987,8 @@ class TestBasicFunctionMetrics_langgraph(unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_basic_function_metrics_01_langgraph",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -1105,8 +1105,8 @@ class TestListStringInputFunctionMetrics(unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_list_string_function_metrics",
-            config_path="config-tests.yaml",
-            evals_path="tests/evals.yaml",
+            config_path="tests/integration/config-tests.yaml",
+            evals_path="tests/integration/evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -1167,7 +1167,7 @@ class TestListStringInputFunctionMetrics(unittest.TestCase):
                     msg="Metric value for reading ease not equal to expected value",
                 )
 
-    def test_count_role_entries(self):
+    def test_count_messages_per_role(self):
         thread_and_turn_id_to_role_entries = {
             1: {1: {"user": 1}, 2: {"assistant": 2}, 3: {"user": 1}},
             2: {4: {"user": 1}, 5: {"assistant": 2}, 6: {"user": 1}},
@@ -1200,7 +1200,7 @@ class TestListStringInputFunctionMetrics(unittest.TestCase):
                         metric
                     WHERE 1=1
                         AND thread_id = 1
-                        AND evaluation_name = 'count_role_entries'
+                        AND evaluation_name = 'count_messages_per_role'
                     """
             ).fetchall()
             for result in role_entry_metrics:

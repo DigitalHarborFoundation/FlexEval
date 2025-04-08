@@ -360,10 +360,10 @@ test_list_string_function_metrics:
 
   metrics:
     function:
-      - name: count_role_entries
+      - name: count_messages_per_role
         metric_level: Turn
       
-      - name: count_role_entries
+      - name: count_messages_per_role
         metric_level: Thread
       
       - name: flesch_reading_ease
@@ -389,10 +389,10 @@ test_list_string_function_metrics_langgraph:
 
   metrics:
     function:
-      - name: count_role_entries
+      - name: count_messages_per_role
         metric_level: Turn
       
-      - name: count_role_entries
+      - name: count_messages_per_role
         metric_level: Thread
       
       - name: flesch_reading_ease

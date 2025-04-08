@@ -21,7 +21,7 @@ from typing import ForwardRef, get_args
 import dotenv
 import jsonschema
 import yaml
-from configuration import function_metrics
+from flexeval.configuration import function_metrics
 from openai import OpenAI
 
 from flexeval import helpers
