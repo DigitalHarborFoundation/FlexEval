@@ -402,7 +402,6 @@ test_list_string_function_metrics_langgraph:
         metric_level: Turn
         context_only: false
 
-
       - name: flesch_reading_ease
         metric_level: Message
         context_only: true

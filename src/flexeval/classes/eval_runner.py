@@ -11,7 +11,7 @@ import jsonschema
 import yaml
 from peewee import *
 
-from flexeval import helpers
+from flexeval import helpers, validate
 from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.message import Message
@@ -103,9 +103,7 @@ class EvalRunner(Model):
 
         self.logger.debug("Verifying configuration")
         # Locate the tests
-        suite = unittest.defaultTestLoader.discover(
-            "tests/", pattern="verify_installation.py"
-        )
+        suite = unittest.defaultTestLoader.loadTestsFromModule(validate)
         # set args in environment so they're available in the test
         os.environ["CONFIG_FILENAME"] = self.config_path
         os.environ["EVALUATION_NAME"] = self.eval_name

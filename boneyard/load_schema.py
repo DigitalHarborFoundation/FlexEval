@@ -1,7 +1,5 @@
 import json
-import os
 
-import jsonschema
 import yaml
 from jsonschema import validate
 

@@ -17,10 +17,9 @@
 # - if I try to use a function that doesn't exist, it fails but gives a useful error message
 
 
-import os
 import unittest
 
-from run import run
+from flexeval.runner import run
 
 
 class FunctionalTest(unittest.TestCase):
@@ -39,6 +38,6 @@ class FunctionalTest(unittest.TestCase):
         # write assertions here
         run(
             eval_name="test01",
-            config_filename="config-tests.yaml",
+            config_filename="tests/integration/config-tests.yaml",
             evals_path="tests/tests.py",
         )
