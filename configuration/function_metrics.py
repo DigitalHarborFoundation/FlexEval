@@ -6,9 +6,9 @@ import json
 from typing import Union
 import datetime
 
-from flexeval.classes.Turn import Turn
+from flexeval.classes.turn import Turn
 from flexeval.classes.message import Message
-from flexeval.classes.Thread import Thread
+from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 
 

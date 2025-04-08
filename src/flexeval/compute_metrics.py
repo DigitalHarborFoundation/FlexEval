@@ -6,7 +6,7 @@ from typing import Union
 
 from configuration import completion_functions, function_metrics
 from flexeval.classes.message import Message
-from flexeval.classes.Thread import Thread
+from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 

@@ -179,3 +179,9 @@ To update dependencies:
 ```bash
 uv lock --upgrade
 ```
+
+Verify CLI:
+
+```bash
+uv run python -m flexeval --help
+```
