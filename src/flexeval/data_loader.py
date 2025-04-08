@@ -1,73 +1,94 @@
-import copy
 import json
-import sqlite3
 import pathlib
-from typing import OrderedDict
+import random as rd
+import sqlite3
+import warnings
+
+from langchain.load.dump import dumps
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 from flexeval.classes.Dataset import Dataset
 from flexeval.classes.Message import Message
 from flexeval.classes.Thread import Thread
 from flexeval.classes.ToolCall import ToolCall
 from flexeval.classes.Turn import Turn
-from langchain.load.dump import dumps
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 
-def load_jsonl(dataset: Dataset, filename: str | pathlib.Path):
+def load_jsonl(
+    dataset: Dataset,
+    filename: str | pathlib.Path,
+    max_n_conversation_threads: int | None = None,
+):
 
     with open(filename, "r") as infile:
         contents = infile.read()  # will be a big string
+        all_lines = contents.splitlines()
 
         # Each row is a single row of the jsonl file
         # That means it has 'input' as a key, and a list of dictionaries as values
         # per line
-        for thread in contents.splitlines():
-            thread_object = Thread.create(
-                evalsetrun=dataset.evalsetrun, dataset=dataset
+
+        if max_n_conversation_threads is None:
+            max_n_conversation_threads = len(all_lines)
+
+        if max_n_conversation_threads <= len(all_lines):
+            selected_thread_ids = rd.sample(
+                list(range(len(all_lines))), max_n_conversation_threads
             )
+        else:
+            warnings.warn(
+                f"You requested {max_n_conversation_threads} conversations but only {len(all_lines)} are present in Jsonl dataset."
+            )
+            selected_thread_ids = list(range(len(all_lines)))
 
-            # Context
-            context = []
-            # Get system prompt used in the thread - assuming only 1
-            system_prompt = [
-                i["content"]
-                for i in json.loads(thread)["input"]
-                if i["role"] == "system"
-            ][0]
+        for thread_id, thread in enumerate(all_lines):
+            if thread_id in selected_thread_ids:
+                thread_object = Thread.create(
+                    evalsetrun=dataset.evalsetrun, dataset=dataset
+                )
 
-            # Add the system prompt as context
-            context.append({"role": "system", "content": system_prompt})
+                # Context
+                context = []
+                # Get system prompt used in the thread - assuming only 1
+                system_prompt = [
+                    i["content"]
+                    for i in json.loads(thread)["input"]
+                    if i["role"] == "system"
+                ][0]
 
-            # Create messages
-            for message in json.loads(thread)["input"]:
-                role = message.get("role", None)
-                if role != "system":
-                    # System message shouldn't be added as a separate message
-                    system_prompt_for_this_message = ""
-                    if role != "user":
-                        system_prompt_for_this_message = system_prompt
-                    Message.create(
-                        evalsetrun=dataset.evalsetrun,
-                        dataset=dataset,
-                        thread=thread_object,
-                        role=role,
-                        content=message.get("content", None),
-                        context=json.dumps(context),
-                        metadata=message.get("metadata", None),
-                        is_flexeval_completion=False,
-                        system_prompt=system_prompt_for_this_message,
-                    )
-                    # Update context
-                    context.append(
-                        {"role": role, "content": message.get("content", None)}
-                    )
+                # Add the system prompt as context
+                context.append({"role": "system", "content": system_prompt})
 
-            add_turns(thread_object)
+                # Create messages
+                for message in json.loads(thread)["input"]:
+                    role = message.get("role", None)
+                    if role != "system":
+                        # System message shouldn't be added as a separate message
+                        system_prompt_for_this_message = ""
+                        if role != "user":
+                            system_prompt_for_this_message = system_prompt
+                        Message.create(
+                            evalsetrun=dataset.evalsetrun,
+                            dataset=dataset,
+                            thread=thread_object,
+                            role=role,
+                            content=message.get("content", None),
+                            context=json.dumps(context),
+                            metadata=message.get("metadata", None),
+                            is_flexeval_completion=False,
+                            system_prompt=system_prompt_for_this_message,
+                        )
+                        # Update context
+                        context.append(
+                            {"role": role, "content": message.get("content", None)}
+                        )
+
+                add_turns(thread_object)
 
     # TODO - should we add ToolCall here? Is there a standard way to represent them in jsonl?
 
 
-def load_langgraph_sqlite(dataset, filename):
+def load_langgraph_sqlite(dataset, filename, max_n_conversation_threads=None):
     serializer = JsonPlusSerializer()
 
     with sqlite3.connect(filename) as conn:
@@ -87,7 +108,20 @@ def load_langgraph_sqlite(dataset, filename):
         query = "select distinct thread_id from checkpoints"
         cursor.execute(query)
         thread_ids = cursor.fetchall()
-        for thread_id in thread_ids:
+
+        nb_threads = len(thread_ids)
+        if max_n_conversation_threads is None:
+            max_n_conversation_threads = nb_threads
+
+        if max_n_conversation_threads <= nb_threads:
+            selected_thread_ids = rd.sample(thread_ids, max_n_conversation_threads)
+        else:
+            warnings.warn(
+                f"You requested {max_n_conversation_threads} conversations but only {nb_threads} are present in Sqlite dataset."
+            )
+            selected_thread_ids = thread_ids
+
+        for thread_id in selected_thread_ids:
             thread = Thread.create(
                 evalsetrun=dataset.evalsetrun,
                 dataset=dataset,

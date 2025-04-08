@@ -8,16 +8,16 @@ from pathlib import Path
 
 import peewee as pw
 import pydantic
+from playhouse.shortcuts import model_to_dict
+
 from flexeval.classes.BaseModel import BaseModel
 from flexeval.classes.Dataset import Dataset
 from flexeval.classes.EvalSetRun import EvalSetRun
 from flexeval.classes.Message import Message
-
 # from flexeval.classes.DatasetRow import DatasetRow
 from flexeval.classes.Thread import Thread
 from flexeval.classes.ToolCall import ToolCall
 from flexeval.classes.Turn import Turn
-from playhouse.shortcuts import model_to_dict
 
 
 class Metric(BaseModel):

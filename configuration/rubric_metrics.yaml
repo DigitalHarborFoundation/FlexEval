@@ -16,14 +16,14 @@ is_plot_generated_upon_request_pedagogically_appropriate:
       To aid understanding, the tutor (assistant) generates a plot to illustrate the math concepts more clearly.
 
     Your Task:
-      First, decide whether a student (user) is asking for a plot at the end of a conversation. The request for a plot might occur in the very last message from a student (user) or before that. 
+      First, decide whether a student (user) is asking for a plot before the assistant's [Output] message. The request for a plot might occur in this last message from a student (user) or before that. 
       If the student (user) asked for a plot earlier in the conversation and the tutor (assistant) already generated the plot, do NOT treat it as a request for a plot unless the student (user) has made a new request that has not yet been fulfilled.
       Then, if you consider that the student actually requested a plot, determine whether the final plot generated in the conversation is pedagogically appropriate given the context of the previous conversation.
       A plot is pedagogically appropriate if it seems likely to be helpful for the student's (user's) learning and is relevant to the current topic of conversation.
 
     Data:
       The following contains a conversation between the student (user) and the tutor (assistant).
-      Use the input to evaluate whether the student requests for a plot and the final plot's JSON description from the output to evaluate its pedagogical appropriateness. 
+      Use the [Input] to evaluate whether the student requests for a plot and the final plot's JSON description from the [Output] section to evaluate its pedagogical appropriateness. 
       
       [BEGIN DATA]
       ***
@@ -36,9 +36,9 @@ is_plot_generated_upon_request_pedagogically_appropriate:
     __start rubric__
       First, evaluate whether the student requests for a plot:
       0. No student request for a plot
-      Characteristics: The student (user) is not requesting for a plot at the end of the conversation, or the student (user) acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?". In this case, you do not need to evaluate the plot's appropriateness.
+      Characteristics: Right before the assistant message flagged as [Output], the student (user) is not requesting for a plot or the student acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?". In this case, do not evaluate the plot's appropriateness.
 
-      Then, if the student (user) is requesting for a plot at the end of the conversation, consider the following cases:
+      Then, if the student (user) is requesting for a plot right above the [Output] assistant message, consider the following cases:
       C. Inappropriate
       Characteristics: The plot is not pedagogically appropriate for the current conversation, and is unlikely to help the student learn.
       Indicators: Plot is unrelated to the previous conversation or empty; plot does not illustrate key features of the problem under discussion; current conversation is not about something that can be helpfully plotted, even if the student requested for a plot.
@@ -84,7 +84,7 @@ are_bounds_reasonable_with_plot_generated_correctly:
       To aid understanding, the tutor (assistant) generates a plot to illustrate the math concepts more clearly.
 
     Your Task:
-      First, decide whether a student (user) is asking for a plot at the end of a conversation. The request for a plot might occur in the very last message from a student (user) or before that. 
+      First, decide whether a student (user) is asking for a plot before the assistant's [Output] message. The request for a plot might occur in this last message from a student (user) or before that.
       If the student (user) asked for a plot earlier in the conversation and the tutor (assistant) already generated the plot, do NOT treat it as a request for a plot unless the student (user) has made a new request that has not yet been fulfilled.
       Then, if you consider that the student actually requested a plot, determine whether the final plot generated in the conversation is pedagogically appropriate given the context of the previous conversation.
       A plot is pedagogically appropriate if it seems likely to be helpful for the student's (user's) learning and is relevant to the current topic of conversation.
@@ -92,8 +92,7 @@ are_bounds_reasonable_with_plot_generated_correctly:
       If you consider that the student requested for a plot AND the plot is pedagogically appropriate, THEN evaluates if the plot boundaries are reasonable:
       In this turn, there are toolcall's describing a plot and including code to generate the plot.
       Decide whether the bounds in the plot are sufficiently large for the plot that is generated.
-      Bounds are sufficiently large if they allow the student (user) to see the overall shape of the plot and include important features like the x-intercept(s) and the y-intercept(s).
-      It is okay if the bounds are larger than necessary.
+      Bounds are sufficiently large if they allow the student (user) to see the plot's shape and include the x-intercept(s) and the y-intercept(s). It is okay if the bounds are larger than necessary.
       The bounds in the plot are listed as the properties "top", "bottom", "right", and "left" in a JSON dictionary. 
       The values or equations being plotted are also present in the JSON.
       If the JSON plot includes different data than the text description, you should focus on whether the bounds are sufficiently large for the value(s) or equation(s) that are plotted in the JSON plot.
@@ -101,8 +100,8 @@ are_bounds_reasonable_with_plot_generated_correctly:
 
     Data:
       The following contains a conversation between the student (user) and the tutor (assistant).
-      Use the input to evaluate whether the student requests for a plot.
-      Use the plot's JSON description in the output to evaluate its pedagogical appropriateness and whether bounds are reasonable. 
+      Use the [Input] to evaluate whether the student requests for a plot.
+      Use the plot's JSON description in the [Output] assistant message to evaluate its pedagogical appropriateness and whether bounds are reasonable. 
       
       [BEGIN DATA]
       ***
@@ -125,13 +124,13 @@ are_bounds_reasonable_with_plot_generated_correctly:
 
       Then, if the student requests for a plot AND the plot is pedagogically appropriate, evaluate whether the plot bounds are reasonable:
       C. Unreasonable bounds
-      Characteristics: Some of the bounds are not sufficiently large; plot bounds does not include important graph values helping student understand; incorrect number of plots compared to student request
+      Characteristics: Some of the bounds are not sufficiently large; plot bounds does not include x and y intercept(s); the bounds are not large enough to show the plot's shape; incorrect number of plots compared to student request
       
       B. UNSURE
       Characteristics: Either some plot bounds are sufficiently large, plot bounds include important graph values, or a correct number of plots are plotted, but NOT everything is correct.
       
       A. Reasonable bounds
-      Characteristics: All of the bounds are sufficiently large; plot bounds include important graph values helping student understand; correct number of plots compared to student request
+      Characteristics: All of the bounds are sufficiently large; plot bounds include important graph values helping student understand; the bounds are large enough to show the plot's shape; correct number of plots compared to student request
 
       Note:
       If you can't identify the bounds of the plot, print "B".
@@ -168,14 +167,14 @@ is_plot_generated_upon_request_correct:
       To aid understanding, the tutor (assistant) generates a plot to illustrate the math concepts more clearly.
 
     Your Task:
-      First, decide whether a student (user) is asking for a plot at the end of a conversation. The request for a plot might occur in the very last message from a student (user) or before that. 
+      First, decide whether a student (user) is asking for a plot before the assistant's [Output] message. The request for a plot might occur in this last message from a student (user) or before that.
       If the student (user) asked for a plot earlier in the conversation and the tutor (assistant) already generated the plot, do NOT treat it as a request for a plot unless the student (user) has made a new request that has not yet been fulfilled.
       Then, if you consider that the student actually requested a plot, determine whether the final plot generated in the conversation is correct.
       A plot is correct if it matches the plot description and equation expectations. Its math and visual properties must correspond to the intended description and graph characteristics.
 
     Data:
       The following contains a conversation between the student (user) and the tutor (assistant).
-      Use the input to evaluate whether the student requests for a plot and the plot's JSON in the output to evaluate its correctness.
+      Use the [Input] to evaluate whether the student requests for a plot and the final plot's JSON description from the [Output] section to evaluate its correctness. 
       
       [BEGIN DATA]
       ***
@@ -188,9 +187,9 @@ is_plot_generated_upon_request_correct:
     __start rubric__
       First, evaluate whether the student requests for a plot:
       0. No student request for a plot
-      Characteristics: The student (user) is not requesting for a plot at the end of the conversation, or the student (user) acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?". In this case, you do not need to evaluate the plot's appropriateness.
+      Characteristics: Right before the assistant message flagged as [Output], the student (user) is not requesting for a plot or the student acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?". In this case, do not evaluate the plot's appropriateness.
 
-      Then, if the student (user) is requesting for a plot at the end of the conversation, consider the following cases:
+      Then, if the student (user) is requesting for a plot right above the [Output] assistant message, consider the following cases:
       B. Incorrect
       Characteristics: The plot is incorrect for the current plot's description, graph math properties.
       Indicators: Plot is empty; x or y intercepts are incorrect; features the wrong equation; is plotted in the opposite direction; lacks shading; etc.
@@ -218,7 +217,7 @@ is_plot_generated_upon_request_correct:
 #     then evaluates:
 #     if the conversation would benefit from a plot to help the student's understanding
 
-no_plot_after_student_requested: // easy, as above
+no_plot_after_student_requested:
   notes: |-
     Use the conversation context and the current assistant turn content:
     then evaluates:
@@ -253,7 +252,7 @@ no_plot_after_student_requested: // easy, as above
 
     __start rubric__
       First, evaluate whether the student requests for a plot:
-      NO_REQUEST. No student request for a plot
+      0. No student request for a plot
       Characteristics: The student (user) is not requesting for a plot at the end of the conversation, or the student (user) acts as a tutor by saying: "Do you want me to graph it?" or "Do you want to see a graph?". In this case, you do not need to evaluate the plot's appropriateness.
 
       Then, if the student (user) is requesting for a plot at the end of the conversation, consider the following cases:
@@ -267,17 +266,17 @@ no_plot_after_student_requested: // easy, as above
     Output:
       First, report your reasoning for your decision. 
       Second, print your decision.
-      IMPORTANT: After your reasoning, print the choice string of "NO_REQUEST", "YES", or "NO" on a separate line with NO OTHER TEXT on that line.
+      IMPORTANT: After your reasoning, print the choice string of "0", "YES", or "NO" on a separate line with NO OTHER TEXT on that line.
 
   choice_scores:
     "YES": 1
     "NO": 0
-    "NO_REQUEST": -1
+    "0": -1
 
 
 # Should we create a global technical error function; based on human testing feedback:
 # like merging 'An error occurred' message regex matching / desmos code was output / other technical errors.
-desmos_code_rendered_on_toolcall: // OK
+desmos_code_rendered_on_toolcall:
   notes: |-
     Consider all Turns from assistants with tool calls
     Evaluates if some desmos code was rendered instead of / on top of actual plot.
@@ -323,8 +322,7 @@ desmos_code_rendered_on_toolcall: // OK
     "NO": 0  
 
 
-plot_text_description_no_match: // interesting one - on tool calls
-### same as below?
+# plot_text_description_no_match:
 
 
 yeasayer_completion:

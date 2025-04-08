@@ -7,22 +7,21 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from flexeval import helpers
 import jsonschema
 import yaml
+from peewee import *
+
+from flexeval import helpers
 from flexeval.classes.Dataset import Dataset
 from flexeval.classes.EvalSetRun import EvalSetRun
 from flexeval.classes.Message import Message
 from flexeval.classes.Metric import Metric
-
 # from flexeval.classes.TurnMetric import TurnMetric
 from flexeval.classes.Thread import Thread
 from flexeval.classes.ToolCall import ToolCall
-
 # from flexeval.classes.DatasetRow import DatasetRow
 from flexeval.classes.Turn import Turn
 from flexeval.helpers import apply_defaults
-from peewee import *
 
 
 class EvalRunner(Model):

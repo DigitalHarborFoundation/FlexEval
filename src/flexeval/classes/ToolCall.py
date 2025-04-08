@@ -4,18 +4,18 @@ import os
 import sys
 from pathlib import Path
 
-from flexeval import helpers
 import peewee as pw
 import pydantic
+from playhouse.shortcuts import model_to_dict
+
+from configuration import completion_functions
+from flexeval import helpers
 from flexeval.classes.BaseModel import BaseModel
 from flexeval.classes.Dataset import Dataset
 from flexeval.classes.EvalSetRun import EvalSetRun
 from flexeval.classes.Message import Message
 from flexeval.classes.Thread import Thread
 from flexeval.classes.Turn import Turn
-from playhouse.shortcuts import model_to_dict
-
-from configuration import completion_functions
 
 
 class ToolCall(BaseModel):

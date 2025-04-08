@@ -6,11 +6,12 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from flexeval import helpers
 import networkx as nx
 import peewee as pw
 import pydantic
 import yaml
+
+from flexeval import helpers
 from flexeval.classes.BaseModel import BaseModel
 
 

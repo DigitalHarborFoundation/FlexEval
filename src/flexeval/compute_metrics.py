@@ -4,12 +4,11 @@ import json
 import string
 from typing import ForwardRef, Union, get_args
 
+from configuration import completion_functions, function_metrics
 from flexeval.classes.Message import Message
 from flexeval.classes.Thread import Thread
 from flexeval.classes.ToolCall import ToolCall
 from flexeval.classes.Turn import Turn
-
-from configuration import completion_functions, function_metrics
 
 
 def compute_metrics(object: Union[Thread, Turn, Message, ToolCall]):

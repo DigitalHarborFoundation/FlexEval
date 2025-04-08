@@ -4,11 +4,12 @@ import os
 import sys
 
 import peewee as pw
+from playhouse.shortcuts import model_to_dict
+
 from flexeval.classes.BaseModel import BaseModel
 from flexeval.classes.Dataset import Dataset
 from flexeval.classes.EvalSetRun import EvalSetRun
 from flexeval.classes.Thread import Thread
-from playhouse.shortcuts import model_to_dict
 
 # add configuration folder to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))

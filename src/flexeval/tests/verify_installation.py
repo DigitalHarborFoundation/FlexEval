@@ -19,20 +19,21 @@ import os
 import sys
 import types
 import unittest
-from typing import Any, AnyStr, Dict, ForwardRef, List, Union, get_args, get_origin
+from typing import (Any, AnyStr, Dict, ForwardRef, List, Union, get_args,
+                    get_origin)
 
 import dotenv
-from flexeval import helpers
 import jsonschema
 import networkx as nx
 import yaml
+from openai import OpenAI
+
+from configuration import function_metrics
+from flexeval import helpers
 from flexeval.classes.Message import Message
 from flexeval.classes.Thread import Thread
 from flexeval.classes.ToolCall import ToolCall
 from flexeval.classes.Turn import Turn
-from openai import OpenAI
-
-from configuration import function_metrics
 
 dotenv.load_dotenv()
 
@@ -48,8 +49,15 @@ class TestConfiguration(unittest.TestCase):
             self.config = yaml.safe_load(file)
         with open(self.config["evals_path"]) as file:
             self.user_evals = yaml.safe_load(file)
-        with open(self.config["rubric_metrics_path"]) as file:
-            self.rubric_metrics = yaml.safe_load(file)
+        self.rubric_metrics = {}
+        for rf in self.config["rubric_metrics_path"]:
+            with open(rf) as file:
+                new_rubrics = yaml.safe_load(file)
+                print('DEBUG - NEW RUBRIC ', new_rubrics)
+                for key, value in new_rubrics.items():
+                    if key not in self.rubric_metrics:
+                        self.rubric_metrics[key] = value
+        
         # Apply the defaults before any testing of validity, since
         # may only be valid with these defaults
         with open(self.config["eval_schema_path"], "r") as infile:
