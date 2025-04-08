@@ -10,7 +10,7 @@ test_suite_01:
 
 test_suite_01_langgraph:
   data:
-    - tests/data/langgraph-test-data.db
+    - tests/resources/langgraph-test-data.db
 
   metrics:
     function:
@@ -33,7 +33,7 @@ test_suite_02:
 
 test_suite_02_langgraph:
   data:
-    - tests/data/langgraph-test-data.db
+    - tests/resources/langgraph-test-data.db
 
   metrics:
     function:
@@ -109,7 +109,7 @@ test_suite_04:
 
 test_suite_04_langgraph:
   data:
-    - tests/data/langgraph-test-data.db
+    - tests/resources/langgraph-test-data.db
 
   do_completion: False
 
@@ -334,7 +334,7 @@ test_basic_function_metrics_01:
 
 test_basic_function_metrics_01_langgraph:
   data:
-    - tests/data/langgraph-test-data.db
+    - tests/resources/langgraph-test-data.db
 
   metrics:
     function:
@@ -385,7 +385,7 @@ test_list_string_function_metrics:
 
 test_list_string_function_metrics_langgraph:
   data:
-    - tests/data/langgraph-test-data.db
+    - tests/resources/langgraph-test-data.db
 
   metrics:
     function:
