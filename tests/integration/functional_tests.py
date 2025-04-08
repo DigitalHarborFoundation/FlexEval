@@ -10,7 +10,6 @@ Then run
 
 import os
 import sqlite3
-import sys
 import unittest
 
 import pandas as pd
