@@ -20,7 +20,8 @@ from tests.unit import mixins
 
 
 def setUpModule():
-    logging.basicConfig(level=logging.CRITICAL)
+    logger = logging.getLogger()
+    logger.addHandler(logging.NullHandler())
 
 
 class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
