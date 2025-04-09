@@ -143,7 +143,7 @@ class TestConfiguration(unittest.TestCase):
             for rubric in self.user_evals[self.eval_suite_name].get("rubric_metrics"):
                 assert (
                     "name" in rubric
-                ), f"All rubric_metrics entries must have an entry with a `name` key."
+                ), "All rubric_metrics entries must have an entry with a `name` key."
                 assert (
                     rubric["name"] in self.rubric_metrics.keys()
                 ), f"Your eval suite `{self.eval_suite_name}` uses a rubric named `{rubric['name']}`, but no rubric with this name was found in configuration/rubric_metrics.yaml."
@@ -176,13 +176,10 @@ class TestConfiguration(unittest.TestCase):
         Test if the metrics types provided are either 'function' or 'rubric'
         """
         for metric_type in self.user_evals[self.eval_suite_name].get("metrics").keys():
-            assert (
-                metric_type
-                in [
-                    "function",
-                    "rubric",
-                ]
-            ), f"Unrecognized metric type '{metric_type}'. Use either function or rubric"
+            assert metric_type in [
+                "function",
+                "rubric",
+            ], f"Unrecognized metric type '{metric_type}'. Use either function or rubric"
 
     def test_metrics_have_correct_keys(self):
         allowed_keys = [
@@ -244,7 +241,9 @@ class TestConfiguration(unittest.TestCase):
                         or arg_tuple[1].kind is inspect.Parameter.VAR_KEYWORD
                     )
 
-            assert arg_found, f"Function metrics must take at least one input, but {name} does not have any arguments."
+            assert (
+                arg_found
+            ), f"Function metrics must take at least one input, but {name} does not have any arguments."
             # Check that there are no extra keyword arguments that don't match the function. If the function allows
             # variable length keyword arguments, then extra keyword arguments are allowed.
             if "kwargs" in function_metric and not var_keyword_arg_found:
@@ -371,15 +370,12 @@ class TestConfiguration(unittest.TestCase):
             self.helper_valid_first_function_param(function_metric, first_argument_type)
 
             return_type = inspect.signature(metric_function).return_annotation
-            assert (
-                return_type
-                in [
-                    float,
-                    int,
-                    dict,
-                    list,
-                ]
-            ), f"The return type of function {name} has type {first_argument_type}. The return type must be one of `int`, `float`, `dict`, or `list`."
+            assert return_type in [
+                float,
+                int,
+                dict,
+                list,
+            ], f"The return type of function {name} has type {first_argument_type}. The return type must be one of `int`, `float`, `dict`, or `list`."
 
     def validate_dataset(self, filename, rows):
         filenames = self.user_evals[self.eval_suite_name].get("data", [])
@@ -408,15 +404,12 @@ class TestConfiguration(unittest.TestCase):
                     assert (
                         "content" in entry
                     ), f"Entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} does not contain a `content` key!"
-                    assert (
-                        entry["role"]
-                        in [
-                            "user",
-                            "assistant",
-                            "tool",
-                            "system",
-                        ]
-                    ), f"`user` key in entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} must be one of `tool`,`user`,`assistant`! You have `{entry['role']}`."
+                    assert entry["role"] in [
+                        "user",
+                        "assistant",
+                        "tool",
+                        "system",
+                    ], f"`user` key in entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} must be one of `tool`,`user`,`assistant`! You have `{entry['role']}`."
 
 
 # def test_evals_has_required_components(self):

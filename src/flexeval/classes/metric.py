@@ -1,5 +1,4 @@
 import peewee as pw
-from playhouse.shortcuts import model_to_dict
 
 from flexeval.classes.base import BaseModel
 from flexeval.classes.dataset import Dataset
@@ -45,7 +44,9 @@ class Metric(BaseModel):
     # or 'was the conversation ever flagged by the moderation api' would be a question about the previous turns that might
     #    allow to have better context for the properties of this turn
     context_only = pw.BooleanField(default=False)
-    source = pw.TextField()  # TODO - make another table for this? But maybe not, because this also contains filled-in rubrics
+    source = (
+        pw.TextField()
+    )  # TODO - make another table for this? But maybe not, because this also contains filled-in rubrics
     depends_on = pw.TextField()
     rubric_prompt = pw.TextField(null=True)
     rubric_completion = pw.TextField(null=True)

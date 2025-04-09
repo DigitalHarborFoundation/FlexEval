@@ -1,8 +1,6 @@
 import copy
 import json
 import logging
-import os
-import sys
 
 import peewee as pw
 from playhouse.shortcuts import model_to_dict

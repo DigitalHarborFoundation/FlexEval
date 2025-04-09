@@ -1,7 +1,6 @@
 import json
 import logging
 import random as rd
-import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -183,7 +182,7 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
                     future.result() for future in futures if future.result() is not None
                 ]
 
-            runner.logger.info(f"Saving completions to database.")
+            runner.logger.info("Saving completions to database.")
             for completion in completions:
                 # {"choices": [{"message": {"content": "hi", "role": "assistant"}}]}
                 for message in completion:
@@ -347,5 +346,5 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
     except Exception as e:
         runner.logger.exception("An error occurred computing metrics.", exc_info=True)
 
-    runner.logger.info(f"Evaluation run complete.")
+    runner.logger.info("Evaluation run complete.")
     runner.shutdown_logging()

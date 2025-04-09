@@ -76,7 +76,7 @@ class EvalRunner(Model):
             or self.configuration["logs_path"] is None
             or str(self.configuration["logs_path"]).strip() == ""
         ):
-            logger.debug(f"No logs_path defined, so not using a file logger.")
+            logger.debug("No logs_path defined, so not using a file logger.")
             return
 
         # Get the current date to use in the filename
