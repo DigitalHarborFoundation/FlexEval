@@ -111,20 +111,18 @@ class EvalRunner(Model):
         self.logger.debug("Verifying configuration")
         # Locate the tests
         suite = unittest.defaultTestLoader.loadTestsFromModule(validate)
-        # set args in environment so they're available in the test
+        # Set args in environment so they're available in the test
         os.environ["CONFIG_FILENAME"] = self.config_path
         os.environ["EVALUATION_NAME"] = self.eval_name
         # Run the tests and capture the results
         validation_stream = io.StringIO()
         result = unittest.TextTestRunner(stream=validation_stream).run(suite)
-        # Check if there were any failures or errors
-        test_failed = not result.wasSuccessful()
-        if test_failed:
+        # Check if validation succeeded
+        if not result.wasSuccessful():
             validation_output = validation_stream.getvalue()
-            logger.error(
-                "Something is wrong with your configuration. See report below:\n%s",
-                validation_output,
-            )
+            error_message = f"Something is wrong with your configuration. {len(result.failures)} validation failures and {len(result.errors)} runtime errors checking {result.testsRun} tests. See report below:\n{validation_output}"
+            logger.error(error_message)
+            self.logger.error(error_message)
             raise ValueError(f"Bad configuration for eval '{self.eval_name}'.")
 
     def initialize_database_connection(self):

@@ -11,11 +11,16 @@ Then run
 import os
 import sqlite3
 import unittest
+import logging
 
 import pandas as pd
 
 from flexeval.runner import run
 from tests.unit import mixins
+
+
+def setUpModule():
+    logging.basicConfig(level=logging.CRITICAL)
 
 
 class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
@@ -26,8 +31,8 @@ class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_01",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -48,7 +53,6 @@ class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
             "metric",
         ]
         # write assertions here
-        print(self.database_path)
         with sqlite3.connect(self.database_path) as connection:
             tables_in_database = connection.execute(
                 "select name from sqlite_master where type = 'table'"
@@ -157,8 +161,8 @@ class TestSuite02(mixins.DotenvMixin, unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_02",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -312,8 +316,8 @@ class TestSuite03(mixins.DotenvMixin, unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_suite_03",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -353,8 +357,8 @@ class TestSuite04(mixins.DotenvMixin, unittest.TestCase):
         # in this case, we'd run the evals here using subprocess or something, or maybe main.py
         run(
             eval_name="test_suite_04",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -446,8 +450,8 @@ class FunctionMetricValidation(mixins.DotenvMixin, unittest.TestCase):
     def test_default_kwargs01(self):
         run(
             eval_name="test_default_kwargs_01",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
 
@@ -458,56 +462,56 @@ class ConfigFailures(mixins.DotenvMixin, unittest.TestCase):
     def test_config_failure_01(cls):
         run(
             eval_name="config_failure_01",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
         )
 
     @unittest.expectedFailure
     def test_config_failure_02(cls):
         run(
             eval_name="config_failure_02",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
         )
 
     @unittest.expectedFailure
     def test_config_failure_03(cls):
         run(
             eval_name="config_failure_03",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
         )
 
     @unittest.expectedFailure
     def test_config_failure_04(cls):
         run(
             eval_name="config_failure_04",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
         )
 
     @unittest.expectedFailure
     def test_config_failure_05(cls):
         run(
             eval_name="config_failure_05",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
         )
 
     @unittest.expectedFailure
     def test_config_failure_06(cls):
         run(
             eval_name="config_failure_06",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
         )
 
     @unittest.expectedFailure
     def test_config_failure_07(cls):
         run(
             eval_name="config_failure_07",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
         )
 
 
@@ -519,8 +523,8 @@ class TestBasicFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_basic_function_metrics_01",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -634,8 +638,8 @@ class TestBasicFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_basic_function_metrics_01_langgraph",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
@@ -752,8 +756,8 @@ class TestListStringInputFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
         # in this case, we run the evals via main.py
         run(
             eval_name="test_list_string_function_metrics",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+            config_path="tests/resources/functional_config.yaml",
+            evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
         cls.database_path = os.environ["DATABASE_PATH"]
