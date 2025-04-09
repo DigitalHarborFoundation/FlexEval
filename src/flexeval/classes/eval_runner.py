@@ -125,10 +125,10 @@ class EvalRunner(Model):
         if test_failed:
             validation_output = validation_stream.getvalue()
             logger.error(
-                "Something is wrong with your configuration. Exiting. See report below:\n%s",
+                "Something is wrong with your configuration. See report below:\n%s",
                 validation_output,
             )
-            sys.exit(1)
+            raise ValueError(f"Bad configuration for eval '{self.eval_name}'.")
 
     def initialize_database_connection(self):
         """In peewee, each object has its own database connection

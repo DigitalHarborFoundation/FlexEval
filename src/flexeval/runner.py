@@ -48,10 +48,9 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
     )
     if "env_file" in runner.configuration:
         if not Path(runner.configuration["env_file"]).exists():
-            logger.error(
+            raise ValueError(
                 f"Environment file not present at path '{runner.configuration['env_file']}'."
             )
-            sys.exit(1)
         dotenv.load_dotenv(runner.configuration["env_file"], verbose=True)
 
     rubrics = {}
