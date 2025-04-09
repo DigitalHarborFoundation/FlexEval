@@ -19,3 +19,4 @@ class TestDataLoader(mixins.DotenvMixin, unittest.TestCase):
             clear_tables=True,
         )
         assert runner.eval is not None
+        runner.shutdown_logging()

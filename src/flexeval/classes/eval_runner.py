@@ -1,5 +1,6 @@
 import json
 import logging
+import io
 import os
 import sqlite3
 import sys
@@ -52,25 +53,34 @@ class EvalRunner(Model):
         self.initialize_database_tables(clear_tables)
         self.load_evaluation_settings()
 
-    def initialize_logger(self):
+    def initialize_logger(self, add_stream_handler: bool = False):
         # Configure the logger
         self.logger = logging.getLogger("FlexEval")
         self.logger.setLevel(logging.DEBUG)
 
-        # Create a console handler for lower level messages to output to console
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.INFO)
+        if add_stream_handler:
+            # Create a console handler for lower level messages to output to console
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.INFO)
 
-        # Create a formatter and set it for the handlers
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        ch.setFormatter(formatter)
+            # Create a formatter and set it for the handlers
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
+            ch.setFormatter(formatter)
 
-        # Add the handlers to the logger
-        self.logger.addHandler(ch)
+            # Add the handlers to the logger
+            self.logger.addHandler(ch)
 
     def add_file_logger(self):
+        if (
+            "logs_path" not in self.configuration
+            or self.configuration["logs_path"] is None
+            or str(self.configuration["logs_path"]).strip() == ""
+        ):
+            logger.debug(f"No logs_path defined, so not using a file logger.")
+            return
+
         # Get the current date to use in the filename
         current_date = datetime.now().strftime("%Y-%m-%d")
 
@@ -108,14 +118,17 @@ class EvalRunner(Model):
         os.environ["CONFIG_FILENAME"] = self.config_path
         os.environ["EVALUATION_NAME"] = self.eval_name
         # Run the tests and capture the results
-        result = unittest.TextTestRunner().run(suite)
+        validation_stream = io.StringIO()
+        result = unittest.TextTestRunner(stream=validation_stream).run(suite)
         # Check if there were any failures or errors
         test_failed = not result.wasSuccessful()
         if test_failed:
+            validation_output = validation_stream.getvalue()
             logger.error(
-                "Something is wrong with your configuration. See error messages for details. Exiting."
+                "Something is wrong with your configuration. Exiting. See report below:\n%s",
+                validation_output,
             )
-            sys.exit()
+            sys.exit(1)
 
     def initialize_database_connection(self):
         """In peewee, each object has its own database connection
@@ -186,3 +199,10 @@ class EvalRunner(Model):
         self.metrics_graph_ordered_list = helpers.create_metrics_graph(
             self.eval["metrics"]
         )
+
+    def shutdown_logging(self):
+        # remove logging handler so we don't get repeat logs if we call run() twice
+        handlers = self.logger.handlers[:]
+        for handler in handlers:
+            handler.close()
+            self.logger.removeHandler(handler)

@@ -97,7 +97,9 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
         )
         runner.logger.info(evalsetrun.metrics_graph_ordered_list)
     except Exception as e:
-        runner.logger.exception("An error occurred", exc_info=True)
+        runner.logger.exception(
+            "An error occurred creating the EvalSetRun.", exc_info=True
+        )
         raise e
 
     #######################################################
@@ -131,7 +133,9 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
             )
 
     except Exception as e:
-        runner.logger.exception("An error occurred", exc_info=True)
+        runner.logger.exception(
+            "An error occurred creating dataset metadata.", exc_info=True
+        )
 
     try:
         runner.logger.info("Parsing data files")
@@ -139,7 +143,7 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
             runner.logger.debug(f"Loading data from {dataset.filename}")
             dataset.load_data()
     except Exception as e:
-        runner.logger.exception("An error occurred", exc_info=True)
+        runner.logger.exception("An error occurred loading data.", exc_info=True)
 
     # Do completions, if necessary
     try:
@@ -206,7 +210,9 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
                     )
 
     except Exception as e:
-        runner.logger.exception("An error occurred", exc_info=True)
+        runner.logger.exception(
+            "An error occurred generating completions.", exc_info=True
+        )
 
     #######################################################
     #################  Compute Metrics  ###################
@@ -341,11 +347,7 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
             )
 
     except Exception as e:
-        runner.logger.exception("An error occurred", exc_info=True)
+        runner.logger.exception("An error occurred computing metrics.", exc_info=True)
 
     runner.logger.info(f"Evaluation run complete.")
-
-    # remove logging handler so we don't get repeat logs if we call run() twice
-    handlers = runner.logger.handlers[:]
-    for handler in handlers:
-        runner.logger.removeHandler(handler)
+    runner.shutdown_logging()
