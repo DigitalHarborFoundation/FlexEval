@@ -19,7 +19,6 @@ def load_jsonl(
     filename: str | pathlib.Path,
     max_n_conversation_threads: int | None = None,
 ):
-
     with open(filename, "r") as infile:
         contents = infile.read()  # will be a big string
         all_lines = contents.splitlines()
@@ -330,10 +329,10 @@ def load_langgraph_sqlite(dataset, filename, max_n_conversation_threads=None):
                                         # this should have all the info about the tool calls, including additional_kwargs
                                         # but NOT their responses
                                         tool_calls_dict[tool_call["id"]] = tool_call
-                                        tool_addional_kwargs_dict[tool_call["id"]] = (
-                                            message.get("kwargs", {}).get(
-                                                "additional_kwargs", {}
-                                            )
+                                        tool_addional_kwargs_dict[
+                                            tool_call["id"]
+                                        ] = message.get("kwargs", {}).get(
+                                            "additional_kwargs", {}
                                         )
 
             # Add turns to each message

@@ -162,7 +162,6 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
                     if completion is not None:
                         completions.append(completion)
             elif n_workers > 1:
-
                 with ThreadPoolExecutor(max_workers=n_workers) as executor:
                     # Submit all turns to the executor
                     futures = [

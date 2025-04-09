@@ -3,7 +3,6 @@ import logging
 import io
 import os
 import sqlite3
-import sys
 import unittest
 from datetime import datetime
 from pathlib import Path
@@ -40,7 +39,6 @@ class EvalRunner(Model):
         evals_path: str | Path | None = None,
         clear_tables: bool = False,
     ):
-
         self.eval_name = eval_name
         self.config_path = config_path
         self.evals_path = evals_path
@@ -110,7 +108,6 @@ class EvalRunner(Model):
             self.configuration = yaml.safe_load(file)
 
     def validate_settings(self):
-
         self.logger.debug("Verifying configuration")
         # Locate the tests
         suite = unittest.defaultTestLoader.loadTestsFromModule(validate)

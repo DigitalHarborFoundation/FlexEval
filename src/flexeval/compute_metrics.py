@@ -32,7 +32,6 @@ def compute_metrics(object: Union[Thread, Turn, Message, ToolCall]):
         # If there are no dependencies, this loop won't execute
         # and the metric will be evaluated
         if len(metric_to_evaluate.get("depends_on")) > 0:
-
             # here, we have a metric with 1+ dependencies
             # ALL of these dependencies must be satisfied
 
@@ -44,7 +43,6 @@ def compute_metrics(object: Union[Thread, Turn, Message, ToolCall]):
             # not meeting ANY of them will short-circuit the loop and cause the eval to not evaluate
             # check all dependencies
             for dependency in metric_to_evaluate.get("depends_on"):
-
                 # for each dependency, assume it's not met
                 # if it's in the list AND its values meet the criteria, it's met
                 dependency_is_met = False
@@ -308,7 +306,6 @@ def compute_rubric_metric(
     depends_on: list,
     id: int,
 ):
-
     # load metrics
     rubrics = json.loads(object.evalsetrun.rubrics)
     assert (

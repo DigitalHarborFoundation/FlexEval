@@ -49,7 +49,6 @@ def create_metrics_graph(user_metrics: dict) -> List[Any]:
     # now that all potential parents have IDs, find parents for each child
     for evaluation_type in user_metrics.keys():
         for metric_dict in user_metrics_with_ids[evaluation_type]:
-
             parent_metrics, depends_on_with_parent_ids = get_parent_metrics(
                 all_metrics=user_metrics_with_ids, child=metric_dict
             )
