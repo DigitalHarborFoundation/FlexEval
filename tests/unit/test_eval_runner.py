@@ -8,8 +8,8 @@ from flexeval.classes.eval_runner import EvalRunner
 from tests.unit import mixins
 
 
-class TestDataLoader(mixins.DotenvMixin, unittest.TestCase):
-    def test_load_jsonl(self):
+class TestEvalRunner(mixins.DotenvMixin, unittest.TestCase):
+    def test_build_eval_runner(self):
         config_path = "tests/resources/test_config.yaml"
         evals_path = "tests/resources/test_evals.yaml"
         runner = EvalRunner(

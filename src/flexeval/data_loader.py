@@ -87,7 +87,9 @@ def load_jsonl(
     # TODO - should we add ToolCall here? Is there a standard way to represent them in jsonl?
 
 
-def load_langgraph_sqlite(dataset, filename, max_n_conversation_threads=None):
+def load_langgraph_sqlite(
+    dataset: Dataset, filename: str, max_n_conversation_threads: int | None = None
+):
     serializer = JsonPlusSerializer()
 
     with sqlite3.connect(filename) as conn:

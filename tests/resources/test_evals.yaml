@@ -1,6 +1,6 @@
 length_test:
   data:
-    - tests/resources/test_dataset.jsonl
+    - tests/data/simple.jsonl
 
   metrics:
     function:

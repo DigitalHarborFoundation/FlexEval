@@ -8,6 +8,7 @@ import dotenv
 import yaml
 
 from flexeval import compute_metrics
+from flexeval import run_utils
 from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_runner import EvalRunner
 from flexeval.classes.eval_set_run import EvalSetRun
@@ -50,17 +51,6 @@ def run(
             )
         dotenv.load_dotenv(runner.configuration["env_file"], verbose=True)
 
-    rubrics = {}
-    for rf in runner.configuration["rubric_metrics_path"]:
-        logger.debug("Found rubric file: %s", rf)
-        with open(rf) as file:
-            new_rubrics = yaml.safe_load(file)
-            for key, value in new_rubrics.items():
-                if key not in rubrics:
-                    rubrics[key] = value
-
-    logger.debug("Loaded rubrics: %s", rubrics)
-
     #######################################################
     ############  Create Test Run  ########################
     #######################################################
@@ -69,28 +59,7 @@ def run(
         # (runner.eval.get("metrics"))
         # TODO instead of raw 'metrics', pass in graph created when setting up the runner
 
-        evalsetrun = EvalSetRun.create(
-            name=runner.eval.get("name", ""),
-            notes=runner.eval.get("notes", ""),
-            metrics=json.dumps(runner.eval.get("metrics", "")),
-            metrics_graph_ordered_list=json.dumps(runner.metrics_graph_ordered_list),
-            dataset_files=json.dumps(runner.eval.get("data", "")),
-            do_completion=runner.eval.get("do_completion", False),
-            completion_llm=json.dumps(runner.eval.get("completion_llm", None)),
-            model_name=json.dumps(
-                runner.eval.get("completion_llm", {}).get("model_name", None)
-            ),
-            grader_llm=json.dumps(runner.eval.get("grader_llm", None)),
-            # only save rubrics that will actually be used
-            rubrics=json.dumps(
-                {
-                    i["evaluation_name"]: rubrics[i["evaluation_name"]]
-                    for i in runner.metrics_graph_ordered_list
-                    if i["evaluation_type"] == "rubric"
-                }
-            ),
-            clear_tables=clear_tables,
-        )
+        evalsetrun = run_utils.build_eval_set_run(runner, clear_tables)
         runner.logger.info(evalsetrun.metrics_graph_ordered_list)
     except Exception as e:
         runner.logger.exception(
@@ -103,31 +72,14 @@ def run(
     #######################################################
 
     try:
-        runner.logger.info("Loading data")
-
-        max_n_conversation_threads = runner.configuration.get(
-            "max_n_conversation_threads", None
-        )
-        runner.logger.info(
-            f"Running eval with max number of conversation threads: {max_n_conversation_threads}"
-        )
+        runner.logger.debug("Loading data")
 
         # set random seed
         rd_seed = runner.configuration.get("random_seed_conversation_sampling", 1)
         rd.seed(rd_seed)
         runner.logger.info(f"Set random seed to {rd_seed}")
 
-        for filename in evalsetrun.get_datasets():
-            # these will automatically be saved as a property of evalsetrun
-            Dataset.create(
-                evalsetrun=evalsetrun,
-                filename=filename,
-                max_n_conversation_threads=max_n_conversation_threads,
-            )
-            runner.logger.info(
-                f"Created dataset from {filename}. Max number of conversation threads: {max_n_conversation_threads}"
-            )
-
+        run_utils.build_datasets(runner, evalsetrun)
     except Exception as e:
         runner.logger.exception(
             "An error occurred creating dataset metadata.", exc_info=True

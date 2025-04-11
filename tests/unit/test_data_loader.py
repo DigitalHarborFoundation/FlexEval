@@ -2,7 +2,7 @@ import pathlib
 import tempfile
 import unittest
 
-from flexeval import data_loader
+from flexeval import data_loader, run_utils
 from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_runner import EvalRunner
 from tests.unit import mixins
@@ -29,4 +29,12 @@ class TestDataLoader(TempPathMixin, mixins.DotenvMixin, unittest.TestCase):
             evals_path=evals_path,
             clear_tables=True,
         )
-        # data_loader.load_jsonl(dataset, "tests/resources/test_dataset.jsonl")
+        eval_set_run = run_utils.build_eval_set_run(runner)
+        run_utils.build_datasets(runner, eval_set_run)
+        for dataset in eval_set_run.datasets:
+            dataset.load_data()
+
+
+class TestLanggraphDataLoading(mixins.DotenvMixin, unittest.TestCase):
+    def test_load_langgraph(self):
+        data_filepath = "tests/data/simple.jsonl"
