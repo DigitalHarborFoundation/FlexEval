@@ -160,11 +160,23 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv build
 ```
 
-### Running the unit tests
+FlexEval is not yet available on PyPI.
+
+### Running tests
+
+Run the unit tests:
 
 ```bash
 uv run python -m unittest discover -s tests.unit
 ```
+
+To run a specific file's worth of tests:
+
+```bash
+uv run python -m unittest tests.unit.{module_name}
+```
+
+There are integration tests in tests/integration that can be executed.
 
 ### Adding or updating dependencies
 
