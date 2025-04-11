@@ -1,6 +1,19 @@
+import pathlib
+import tempfile
 import unittest.mock
 
 import dotenv
+
+
+class TempPathMixin:
+    def setUp(self):
+        super().setUp()
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.temp_path = pathlib.Path(self.temp_dir.name)
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+        super().tearDown()
 
 
 class DotenvMixin:

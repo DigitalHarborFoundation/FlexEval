@@ -1,5 +1,3 @@
-import pathlib
-import tempfile
 import unittest
 from datetime import datetime
 from typing import Annotated
@@ -14,18 +12,7 @@ from flexeval.classes.eval_runner import EvalRunner
 from tests.unit import mixins
 
 
-class TempPathMixin:
-    def setUp(self):
-        super().setUp()
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_path = pathlib.Path(self.temp_dir.name)
-
-    def tearDown(self):
-        self.temp_dir.cleanup()
-        super().tearDown()
-
-
-class TestDataLoader(TempPathMixin, mixins.DotenvMixin, unittest.TestCase):
+class TestDataLoader(mixins.DotenvMixin, unittest.TestCase):
     def test_load_jsonl(self):
         config_path = "tests/resources/test_config.yaml"
         evals_path = "tests/resources/test_evals.yaml"
@@ -46,9 +33,10 @@ class State(TypedDict):
     messages: Annotated[list, add_messages]
 
 
-class TestLanggraphDataLoading(TempPathMixin, mixins.DotenvMixin, unittest.TestCase):
+class TestLanggraphDataLoading(
+    mixins.TempPathMixin, mixins.DotenvMixin, unittest.TestCase
+):
     def test_load_langgraph(self):
-        self.skipTest("Temporary skip")
         data_filepath = "tests/data/simple.jsonl"
         langgraph_db_path = self.temp_path / "data.db"
 
