@@ -30,13 +30,13 @@ class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
         # in this case, we run the evals via main.py
-        run(
+        cls.runner = run(
             eval_name="test_suite_01",
             config_path="tests/resources/functional_config.yaml",
             evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
-        cls.database_path = os.environ["DATABASE_PATH"]
+        cls.database_path = cls.runner.get_database_path()
 
     @classmethod
     def tearDownClass(cls):
@@ -160,13 +160,13 @@ class TestSuite02(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
         # in this case, we run the evals via main.py
-        run(
+        cls.runner = run(
             eval_name="test_suite_02",
             config_path="tests/resources/functional_config.yaml",
             evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
-        cls.database_path = os.environ["DATABASE_PATH"]
+        cls.database_path = cls.runner.get_database_path()
 
     def test_simple_condition_is_met_once(self):
         # for the first dataset
@@ -315,13 +315,13 @@ class TestSuite03(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
         # in this case, we run the evals via main.py
-        run(
+        cls.runner = run(
             eval_name="test_suite_03",
             config_path="tests/resources/functional_config.yaml",
             evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
-        cls.database_path = os.environ["DATABASE_PATH"]
+        cls.database_path = cls.runner.get_database_path()
 
     def test_tables_have_right_rows(self):
         # this suite has two jsonls, simple.jsonl and multiturn.jsonl,
@@ -356,13 +356,13 @@ class TestSuite04(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests
         # in this case, we'd run the evals here using subprocess or something, or maybe main.py
-        run(
+        cls.runner = run(
             eval_name="test_suite_04",
             config_path="tests/resources/functional_config.yaml",
             evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
-        cls.database_path = os.environ["DATABASE_PATH"]
+        cls.database_path = cls.runner.get_database_path()
 
     def test_rubric_metric_value(self):
         # test if the rurbric output expected values
@@ -522,13 +522,13 @@ class TestBasicFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
         # in this case, we run the evals via main.py
-        run(
+        cls.runner = run(
             eval_name="test_basic_function_metrics_01",
             config_path="tests/resources/functional_config.yaml",
             evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
-        cls.database_path = os.environ["DATABASE_PATH"]
+        cls.database_path = cls.runner.get_database_path()
 
     def test_correct_metric_levels(self):
         # Expect to have one is_role evaluation for every Turn, at the
@@ -640,13 +640,13 @@ class TestListStringInputFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
         # in this case, we run the evals via main.py
-        run(
+        cls.runner = run(
             eval_name="test_list_string_function_metrics",
             config_path="tests/resources/functional_config.yaml",
             evals_path="tests/resources/functional_evals.yaml",
             clear_tables=True,
         )
-        cls.database_path = os.environ["DATABASE_PATH"]
+        cls.database_path = cls.runner.get_database_path()
 
     def test_reading_ease_levels_by_level(self):
         message_id_to_reading_ease = {1: 119.19, 2: 119.19, 3: 35.61, 4: 77.91}

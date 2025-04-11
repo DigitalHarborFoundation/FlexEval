@@ -25,32 +25,7 @@ class EvalSetRun(BaseModel):
         default=datetime.now
     )  # Automatically set to current date and time
 
-    def get_datasets(self) -> list:
+    def get_datasets(self) -> list[str]:
         temp = json.loads(self.dataset_files)
         assert isinstance(temp, list), "The `data` entry in evals.yaml must be a list."
         return temp
-
-
-# # Create the tables
-
-# # Create a new user
-# user = User.create(username="john_doe", email="john@example.com")
-
-# # Query all users
-# users = User.select()
-# for user in users:
-#     print(user.username, user.email)
-
-# # Query a single user
-# user = User.get(User.username == "john_doe")
-# print(user.username, user.email)
-
-# # Update a user's email
-# user.email = "john.doe@example.com"
-# user.save()
-
-# # Delete a user
-# user.delete_instance()
-
-# # Close the database connection
-# db.close()

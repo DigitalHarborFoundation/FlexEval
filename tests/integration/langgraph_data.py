@@ -71,7 +71,7 @@ def generate_langgraph_data(
                 {"messages": ["print them again but reverse the order"]}, config
             )
             for m in response["messages"]:
-                logger.info("Role: %s", m.type)
+                logger.info(f"Role: {m.type}")
                 logger.info(f"Content: '{m.content}'")
 
 

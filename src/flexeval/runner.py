@@ -29,12 +29,10 @@ logger = logging.getLogger(__name__)
 # - allow comparison with 'ideal' responses
 
 
-def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
+def run(
+    eval_name: str, evals_path: str, config_path: str, clear_tables=False
+) -> EvalRunner:
     """Runs the evaluations.
-    We want this to be callable by both the CLI and the webapp
-    That means it needs to do argument parsing BEFORE this is called
-
-    TODO - for webapp, config should be an argument here ^
 
     param: clear_tables - if True, deletes any existing data in the output database. Otherwise, appends
     """
@@ -348,3 +346,4 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
 
     runner.logger.info("Evaluation run complete.")
     runner.shutdown_logging()
+    return runner

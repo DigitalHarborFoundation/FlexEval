@@ -125,11 +125,14 @@ class EvalRunner(Model):
             self.logger.error(error_message)
             raise ValueError(f"Bad configuration for eval '{self.eval_name}'.")
 
+    def get_database_path(self) -> str:
+        return self.configuration["database_path"]
+
     def initialize_database_connection(self):
         """In peewee, each object has its own database connection
         This is fine - so we'll just make the path available here
         """
-        os.environ["DATABASE_PATH"] = self.configuration["database_path"]
+        # os.environ["DATABASE_PATH"] = self.configuration["database_path"]
 
         # also set up SQLite so it's less likely to error when there are multiple writes
         with sqlite3.connect(
@@ -139,16 +142,9 @@ class EvalRunner(Model):
 
     def initialize_database_tables(self, clear_tables: bool = False):
         """Initializes database tables. If clear_tables, then current contents of tables are dropped."""
+        database_path = self.configuration["database_path"]
         for cls in [EvalSetRun, Dataset, Thread, Turn, Message, ToolCall, Metric]:
-            cls.initialize_database()
-            db = cls._meta.database
-            db.connect()
-            if clear_tables:
-                db.drop_tables([cls])
-            db.create_tables([cls], safe=False)  # can alter tables if needed
-
-    # def connect_to_db(self):
-    #     return SqliteDatabase(os.environ["DATABASE_PATH"])
+            cls.initialize_database(database_path, clear_table=clear_tables)
 
     def load_evaluation_settings(self):
         """This function parses our eval suite and puts it in the data structure we'll need
