@@ -19,10 +19,6 @@ class State(TypedDict):
     messages: Annotated[list, add_messages]
 
 
-def generate_data():
-    load_dotenv()
-
-
 ## Define tool
 def factor_tool(
     number: Annotated[int, "integer that you need to factor"],

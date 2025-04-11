@@ -1,5 +1,6 @@
-import dotenv
 import unittest.mock
+
+import dotenv
 
 
 class DotenvMixin:
