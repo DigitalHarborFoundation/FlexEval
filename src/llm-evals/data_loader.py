@@ -13,7 +13,7 @@ from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langchain.load.dump import dumps
 
 
-def load_jsonl(dataset, filename, max_n_conversation_threads = None):
+def load_jsonl(dataset, filename, max_n_conversation_threads = None, nb_evaluations_per_thread: int | None = 1):
 
     with open(filename, "r") as infile:
         contents = infile.read()  # will be a big string
@@ -32,55 +32,63 @@ def load_jsonl(dataset, filename, max_n_conversation_threads = None):
         else:
             warnings.warn(f'You requested {max_n_conversation_threads} conversations but only {len(all_lines)} are present in Jsonl dataset.')
             selected_thread_ids = list(range(len(all_lines)))
+            
+        ### should duplicate the select threads nb_evaluations_per_thread times
+        
 
         for thread_id, thread in enumerate(all_lines):
-            if thread_id in selected_thread_ids:
-                thread_object = Thread.create(
-                    evalsetrun=dataset.evalsetrun, dataset=dataset
-                )
+            
+            for _ in range(max(1, nb_evaluations_per_thread)): # duplicate stored threads for averaged evaluation results
+                
+                if thread_id in selected_thread_ids:
+                    thread_object = Thread.create(
+                        evalsetrun=dataset.evalsetrun,
+                        dataset=dataset,
+                        jsonl_thread_id=thread_id
+                    )
 
-                # Context
-                context = []
-                # Get system prompt used in the thread - assuming only 1
-                system_prompt = [
-                    i["content"]
-                    for i in json.loads(thread)["input"]
-                    if i["role"] == "system"
-                ][0]
+                    # Context
+                    context = []
+                    # Get system prompt used in the thread - assuming only 1
+                    system_prompt = [
+                        i["content"]
+                        for i in json.loads(thread)["input"]
+                        if i["role"] == "system"
+                    ][0]
 
-                # Add the system prompt as context
-                context.append({"role": "system", "content": system_prompt})
+                    # Add the system prompt as context
+                    context.append({"role": "system", "content": system_prompt})
 
-                # Create messages
-                for message in json.loads(thread)["input"]:
-                    role = message.get("role", None)
-                    if role != "system":
-                        # System message shouldn't be added as a separate message
-                        system_prompt_for_this_message = ""
-                        if role != "user":
-                            system_prompt_for_this_message = system_prompt
-                        Message.create(
-                            evalsetrun=dataset.evalsetrun,
-                            dataset=dataset,
-                            thread=thread_object,
-                            role=role,
-                            content=message.get("content", None),
-                            context=json.dumps(context),
-                            metadata=message.get("metadata", None),
-                            is_flexeval_completion=False,
-                            system_prompt=system_prompt_for_this_message,
-                        )
-                        # Update context
-                        context.append(
-                            {"role": role, "content": message.get("content", None)}
-                        )
+                    # Create messages
+                    for message in json.loads(thread)["input"]:
+                        role = message.get("role", None)
+                        if role != "system":
+                            # System message shouldn't be added as a separate message
+                            system_prompt_for_this_message = ""
+                            if role != "user":
+                                system_prompt_for_this_message = system_prompt
+                            Message.create(
+                                evalsetrun=dataset.evalsetrun,
+                                dataset=dataset,
+                                thread=thread_object,
+                                role=role,
+                                content=message.get("content", None),
+                                context=json.dumps(context),
+                                metadata=message.get("metadata", None),
+                                is_flexeval_completion=False,
+                                system_prompt=system_prompt_for_this_message,
+                            )
+                            # Update context
+                            context.append(
+                                {"role": role, "content": message.get("content", None)}
+                            )
 
-                add_turns(thread_object)
+                    add_turns(thread_object)
 
     # TODO - should we add ToolCall here? Is there a standard way to represent them in jsonl?
 
 
-def load_langgraph_sqlite(dataset, filename, max_n_conversation_threads = None):
+def load_langgraph_sqlite(dataset, filename, max_n_conversation_threads = None, nb_evaluations_per_thread: int | None = 1):
     serializer = JsonPlusSerializer()
 
     with sqlite3.connect(filename) as conn:
@@ -111,6 +119,11 @@ def load_langgraph_sqlite(dataset, filename, max_n_conversation_threads = None):
             warnings.warn(f'You requested {max_n_conversation_threads} conversations but only {nb_threads} are present in Sqlite dataset.')
             selected_thread_ids = thread_ids
 
+        ### duplicate the list of selected thread ids nb_evaluations_per_thread times:
+        selected_thread_ids = selected_thread_ids * max(1, nb_evaluations_per_thread)
+        
+        # print(" DEBUG DUPLICATE SELECT THREAD IDS\n", selected_thread_ids)
+        
         for thread_id in selected_thread_ids:
             thread = Thread.create(
                 evalsetrun=dataset.evalsetrun,

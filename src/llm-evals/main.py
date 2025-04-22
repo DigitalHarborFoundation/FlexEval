@@ -97,7 +97,8 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
         runner.logger.info("Loading data")
         
         max_n_conversation_threads = runner.configuration.get("max_n_conversation_threads", None)
-        runner.logger.info(f"Running eval with max number of conversation threads: {max_n_conversation_threads}")
+        nb_evaluations_per_thread = runner.configuration.get("nb_evaluations_per_thread", None)
+        runner.logger.info(f"Running eval with max number of conversation threads: {max_n_conversation_threads} and {nb_evaluations_per_thread} evaluation(s) per thread")
         
         # set random seed
         rd_seed = runner.configuration.get("random_seed_conversation_sampling", 1)
@@ -108,8 +109,9 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
             # these will automatically be saved as a property of evalsetrun
             Dataset.create(evalsetrun=evalsetrun,
                            filename=filename,
-                           max_n_conversation_threads=max_n_conversation_threads)
-            runner.logger.info(f"Created dataset from {filename}. Max number of conversation threads: {max_n_conversation_threads}")
+                           max_n_conversation_threads=max_n_conversation_threads,
+                           nb_evaluations_per_thread=nb_evaluations_per_thread)
+            runner.logger.info(f"Created dataset from {filename}. Max number of conversation threads: {max_n_conversation_threads}, Nb evaluations per thread: {nb_evaluations_per_thread}")
 
     except Exception as e:
         runner.logger.exception("An error occurred", exc_info=True)
@@ -278,14 +280,17 @@ def run(eval_name: str, evals_path: str, config_path: str, clear_tables=False):
                         )
 
                 # Wait for all futures to complete and handle exceptions
-                for future in futures:
+                for fid, future in enumerate(futures):
                     try:
                         future.result()  # If you need to catch exceptions or ensure completion
+                        if fid%100 == 0:
+                            runner.logger.info(f'Metrics futures resulted: {fid} / {len(futures)}')
                     except Exception as e:
                         runner.logger.exception("An error occurred during processing")
                 metrics = []
                 for future in futures:
                     metrics += future.result()
+                    
 
         runner.logger.info(f"Saving {len(metrics)} metrics to database.")
         for metric in metrics:

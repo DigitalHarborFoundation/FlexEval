@@ -1,3 +1,204 @@
+multimodels-langgraph-rubric-dependencies:
+  data:
+    - ../../data/test-cases/ckpts_livehint/checkpoint.db
+
+  name: plot evaluations, models comparison
+  notes: |-
+    Comparing models on langgraph rubric evaluation performance,
+    compare same-model consistency in performance with duplicate evaluations,
+    evaluate when requested for a plot, if plot provided, if provided and correct,
+    if provided and appropriate. if plot provided but not requested.
+    if plot provided and bounds reasonable, if create_a_plot is true in response_to_student
+    matches the DesmosPlot counts, if plot matches description before or after.
+
+  config:
+    max_n_conversation_threads: 20
+    nb_evaluations_per_thread: 6
+    max_workers: 10
+
+  metrics:
+    function:
+    # compute most metrics only on assistant turns
+      - name: is_role
+        kwargs:
+          role: assistant
+
+    # count tool calls by name to locate the responses from DesmosPlot in assistant turns
+    #NOTE: can have a DesmosPlot rendered but no request for a plot, no dependency here
+      - name: count_tool_calls_by_name
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+    # count when assistant wants to create a plot at any time in a turn - should always lead to a DesmosPlot rendered
+      - name: count_of_parts_matching_regex
+        kwargs:
+          expression: 'create_a_plot": true'
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+    rubric:
+    # check if student requested a plot in their last message
+      - name: is_request_for_plot
+        # context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+    # We don't assume that to be pedagogically correct, a plot has to be requested. So here only check if the plot has been rendered, was it pedagogically correct.
+    # Can cross information with is_plot_requested to know if a requested plot that has been rendered is pedagogically correct
+      - name: is_pedagogically_appropriate_plot
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls_by_name
+            type: function
+            metric_name: DesmosPlot
+            metric_min_value: 1
+
+    # if a plot is generated, validates that it matches the assistant's description following the plot
+      - name: plot_matches_followup_description
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls_by_name
+            type: function
+            metric_name: DesmosPlot
+            metric_min_value: 1
+      
+    # if plot generated, check if bounds are reasonable
+      - name: plot_bounds_are_reasonable
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls_by_name
+            type: function
+            metric_name: DesmosPlot
+            metric_min_value: 1
+
+    # if generated, is the plot mathematically correct compared to its intended use case
+      - name: is_correct_plot
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls_by_name
+            type: function
+            metric_name: DesmosPlot
+            metric_min_value: 1
+
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: o3-mini
+      api_key_name: OPENAI_API_KEY
+
+
+
+test-multimodels-langgraph-rubric-dependencies:
+  data:
+    - ../../data/test-cases/ckpts_livehint/checkpoint.db
+
+  name: LLM models comparison
+  notes: Testing multi models langgraph rubric evaluation comparison
+
+  config:
+    max_n_conversation_threads: 10
+    max_workers: 6
+
+  metrics:
+    function:
+    # compute most metrics only on assistant turns
+      - name: is_role
+        kwargs:
+          role: assistant
+
+    # count tool calls by name to locate the responses from DesmosPlot in assistant turns
+      - name: count_tool_calls_by_name
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+    rubric:
+      - name: is_request_for_plot
+        # context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: is_pedagogically_appropriate_plot
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls_by_name
+            type: function
+            metric_name: DesmosPlot
+            metric_min_value: 1
+          - name: is_request_for_plot
+            type: rubric
+            metric_min_value: 1
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: o3-mini
+      api_key_name: OPENAI_API_KEY
+
+
+
+test-multimodels-langgraph:
+  data:
+    - ../../data/test-cases/ckpts_livehint/checkpoint.db
+
+  name: LLM models comparison
+  notes: Testing multi models langgraph rubric evaluation comparison
+
+  config:
+    max_n_conversation_threads: 2
+    max_workers: 6
+
+  metrics:
+    function:
+      - name: is_role
+        kwargs:
+          role: assistant
+
+    rubric:
+      - name: no_plot_after_student_requested
+        context_only: false
+        depends_on:
+          - name: is_role
+            type: function
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: o3-mini
+      api_key_name: OPENAI_API_KEY
+
+
+
+
 issues-fixing-rubrics:
   data:
     - ../../data/test-cases/ckpts_livehint/checkpoint_gpt-4o-mini-2024-07-18_1540.sqlite
