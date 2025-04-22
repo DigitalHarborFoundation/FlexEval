@@ -54,13 +54,17 @@ def build_datasets(runner: EvalRunner, evalsetrun: EvalSetRun):
     max_n_conversation_threads = runner.configuration.get(
         "max_n_conversation_threads", None
     )
+    nb_evaluations_per_thread = runner.configuration.get(
+        "nb_evaluations_per_thread", None
+    )
     for filename in evalsetrun.get_datasets():
         # these will automatically be saved as a property of evalsetrun
         Dataset.create(
             evalsetrun=evalsetrun,
             filename=filename,
             max_n_conversation_threads=max_n_conversation_threads,
+            nb_evaluations_per_thread=nb_evaluations_per_thread,
         )
         runner.logger.info(
-            f"Created dataset from {filename}. Max number of conversation threads: {max_n_conversation_threads}"
+            f"Created dataset from {filename}. Max number of conversation threads: {max_n_conversation_threads} - Nb of evaluations per thread: {nb_evaluations_per_thread}"
         )

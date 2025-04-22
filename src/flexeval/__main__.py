@@ -19,7 +19,7 @@ def main():
     parser.add_argument(
         "--evals_path",
         type=str,
-        help="Path to the evaluation file evals.yaml you want to run. Deafult is configuration/evals.yaml.",
+        help="Path to the evaluation file evals.yaml you want to run. Default is src/flexeval/configuration/evals.yaml",
     )
     parser.add_argument(
         "--clear_tables",
@@ -30,7 +30,7 @@ def main():
         "--config_path",
         type=str,
         help="Which config file to use",
-        default="config.yaml",
+        default="src/flexeval/config.yaml",
     )
 
     # Parse passed arguments
