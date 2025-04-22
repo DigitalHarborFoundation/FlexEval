@@ -250,14 +250,17 @@ def run(
                         )
 
                 # Wait for all futures to complete and handle exceptions
-                for future in futures:
+                for fid, future in enumerate(futures):
                     try:
                         future.result()  # If you need to catch exceptions or ensure completion
+                        if fid%100 == 0:
+                            runner.logger.info(f'Metrics futures resulted: {fid} / {len(futures)}')
                     except Exception as e:
                         runner.logger.exception("An error occurred during processing")
                 metrics = []
                 for future in futures:
                     metrics += future.result()
+                    
 
         runner.logger.info(f"Saving {len(metrics)} metrics to database.")
         for metric in metrics:
