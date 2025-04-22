@@ -1,8 +1,11 @@
 # FlexEval LLM Evals
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12729993.svg)](https://doi.org/10.5281/zenodo.12729993)
+[![License](https://img.shields.io/github/license/DigitalHarborFoundation/FlexEval)](https://github.com/DigitalHarborFoundation/FlexEval/blob/main/LICENSE)
+
 FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
 
-We describe this in more detail in our paper, located in the root of the repo.
+We describe this in more detail in our paper, located [in this repository](/EDM_2024_FlexEval.pdf).
 
 ## Why?
 
@@ -136,3 +139,61 @@ This tool is intended to be somewhat "batteries included". It supports the follo
 - a set of included metrics calculated as Python files
 
 This list will grow as we add functionality to meet LEVI team needs.
+
+## Cite this work
+
+If this work is useful to you, please cite [our EDM 2024 paper](https://educationaldatamining.org/edm2024/proceedings/2024.EDM-posters.107/2024.EDM-posters.107.pdf):
+
+>S. Thomas Christie, Baptiste Moreau-Pernet, Yu Tian, & John Whitmer. (2024). FlexEval: a customizable tool for chatbot performance evaluation and dialogue analysis. _Proceedings of the 17th International Conference on Educational Data Mining_, 903-908. Atlanta, Georgia, USA, July 2024. <https://doi.org/10.5281/zenodo.12729993>
+
+## Development
+
+You should [install `uv`](https://docs.astral.sh/uv/getting-started/installation/):
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### Making a build
+
+```bash
+uv build
+```
+
+FlexEval is not yet available on PyPI.
+
+### Running tests
+
+Run the unit tests:
+
+```bash
+uv run python -m unittest discover -s tests.unit
+```
+
+To run a specific file's worth of tests:
+
+```bash
+uv run python -m unittest tests.unit.{module_name}
+```
+
+There are integration tests in tests/integration that can be executed.
+
+### Adding or updating dependencies
+
+To add a dependency:
+
+```bash
+uv add {package_name}
+```
+
+To update dependencies:
+
+```bash
+uv lock --upgrade
+```
+
+Verify CLI:
+
+```bash
+uv run python -m flexeval --help
+```

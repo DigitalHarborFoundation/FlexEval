@@ -1,0 +1,32 @@
+name: Run validation
+
+on: [push]
+
+jobs:
+  build:
+    name: Run validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install Python dependencies
+        run: |
+          uv sync
+
+      - name: Run automated validation checks
+        run: |
+          uv run python -m unittest discover -s tests.unit
+        env:
+          CURRENT_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
