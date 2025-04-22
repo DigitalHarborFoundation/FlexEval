@@ -13,7 +13,9 @@ class Dataset(BaseModel):
     datatype = pw.TextField(null=True)
     contents = pw.TextField(null=True)  # raw contents
 
+
     max_n_conversation_threads = pw.IntegerField(null=True)
+    nb_evaluations_per_thread = pw.IntegerField(null=True, default=1)
     
     # In line with LangGraph expectations, we assume n=1 for all outputs of LLMs
     # However, each node can append list with length 2+ to the message queue
@@ -50,13 +52,15 @@ class Dataset(BaseModel):
             self.datatype = "json"
             data_loader.load_jsonl(dataset=self,
                                    filename=self.filename,
-                                   max_n_conversation_threads=self.max_n_conversation_threads)
+                                   max_n_conversation_threads=self.max_n_conversation_threads,
+                                   nb_evaluations_per_thread=self.nb_evaluations_per_thread)
         
         elif is_sqlite_file(self.filename):
             self.datatype = "sqlite"
             data_loader.load_langgraph_sqlite(dataset=self,
                                               filename=self.filename,
-                                              max_n_conversation_threads=self.max_n_conversation_threads)
+                                              max_n_conversation_threads=self.max_n_conversation_threads,
+                                              nb_evaluations_per_thread=self.nb_evaluations_per_thread)
         
         else:
             raise Exception(
