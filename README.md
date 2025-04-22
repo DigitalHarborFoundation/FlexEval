@@ -197,3 +197,20 @@ Verify CLI:
 ```bash
 uv run python -m flexeval --help
 ```
+
+### Running an eval set with env variables
+
+Run an eval set by specifying the .env file:
+
+```bash
+uv run --env-file=.env python -m flexeval --eval_name {eval_suite_name}
+```
+
+Or set the UV_ENV_FILE variable first:
+
+```bash
+export UV_ENV_FILE=.env
+uv run python -m flexeval --eval_name {eval_suite_name}
+```
+
+

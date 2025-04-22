@@ -1,6 +1,6 @@
 multimodels-langgraph-rubric-dependencies:
   data:
-    - ../../data/test-cases/ckpts_livehint/checkpoint.db
+    - data/test-cases/ckpts_livehint/checkpoint.db
 
   name: plot evaluations, models comparison
   notes: |-
@@ -12,9 +12,9 @@ multimodels-langgraph-rubric-dependencies:
     matches the DesmosPlot counts, if plot matches description before or after.
 
   config:
-    max_n_conversation_threads: 20
-    nb_evaluations_per_thread: 6
-    max_workers: 10
+    max_n_conversation_threads: 2
+    nb_evaluations_per_thread: 3
+    max_workers: 5
 
   metrics:
     function:

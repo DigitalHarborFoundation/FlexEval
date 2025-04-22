@@ -42,7 +42,8 @@ def load_jsonl(
             selected_thread_ids = list(range(len(all_lines)))
             
         ### should duplicate the select threads nb_evaluations_per_thread times
-        
+        if nb_evaluations_per_thread is None:
+            nb_evaluations_per_thread = 1
 
         for thread_id, thread in enumerate(all_lines):
             

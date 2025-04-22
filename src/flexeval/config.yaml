@@ -2,14 +2,14 @@
 
 # paths are relative to the root of the repo
 rubric_metrics_path:
-  - '../../configuration/rubric_metrics.yaml'
-  - '../../example_project/example_specific_rubrics.yaml'
-evals_path: '../../configuration/evals.yaml'
-env_file: '.env' #in same location as main.py
-logs_path: '../../logs/'
-eval_schema_path: 'eval_schema.json'
+  - src/flexeval/configuration/rubric_metrics.yaml
+  - example_project/example_specific_rubrics.yaml
+evals_path: src/flexeval/configuration/evals.yaml
+env_file: .env #in same location as main.py
+logs_path: logs/
+eval_schema_path: src/flexeval/eval_schema.json
 
-database_path: ../../data/results/results.db
+database_path: data/results/results.db
 
 max_workers: 1
 
