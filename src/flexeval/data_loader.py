@@ -59,7 +59,7 @@ def load_jsonl(
                         evalsetrun=dataset.evalsetrun,
                         dataset=dataset,
                         jsonl_thread_id=thread_id,
-                        eval_run_thread_id=thread_id+'_'+str(thread_eval_run_id)
+                        eval_run_thread_id=str(thread_id)+'_'+str(thread_eval_run_id)
                     )
 
                     # Context
@@ -147,7 +147,7 @@ def load_langgraph_sqlite(
                     evalsetrun=dataset.evalsetrun,
                     dataset=dataset,
                     langgraph_thread_id=thread_id[0],
-                    eval_run_thread_id=thread_id[0]+'_'+str(thread_eval_run_id)
+                    eval_run_thread_id=str(thread_id[0])+'_'+str(thread_eval_run_id)
                 )
 
                 # Create messages
