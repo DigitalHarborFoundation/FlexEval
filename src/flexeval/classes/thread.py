@@ -15,8 +15,10 @@ class Thread(BaseModel):
     evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="threads")
 
     langgraph_thread_id = pw.TextField(null=True)
-    system_prompt = pw.TextField(null=True)
+    eval_run_thread_id = pw.TextField(null=True)
     jsonl_thread_id = pw.TextField(null=True)
+    
+    system_prompt = pw.TextField(null=True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
