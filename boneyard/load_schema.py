@@ -13,12 +13,8 @@ with open("src/flexeval/configuration/evals.yaml", "r") as infile:
 data = {}
 data["evaluation_suite"] = temp["evaluation"]
 
-print(json.dumps(data, indent=4))
-
-
 # Validate data
 validate(instance=data, schema=schema)
-
 
 def apply_defaults(schema, data, path=None):
     # Initialize path as an empty list if None. This will store the navigation path in the schema.
@@ -62,4 +58,4 @@ def apply_defaults(schema, data, path=None):
 # Apply defaults
 data = apply_defaults(schema, data)
 
-print(json.dumps(data, indent=4))
+#print(json.dumps(data, indent=4))

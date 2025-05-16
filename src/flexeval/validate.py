@@ -106,7 +106,7 @@ class TestConfiguration(unittest.TestCase):
 
         def traverse_yaml(node, base_path=""):
             """Traverse the YAML tree and check existence of leaf entries."""
-            if isinstance(node, str):
+            if isinstance(node, str) and node is not None and str(node) != "None":
                 path = node
                 # path = os.path.join(base_path, node)
                 if not check_file_or_dir(path) and not path.endswith("db"):

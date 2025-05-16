@@ -18,7 +18,7 @@ def load_jsonl(
     dataset: Dataset,
     filename: str | pathlib.Path,
     max_n_conversation_threads: int | None = None,
-    nb_evaluations_per_thread: int | None = 1
+    nb_evaluations_per_thread: int | None = 1,
 ):
     with open(filename, "r") as infile:
         contents = infile.read()  # will be a big string
@@ -40,20 +40,30 @@ def load_jsonl(
                 f"You requested {max_n_conversation_threads} conversations but only {len(all_lines)} are present in Jsonl dataset."
             )
             selected_thread_ids = list(range(len(all_lines)))
-            
+
         ### should duplicate the select threads nb_evaluations_per_thread times
         if nb_evaluations_per_thread is None:
             nb_evaluations_per_thread = 1
 
         for thread_id, thread in enumerate(all_lines):
-            
-            for _ in range(max(1, nb_evaluations_per_thread)): # duplicate stored threads for averaged evaluation results
-                
+
+            for thread_eval_run_id in range(
+                max(1, nb_evaluations_per_thread)
+            ):  # duplicate stored threads for averaged evaluation results
+
                 if thread_id in selected_thread_ids:
+                    # The code snippet you provided is not complete and does not perform any specific
+                    # action. It seems to be a partial line of code in Python that declares a variable
+                    # named `thread_object` but does not assign any value to it or perform any
+                    # operations. If you provide more context or complete the code snippet, I can help
+                    # you understand its functionality.
                     thread_object = Thread.create(
                         evalsetrun=dataset.evalsetrun,
                         dataset=dataset,
-                        jsonl_thread_id=thread_id
+                        jsonl_thread_id=thread_id,
+                        eval_run_thread_id=str(thread_id)
+                        + "_"
+                        + str(thread_eval_run_id),
                     )
 
                     # Context
@@ -98,9 +108,21 @@ def load_jsonl(
 
 
 def load_langgraph_sqlite(
-    dataset: Dataset, filename: str, max_n_conversation_threads: int | None = None, nb_evaluations_per_thread: int | None = 1
+    dataset: Dataset,
+    filename: str,
+    max_n_conversation_threads: int | None = None,
+    nb_evaluations_per_thread: int | None = 1,
+    langgraph_nodes_to_ignore: list = []
 ):
     serializer = JsonPlusSerializer()
+
+    langgraph_nodes_to_ignore = dataset.langgraph_nodes_to_ignore
+    if langgraph_nodes_to_ignore is None:
+        langgraph_nodes_to_ignore = []
+    elif isinstance(langgraph_nodes_to_ignore, str):
+        langgraph_nodes_to_ignore = json.loads(langgraph_nodes_to_ignore)
+    elif isinstance(langgraph_nodes_to_ignore, list):
+        pass
 
     with sqlite3.connect(filename) as conn:
         # Set the row factory to sqlite3.Row
@@ -119,6 +141,9 @@ def load_langgraph_sqlite(
         query = "select distinct thread_id from checkpoints"
         cursor.execute(query)
         thread_ids = cursor.fetchall()
+        if max_n_conversation_threads is not None:
+            thread_ids = thread_ids[:max_n_conversation_threads]
+        print(f"Loading data from {len(thread_ids)} threads")
 
         nb_threads = len(thread_ids)
         if max_n_conversation_threads is None:
@@ -132,260 +157,295 @@ def load_langgraph_sqlite(
             )
             selected_thread_ids = thread_ids
 
-        ### duplicate the list of selected thread ids nb_evaluations_per_thread times:
-        selected_thread_ids = selected_thread_ids * max(1, nb_evaluations_per_thread)
-        
-        # print(" DEBUG DUPLICATE SELECT THREAD IDS\n", selected_thread_ids)
-        
-        for thread_id in selected_thread_ids:
-            thread = Thread.create(
-                evalsetrun=dataset.evalsetrun,
-                dataset=dataset,
-                langgraph_thread_id=thread_id[0],
-            )
+        for thread_eval_run_id in range(
+            max(1, nb_evaluations_per_thread)
+        ):  # duplicate stored threads for averaged evaluation results
 
-            # Create messages
-            query = f"select * from checkpoints where thread_id = '{thread.langgraph_thread_id}'"
-            cursor.execute(query)
-            completion_list = cursor.fetchall()
-
-            # context has to be reset at the start of every thread
-            context = []
-            # tool call variables
-            tool_calls_dict = {}
-            tool_responses_dict = {}
-            tool_addional_kwargs_dict = {}
-            # system prompt reset for every thread
-            system_prompt = None
-
-            for completion_row in completion_list:
-                # checkpoint is full state history
-                checkpoint = serializer.loads_typed(
-                    (completion_row["type"], completion_row["checkpoint"])
-                )
-                # metadata is the state update for that row
-                metadata = json.loads(completion_row["metadata"])
-                # IDs from langgraph
-
-                if metadata.get("writes") is None:
-                    continue
-                else:
-                    # Goal here is to create a data structure for EACH write/update
-                    # that can be used to construct a Message object
-                    # LangGraph stores info in 'writes' in the checkpoints.metadata column
-                    # but the format is a bit different between human and machine input
-                    # The resulting data structure should have
-                    # key (str) -- graph 'node' that produced the message (or 'human')
-                    # value (list) -- list of 'message' data structures with id, kwargs, etc
-                    # {
-                    #   'node_name':{
-                    #      "messages":[
-                    #          {
-                    #             'id': "XYZ"
-                    #             'kwargs':{
-                    #                 "content": 'text of the message',
-                    #                 "additional_kwargs": {}
-                    #           },
-                    #        }
-                    #       ]
-                    #
-                    #   }
-                    # }
-
-                    # user input condition
-                    if metadata.get("source") == "input":
-                        # NOTE: I think with the updated logging of HumanMessage with langgraph, we don't need this case
-                        update_dict = {}
-                        # this will be a dictionary we can add to
-                        # key is 'input', as in human input
-                        update_dict["input"] = {"messages": []}
-                        # print("metadata keys:", metadata["writes"].keys())
-                        # the very first message in input in a thread seems to include
-                        # the system prompt, not a message that was sent by the user.
-                        # the system promptdoesn't seem to be set anywhere else, so
-                        # using that as the system prompt for the thread.
-                        messagecount = 0
-                        for msg in metadata["writes"]["__start__"]["messages"]:
-                            if messagecount == 0 and metadata["step"] == -1:
-                                system_prompt = msg["kwargs"]["content"]
-                                messagecount += 1
-                            else:
-                                message = {}
-                                message["id"] = [
-                                    "HumanMessage"
-                                ]  # LangGraph has a list here
-                                message["kwargs"] = {}
-                                message["kwargs"]["content"] = msg
-                                message["kwargs"]["type"] = "human"
-                                update_dict["input"]["messages"].append(message)
-                        # will be used below
-                        role = "user"
-
-                    # machine input condition
-                    elif metadata.get("source") == "loop":
-                        # This already has a list of messages with kwargs, etc
-                        update_dict = metadata.get("writes")
-                        # I think 'system_prompt' is empty by default and not stored here unless
-                        # it's included in the LangGraph state
-                        checkpoint_system_prompt = checkpoint.get(
-                            "channel_values", {}
-                        ).get("system_prompt")
-                        if checkpoint_system_prompt is not None:
-                            system_prompt = checkpoint_system_prompt
-                        role = "assistant"
-                    else:
-                        raise Exception(
-                            f"Unhandled input condition! here is the metadata: {metadata}"
-                        )
-                    # Add system prompt as first thing in context if not already present
-                    if len(context) == 0:
-                        context.append({"role": "system", "content": system_prompt})
-
-                    # iterate through nodes - there is probably only 1
-                    for node, value in update_dict.items():
-                        # iterate through list of message updates
-                        if "messages" in value:
-                            if isinstance(value["messages"], dict):
-                                # Make this a list to iterate through - 4 Feb 2025 - used to be a list previously
-                                messagelist = [value["messages"]]
-                            else:
-                                messagelist = value["messages"]
-                            for message in messagelist:
-                                if role == "user":
-                                    content = (
-                                        message.get("kwargs", {})
-                                        .get("content", {})
-                                        .get("kwargs", {})
-                                        .get("content", None)
-                                    )
-                                elif role == "assistant":
-                                    content = message.get("kwargs", {}).get(
-                                        "content", None
-                                    )
-                                else:
-                                    raise Exception(
-                                        "`role` should be either user or assistant."
-                                    )
-                                Message.create(
-                                    evalsetrun=dataset.evalsetrun,
-                                    dataset=dataset,
-                                    thread=thread,
-                                    role=role,
-                                    content=content,
-                                    context=json.dumps(context),
-                                    is_flexeval_completion=False,
-                                    system_prompt=system_prompt,
-                                    # language model stats
-                                    tool_calls=json.dumps(
-                                        message.get("kwargs", {}).get("tool_calls", [])
-                                    ),
-                                    tool_call_ids=[
-                                        tc["id"]
-                                        for tc in message.get("kwargs", {}).get(
-                                            "tool_calls", []
-                                        )
-                                    ],
-                                    n_tool_calls=len(
-                                        message.get("kwargs", {}).get("tool_calls", [])
-                                    ),
-                                    prompt_tokens=message.get("kwargs", {})
-                                    .get("response_metadata", {})
-                                    .get("token_usage", {})
-                                    .get("prompt_tokens"),
-                                    completion_tokens=message.get("kwargs", {})
-                                    .get("response_metadata", {})
-                                    .get("token_usage", {})
-                                    .get("completion_tokens"),
-                                    model_name=message.get("kwargs", {})
-                                    .get("response_metadata", {})
-                                    .get("model_name"),
-                                    # langgraph metadata
-                                    langgraph_ts=checkpoint.get("ts"),
-                                    langgraph_step=metadata.get("step"),
-                                    langgraph_thread_id=completion_row["thread_id"],
-                                    langgraph_checkpoint_id=completion_row[
-                                        "checkpoint_id"
-                                    ],
-                                    langgraph_parent_checkpoint_id=completion_row[
-                                        "parent_checkpoint_id"
-                                    ],
-                                    langgraph_checkpoint=dumps(
-                                        checkpoint
-                                    ),  # Have to re-dump this because of the de-serialization#completion_row["checkpoint"],
-                                    langgraph_metadata=completion_row["metadata"],
-                                    langgraph_node=node,
-                                    langgraph_message_type=message["id"][-1],
-                                    langgraph_type=message.get("kwargs", {}).get(
-                                        "type"
-                                    ),
-                                    # special property of state
-                                    langchain_print=message.get("kwargs", {})
-                                    .get("additional_kwargs", {})
-                                    .get("print", False),
-                                )
-
-                                # update the context for the next Message
-                                context.append(
-                                    {
-                                        "role": role,
-                                        "content": content,
-                                        "langgraph_role": message["id"][-1],
-                                    }
-                                )
-
-                                # record tool call info so we can match them up later
-                                if message.get("kwargs", {}).get("type") == "tool":
-                                    # this should have a mapping between tool_call_id and the RESPONSE to to the tool call
-                                    tool_responses_dict[
-                                        message.get("kwargs", {}).get("tool_call_id")
-                                    ] = message.get("kwargs", {}).get("content", "")
-                                else:
-                                    for tool_call in message.get("kwargs", {}).get(
-                                        "tool_calls", []
-                                    ):
-                                        # this should have all the info about the tool calls, including additional_kwargs
-                                        # but NOT their responses
-                                        tool_calls_dict[tool_call["id"]] = tool_call
-                                        tool_addional_kwargs_dict[tool_call["id"]] = (
-                                            message.get("kwargs", {}).get(
-                                                "additional_kwargs", {}
-                                            )
-                                        )
-
-            # Add turns to each message
-            # Need to do this before dealing with tool calls, since we
-            # associated turns with tool calls via messages during the .create() method
-            add_turns(thread)
-
-            ## Match up tool calls and make an object for each match
-            for tool_call_id, tool_call_vals in tool_calls_dict.items():
-                # DEBUG
-                # tool_call_id is defined
-
-                assert (
-                    tool_call_id in tool_responses_dict
-                ), f"Found a tool call without a tool response! id: {tool_call_id}"
-                # get matching message - should now be accessible through thread now?
-                matching_message = [
-                    m for m in thread.messages if tool_call_id in m.tool_call_ids
-                ][0]
-
-                ToolCall.create(
+            for thread_id in selected_thread_ids:
+                thread = Thread.create(
                     evalsetrun=dataset.evalsetrun,
                     dataset=dataset,
-                    thread=thread,
-                    turn=matching_message.turn,
-                    message=matching_message,
-                    function_name=tool_call_vals.get("name"),
-                    args=json.dumps(tool_call_vals.get("args")),
-                    additional_kwargs=json.dumps(
-                        tool_addional_kwargs_dict.get(tool_call_id)
-                    ),
-                    tool_call_id=tool_call_id,
-                    response_content=tool_responses_dict.get(tool_call_id),
+                    langgraph_thread_id=thread_id[0],
+                    eval_run_thread_id=str(thread_id[0])
+                    + "_"
+                    + str(thread_eval_run_id),
                 )
 
-            ## Add system prompt if available?
+                # Create messages
+                query = f"select * from checkpoints where thread_id = '{thread.langgraph_thread_id}'"
+                cursor.execute(query)
+                completion_list = cursor.fetchall()
+
+                # context has to be reset at the start of every thread
+                context = []
+                # tool call variables
+                tool_calls_dict = {}
+                tool_responses_dict = {}
+                tool_addional_kwargs_dict = {}
+                # system prompt reset for every thread
+                system_prompt = None
+
+                for completion_row in completion_list:
+                    # checkpoint is full state history
+                    checkpoint = serializer.loads_typed(
+                        (completion_row["type"], completion_row["checkpoint"])
+                    )
+                    # metadata is the state update for that row
+                    metadata = json.loads(completion_row["metadata"])
+                    # IDs from langgraph
+
+                    if metadata.get("writes") is None:
+                        continue
+                    else:
+                        # Goal here is to create a data structure for EACH write/update
+                        # that can be used to construct a Message object
+                        # LangGraph stores info in 'writes' in the checkpoints.metadata column
+                        # but the format is a bit different between human and machine input
+                        # The resulting data structure should have
+                        # key (str) -- graph 'node' that produced the message (or 'human')
+                        # value (list) -- list of 'message' data structures with id, kwargs, etc
+                        # {
+                        #   'node_name':{
+                        #      "messages":[
+                        #          {
+                        #             'id': "XYZ"
+                        #             'kwargs':{
+                        #                 "content": 'text of the message',
+                        #                 "additional_kwargs": {}
+                        #           },
+                        #        }
+                        #       ]
+                        #
+                        #   }
+                        # }
+
+                        # user input condition
+                        if metadata.get("source") == "input":
+                            # NOTE: I think with the updated logging of HumanMessage with langgraph, we don't need this case
+                            update_dict = {}
+                            # this will be a dictionary we can add to
+                            # key is 'input', as in human input
+                            update_dict["input"] = {"messages": []}
+                            # print("metadata keys:", metadata["writes"].keys())
+                            # the very first message in input in a thread seems to include
+                            # the system prompt, not a message that was sent by the user.
+                            # the system promptdoesn't seem to be set anywhere else, so
+                            # using that as the system prompt for the thread.
+                            messagecount = 0
+                            for msg in metadata["writes"]["__start__"]["messages"]:
+                                if messagecount == 0 and metadata["step"] == -1:
+                                    system_prompt = msg["kwargs"]["content"]
+                                    messagecount += 1
+                                else:
+                                    message = {}
+                                    message["id"] = [
+                                        "HumanMessage"
+                                    ]  # LangGraph has a list here
+                                    message["kwargs"] = {}
+                                    message["kwargs"]["content"] = msg
+                                    message["kwargs"]["type"] = "human"
+                                    update_dict["input"]["messages"].append(message)
+                            # will be used below
+                            role = "user"
+
+                        # machine input condition
+                        elif metadata.get("source") == "loop":
+                            # This already has a list of messages with kwargs, etc
+                            update_dict = metadata.get("writes")
+                            # I think 'system_prompt' is empty by default and not stored here unless
+                            # it's included in the LangGraph state
+                            checkpoint_system_prompt = checkpoint.get(
+                                "channel_values", {}
+                            ).get("system_prompt")
+                            if checkpoint_system_prompt is not None:
+                                system_prompt = checkpoint_system_prompt
+                            role = "assistant"
+                        else:
+                            raise Exception(
+                                f"Unhandled input condition! here is the metadata: {metadata}"
+                            )
+                        # Add system prompt as first thing in context if not already present
+                        if len(context) == 0:
+                            context.append({"role": "system", "content": system_prompt})
+
+                        
+                        for node, value in update_dict.items():
+                            #print("NODE", node)
+                            # iterate through list of message updates
+                            if "messages" in value:
+                                if isinstance(value["messages"], dict):
+                                    # Make this a list to iterate through - 4 Feb 2025 - used to be a list previously
+                                    messagelist = [value["messages"]]
+                                else:
+                                    messagelist = value["messages"]
+                                for message in messagelist:
+                                    if role == "user":
+                                        if (
+                                            isinstance(
+                                                message.get("content", None), str
+                                            )
+                                            and message.get("content", "") != ""
+                                        ):
+                                            content = message["content"]
+                                        else:
+                                            content = (
+                                                message.get("kwargs", {})
+                                                .get("content", {})
+                                                .get("kwargs", {})
+                                                .get("content", None)
+                                            )
+                                    elif role == "assistant":
+                                        if isinstance(
+                                            message.get("content", None), str
+                                        ):
+                                            content = message["content"]
+                                        else:
+                                            content = message.get("kwargs", {}).get(
+                                                "content", None
+                                            )
+                                        import pprint
+
+                                        # print("MESSAGE", node)
+                                        # pprint.pprint(message)
+                                        # print("CONTENT", node)
+                                        # pprint.pprint(content)
+                                        # input()
+                                    else:
+                                        raise Exception(
+                                            "`role` should be either user or assistant."
+                                        )
+                                    if node in langgraph_nodes_to_ignore:
+                                        content = ''
+                                    Message.create(
+                                        evalsetrun=dataset.evalsetrun,
+                                        dataset=dataset,
+                                        thread=thread,
+                                        role=role,
+                                        content=content,
+                                        context=json.dumps(context),
+                                        is_flexeval_completion=False,
+                                        system_prompt=system_prompt,
+                                        # language model stats
+                                        tool_calls=json.dumps(
+                                            message.get("kwargs", {}).get(
+                                                "tool_calls", []
+                                            )
+                                        ),
+                                        tool_call_ids=[
+                                            tc["id"]
+                                            for tc in message.get("kwargs", {}).get(
+                                                "tool_calls", []
+                                            )
+                                        ],
+                                        n_tool_calls=len(
+                                            message.get("kwargs", {}).get(
+                                                "tool_calls", []
+                                            )
+                                        ),
+                                        prompt_tokens=message.get("kwargs", {})
+                                        .get("response_metadata", {})
+                                        .get("token_usage", {})
+                                        .get("prompt_tokens"),
+                                        completion_tokens=message.get("kwargs", {})
+                                        .get("response_metadata", {})
+                                        .get("token_usage", {})
+                                        .get("completion_tokens"),
+                                        model_name=message.get("kwargs", {})
+                                        .get("response_metadata", {})
+                                        .get("model_name"),
+                                        # langgraph metadata
+                                        langgraph_ts=checkpoint.get("ts"),
+                                        langgraph_step=metadata.get("step"),
+                                        langgraph_thread_id=completion_row["thread_id"],
+                                        langgraph_checkpoint_id=completion_row[
+                                            "checkpoint_id"
+                                        ],
+                                        langgraph_parent_checkpoint_id=completion_row[
+                                            "parent_checkpoint_id"
+                                        ],
+                                        langgraph_checkpoint=dumps(
+                                            checkpoint
+                                        ),  # Have to re-dump this because of the de-serialization#completion_row["checkpoint"],
+                                        langgraph_metadata=completion_row["metadata"],
+                                        langgraph_node=node,
+                                        langgraph_message_type=message.get(
+                                            "id", [None]
+                                        )[-1],
+                                        langgraph_type=message.get("kwargs", {}).get(
+                                            "type"
+                                        ),
+                                        # special property of state
+                                        langchain_print=message.get("kwargs", {})
+                                        .get("additional_kwargs", {})
+                                        .get("print", False),
+                                    )
+
+                                    # update the context for the next Message
+                                    context.append(
+                                        {
+                                            "role": role,
+                                            "content": content,
+                                            "langgraph_role": message.get("id", [None])[
+                                                -1
+                                            ],
+                                        }
+                                    )
+                                    # record tool call info so we can match them up later
+                                    if message.get("kwargs", {}).get("type") == "tool":
+                                        # this should have a mapping between tool_call_id and the RESPONSE to to the tool call
+                                        tool_responses_dict[
+                                            message.get("kwargs", {}).get(
+                                                "tool_call_id"
+                                            )
+                                        ] = message.get("kwargs", {}).get("content", "")
+                                    else:
+                                        for tool_call in message.get("kwargs", {}).get(
+                                            "tool_calls", []
+                                        ):
+                                            # this should have all the info about the tool calls, including additional_kwargs
+                                            # but NOT their responses
+                                            tool_calls_dict[tool_call["id"]] = tool_call
+                                            tool_addional_kwargs_dict[
+                                                tool_call["id"]
+                                            ] = message.get("kwargs", {}).get(
+                                                "additional_kwargs", {}
+                                            )
+
+                # Add turns to each message
+                # Need to do this before dealing with tool calls, since we
+                # associated turns with tool calls via messages during the .create() method
+                add_turns(thread)
+
+                ## Match up tool calls and make an object for each match
+                for tool_call_id, tool_call_vals in tool_calls_dict.items():
+                    # DEBUG
+                    # tool_call_id is defined
+                    
+                    assert (
+                        tool_call_id in tool_responses_dict
+                    ), f"Found a tool call without a tool response! id: {tool_call_id}"
+                    # get matching message - should now be accessible through thread now?
+                    matching_message = [
+                        m for m in thread.messages if tool_call_id in m.tool_call_ids
+                    ][0]
+                    if matching_message.langgraph_node in langgraph_nodes_to_ignore:
+                        response_content = ''
+                    else:
+                        response_content = tool_responses_dict.get(tool_call_id)
+                    ToolCall.create(
+                        evalsetrun=dataset.evalsetrun,
+                        dataset=dataset,
+                        thread=thread,
+                        turn=matching_message.turn,
+                        message=matching_message,
+                        function_name=tool_call_vals.get("name"),
+                        args=json.dumps(tool_call_vals.get("args")),
+                        additional_kwargs=json.dumps(
+                            tool_addional_kwargs_dict.get(tool_call_id)
+                        ),
+                        tool_call_id=tool_call_id,
+                        response_content=response_content
+                    )
 
 
 def add_turns(thread: Thread):
