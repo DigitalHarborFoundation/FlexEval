@@ -96,6 +96,18 @@ def is_langgraph_type(object: Union[Message], type: str) -> dict:
     """
     return {type: int(object.langgraph_type == type)}
 
+def is_langgraph_node(object: Union[Message], node: str) -> dict:
+    """
+    Return 1 is the langgraph node for this Message matches the passed in node,
+    and 0 otherwise.
+
+    Args:
+    object: the Message
+    type: a string with the desired type to check against
+    """
+    return {node: int(object.langgraph_node == node)}
+
+
 
 def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
     """

@@ -30,6 +30,12 @@ from typing import Any, Dict, List
 import requests
 from openai import OpenAI
 
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_random_exponential,
+)  # for exponential backoff
+
 logger = logging.getLogger(__name__)
 
 
@@ -60,6 +66,59 @@ def open_ai_completion(
     )
 
     return raw_response.model_dump(exclude_unset=True)
+
+
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+def open_ai_completion_flex(
+    conversation_history: List[Dict[str, Any]],
+    model_name: str,
+    api_key_name: str,
+    n: int = 1,
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    """
+    Generate a completion for a given conversation history using OpenAI's chat completion API.
+    Uses 'flex' service tier to halve the price
+
+    Args:
+        conversation_history (List[Dict[str, Any]]): The conversation history as a list of message dictionaries.
+        model_name (str): The name of the OpenAI model to use for the completion.
+        api_key_name (str): The environment variable name where the API key is stored.
+        n (int, optional): The number of completion choices to generate. Defaults to 1.
+        **kwargs (Any): Additional keyword arguments to pass to the OpenAI API client.
+
+    Returns:
+        Dict[str, Any]: The response from the OpenAI API with unset fields excluded.
+    """
+    assert os.getenv(api_key_name) is not None, f'You specified the key name {os.getenv(api_key_name)}, but it is not available in the environment!'
+    client = OpenAI(
+        api_key=os.getenv(api_key_name),
+        # increase default timeout to 15 minutes (from 10 minutes)
+        timeout=900.0
+    )
+    try:
+        raw_response = client.chat.completions.create(
+            model=model_name, 
+            messages=conversation_history, 
+            service_tier="flex",
+            #**kwargs
+        )
+    except Except as exc:
+        # full response body, headers, status, request_id
+        logging.exception(
+            "400 BadRequestError\n%s",
+            json.dumps({
+                "status_code": exc.status_code,      # 400
+                "request_id": exc.request_id,        # req_•••
+                "message": str(exc),                 # short text
+                "body": exc.response.text,           # raw body (JSON string)
+                "headers": dict(exc.response.headers)
+            }, indent=2, ensure_ascii=False)
+        )
+        raise   
+
+    return raw_response.model_dump(exclude_unset=True)
+
 
 
 def open_ai_completion_async(

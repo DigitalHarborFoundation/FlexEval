@@ -99,9 +99,9 @@ plot_bounds_are_reasonable:
 
 is_correct_plot:
   notes: |-
-    evaluate if the plot is correct.
-    - it evaluates the actual JSON output in tool call's 'content'
-    from human evaluation feedback, reasons for a plot not to be correct:
+    Evaluate if the plot is correct.
+    - It evaluates the actual JSON output in tool call's 'content'
+    From human evaluation feedback, reasons for a plot not to be correct:
     empty, y or x intercept incorrect, wrong equation, opposite direction...
   prompt: |-
     Your Role:
@@ -117,33 +117,50 @@ is_correct_plot:
       A plot is correct if it matches the plot description and equation expectations. Its math and visual properties must correspond to the intended description and graph characteristics.
 
     Data:
-      The following contains messages from the tutor (assistant).
-      The messages include the tutor's (assistant's) description of the plot to generate, and shortly afterwards, it contains the generated plot in JSON. Evaluate the correctness of the generated plot.
+      The following data contains messages between the user (student) and tutor (assistant).
+      The [Input] is the conversation context, and the [Output] is the set of messages to the student. The messages include the tutor's (assistant's) description of the plot to generate, and shortly afterwards, it contains the generated plot in JSON. Evaluate the correctness of the generated plot.
       
       [BEGIN DATA]
       ***
-      {content}
+      [Input]: {context}
+
+      [Output]: {content}
       ***
       [END DATA]
 
     __start rubric__
-      B. Incorrect
-      Characteristics: The plot is incorrect for the current plot's description, graph math properties.
-      Indicators: Plot is empty; x or y intercepts are incorrect; features a wrong equation; is plotted in the opposite direction; etc.
+      A. Perfect
+      Characteristics: The plot is exactly correct and matches the description in all respects.
+      Indicators: All features described are present and correct; no extra or missing elements.
 
-      A. Correct
-      Characteristics: The plot is correct for the current plot's description and graph math properties.
-      Indicators: Plot has correct x and y intercepts; it features the correct equation; in the correct direction; etc.
+      B. Correct with Minor Extra
+      Characteristics: The plot is correct, but includes a minor extra element not mentioned in the description (e.g., an extra line to highlight an intercept).
+      Indicators: All required features are present and correct; extra elements do not detract from correctness.
+
+      C. Minor Omission
+      Characteristics: The plot is mostly correct, but omits a minor feature mentioned in the description (e.g., a point was mentioned but not plotted), while the primary curve or feature is correct.
+      Indicators: Main plot is correct; minor described features are missing.
+
+      D. Major Issue
+      Characteristics: The plot is in the incorrect form or has a significant error in representation (e.g., wrong type of plot, axes swapped, or major feature missing).
+      Indicators: Main plot does not match the described form, but some relevant information is present.
+
+      F. Failure
+      Characteristics: The plot is fundamentally incorrect or missing (e.g., wrong equation plotted, plot is empty, or completely unrelated to the description).
+      Indicators: Plot is missing, empty, or does not represent the described math at all.
     __end rubric__
 
     Output:
       First, report your reasoning for your decision. 
       Second, print your decision.
-      IMPORTANT: After your reasoning, print the choice string of "A", or "B" on a separate line with NO OTHER TEXT on that line.
+      IMPORTANT: After your reasoning, print the choice string of "A", "B", "C", "D", or "F" on a separate line with NO OTHER TEXT on that line.
 
   choice_scores:
     "A": 1
-    "B": 0
+    "B": 0.8
+    "C": 0.6
+    "D": 0.2
+    "F": 0
 
 
 is_plot_generated_upon_request_pedagogically_appropriate:
@@ -466,8 +483,8 @@ desmos_code_rendered_on_toolcall:
       IMPORTANT: After your reasoning, print the choice string of "YES", or "NO" on a separate line with NO OTHER TEXT on that line.
 
   choice_scores:
-    "YES": 1
-    "NO": 0  
+    "YES": 0
+    "NO": 1 
 
 
 # plot_text_description_no_match:

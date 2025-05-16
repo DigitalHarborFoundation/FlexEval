@@ -6,6 +6,7 @@ import sqlite3
 import unittest
 from datetime import datetime
 from pathlib import Path
+import dotenv
 
 import jsonschema
 import yaml
@@ -45,11 +46,12 @@ class EvalRunner(Model):
 
         self.initialize_logger()
         self.load_configuration()
+        self.load_evaluation_settings()
         self.add_file_logger()
         self.validate_settings()
         self.initialize_database_connection()
         self.initialize_database_tables(clear_tables)
-        self.load_evaluation_settings()
+        
 
     def initialize_logger(self, add_stream_handler: bool = False):
         # Configure the logger
@@ -106,6 +108,15 @@ class EvalRunner(Model):
         # Load configs
         with open(self.config_path) as file:
             self.configuration = yaml.safe_load(file)
+
+        if "env_file" in self.configuration:
+            if not Path(self.configuration["env_file"]).exists():
+                raise ValueError(
+                    f"Environment file not present at path '{runner.configuration['env_file']}'."
+                )
+            dotenv.load_dotenv(self.configuration["env_file"], verbose=True, override=True)
+
+            
 
     def validate_settings(self):
         self.logger.debug("Verifying configuration")
@@ -167,6 +178,14 @@ class EvalRunner(Model):
                         f"Updating configuration setting: {k}={v} (old={self.configuration.get(k,'unset')})"
                     )
                     self.configuration[k] = v
+                else:
+                    raise Exception(f'Configuration setting {k}={v} was specified but is not supported.')        
+        
+        # Occasionally None gets read as 'None'
+        for k,v in self.configuration.items():
+            if str(v) == 'None':
+                self.configuration[k] = None
+
         if self.evals_path is not None:
             if str(self.evals_path) != str(self.configuration["evals_path"]):
                 self.logger.info(

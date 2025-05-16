@@ -44,12 +44,9 @@ def run(
         evals_path=evals_path,
         clear_tables=clear_tables,
     )
-    if "env_file" in runner.configuration:
-        if not Path(runner.configuration["env_file"]).exists():
-            raise ValueError(
-                f"Environment file not present at path '{runner.configuration['env_file']}'."
-            )
-        dotenv.load_dotenv(runner.configuration["env_file"], verbose=True)
+    assert "max_n_conversation_threads" in runner.configuration
+    assert "nb_evaluations_per_thread" in runner.configuration
+    assert "random_seed_conversation_sampling" in runner.configuration
 
     #######################################################
     ############  Create Test Run  ########################
@@ -92,6 +89,15 @@ def run(
             dataset.load_data()
     except Exception as e:
         runner.logger.exception("An error occurred loading data.", exc_info=True)
+
+    # Print the number of objects of each type
+    runner.logger.info(f"Loaded {len(evalsetrun.threads)} threads")
+    runner.logger.info(f"Loaded {len(evalsetrun.turns)} turns")
+    runner.logger.info(f"Loaded {len(evalsetrun.messages)} messages")
+    runner.logger.info(f"Loaded {len(evalsetrun.toolcalls)} toolcalls")
+    # print("Messages:", len(Message.objects) if hasattr(Message, "objects") else "Not available")
+    # print("Turns:", len(Turn.objects) if hasattr(Turn, "objects") else "Not available")
+    # print("ToolCalls:", len(ToolCall.objects) if hasattr(ToolCall, "objects") else "Not available")
 
     # Do completions, if necessary
     try:
@@ -253,14 +259,15 @@ def run(
                 for fid, future in enumerate(futures):
                     try:
                         future.result()  # If you need to catch exceptions or ensure completion
-                        if fid%100 == 0:
-                            runner.logger.info(f'Metrics futures resulted: {fid} / {len(futures)}')
+                        if fid % 100 == 0:
+                            runner.logger.info(
+                                f"Metrics futures resulted: {fid} / {len(futures)}"
+                            )
                     except Exception as e:
                         runner.logger.exception("An error occurred during processing")
                 metrics = []
                 for future in futures:
                     metrics += future.result()
-                    
 
         runner.logger.info(f"Saving {len(metrics)} metrics to database.")
         for metric in metrics:

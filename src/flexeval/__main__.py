@@ -30,7 +30,7 @@ def main():
         "--config_path",
         type=str,
         help="Which config file to use",
-        default="src/flexeval/config.yaml",
+        default="src/flexeval/default_config.yaml",
     )
 
     # Parse passed arguments
