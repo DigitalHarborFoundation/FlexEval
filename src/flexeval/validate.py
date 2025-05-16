@@ -18,6 +18,7 @@ import logging
 import os
 import unittest
 from typing import ForwardRef, get_args
+from dotenv import load_dotenv
 
 import jsonschema
 import yaml
@@ -32,7 +33,7 @@ from flexeval.configuration import function_metrics
 
 logger = logging.getLogger(__name__)
 
-
+load_dotenv()
 class TestConfiguration(unittest.TestCase):
     @classmethod
     def setUpClass(self):
