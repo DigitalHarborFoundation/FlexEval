@@ -321,7 +321,7 @@ def is_last_turn_in_thread(turn: Turn) -> int:
     return int(max_turn_id == turn.id)
 
 
-def count_emojis(turn: str) -> Union[int, float]:
+def count_emojis(turn: str) -> int:
     """
     Calculate the number of emojis in a given text string.
 
@@ -329,7 +329,7 @@ def count_emojis(turn: str) -> Union[int, float]:
         turn (str): The input text string to be evaluated.
 
     Returns:
-        Union[int, float]: The number of emojis in the input text.
+        int: The number of emojis in the input text.
     """
     emoji_pattern = re.compile(
         "["
