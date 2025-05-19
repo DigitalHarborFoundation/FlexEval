@@ -1,6 +1,6 @@
 multimodels-langgraph-rubric-dependencies:
   data:
-    - data/test-cases/ckpts_livehint/checkpoint.db
+    - data/test-cases/ckpts_livehint/checkpoints_20250519.db
 
   name: plot evaluations, models comparison
   notes: |-
@@ -13,8 +13,15 @@ multimodels-langgraph-rubric-dependencies:
 
   config:
     max_n_conversation_threads: 10
-    nb_evaluations_per_thread: 2
-    max_workers: 5
+    max_workers: 10
+    database_path: data/results/results.db
+    langgraph_nodes_to_ignore:
+      - plotter_validation_node
+      - plotter_node
+      - chat_node
+      - record_state_node
+      - plot_choice
+      - fix_schema_node
 
   metrics:
     function:
