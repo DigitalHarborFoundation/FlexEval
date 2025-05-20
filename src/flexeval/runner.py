@@ -218,6 +218,7 @@ def run(
         runner.logger.info(
             f"Metrics will include up to {rubric_count} rubric evaluations."
         )
+        metric_computer = runner.get_metric_computer()
         if n_workers == 1:
             metrics = []
             # del object_lists_by_level["Thread"]
@@ -227,7 +228,7 @@ def run(
             for level, object_list in object_lists_by_level.items():
                 runner.logger.info(f"Computing metrics for level: {level}")
                 for object in object_list:
-                    cur_metrics = compute_metrics.compute_metrics(object)
+                    cur_metrics = metric_computer.compute_metrics(object)
                     for m in cur_metrics:
                         if m.get("evaluation_type", None) is None:
                             runner.logger.exception(
@@ -246,21 +247,22 @@ def run(
                 for level, object_list in object_lists_by_level.items():
                     for object in object_list:
                         futures.append(
-                            executor.submit(compute_metrics.compute_metrics, object)
+                            executor.submit(metric_computer.compute_metrics, object)
                         )
 
                 # Wait for all futures to complete and handle exceptions
                 for fid, future in enumerate(futures):
                     try:
                         future.result()  # If you need to catch exceptions or ensure completion
-                        if fid%100 == 0:
-                            runner.logger.info(f'Metrics futures resulted: {fid} / {len(futures)}')
+                        if fid % 100 == 0:
+                            runner.logger.info(
+                                f"Metrics futures resulted: {fid} / {len(futures)}"
+                            )
                     except Exception as e:
                         runner.logger.exception("An error occurred during processing")
                 metrics = []
                 for future in futures:
                     metrics += future.result()
-                    
 
         runner.logger.info(f"Saving {len(metrics)} metrics to database.")
         for metric in metrics:

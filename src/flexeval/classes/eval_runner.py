@@ -6,12 +6,13 @@ import sqlite3
 import unittest
 from datetime import datetime
 from pathlib import Path
-
+import importlib
+import importlib.util
 import jsonschema
 import yaml
 from peewee import *
 
-from flexeval import helpers, validate
+from flexeval import helpers, validate, compute_metrics
 from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.message import Message
@@ -197,3 +198,32 @@ class EvalRunner(Model):
         for handler in handlers:
             handler.close()
             self.logger.removeHandler(handler)
+
+    def get_metric_computer(self):
+        function_modules = self.configuration.get("function_modules", [])
+        if len(function_modules) > 0:
+            # convert from string module names or filepaths to Python modules
+            actual_modules = []
+            for i, function_module in enumerate(function_modules):
+                try:
+                    module = importlib.import_module(function_module)
+
+                except ModuleNotFoundError:
+                    try:
+                        spec = importlib.util.spec_from_file_location(
+                            f"function_module_{i}", function_module
+                        )
+                        module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+                    except Exception as ex:
+                        raise ValueError(
+                            f"Failed to load function module specified by {function_module}."
+                        )
+                actual_modules.append(module)
+            function_modules = actual_modules
+        include_default_functions = self.configuration.get(
+            "include_default_functions", True
+        )
+        return compute_metrics.MetricComputer(
+            function_modules, include_default_functions
+        )
