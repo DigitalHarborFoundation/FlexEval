@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.12.4'",
@@ -256,6 +257,7 @@ dependencies = [
     { name = "openai" },
     { name = "pandas" },
     { name = "peewee" },
+    { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "requests" },
@@ -276,6 +278,7 @@ requires-dist = [
     { name = "openai", specifier = ">=1.66.0" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "peewee", specifier = ">=3.17.9" },
+    { name = "pydantic", specifier = ">=2.10.6" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "requests", specifier = ">=2.32.3" },
