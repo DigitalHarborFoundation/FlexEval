@@ -103,7 +103,7 @@ def open_ai_completion_flex(
             service_tier="flex",
             #**kwargs
         )
-    except Except as exc:
+    except Exception as exc:
         # full response body, headers, status, request_id
         logging.exception(
             "400 BadRequestError\n%s",

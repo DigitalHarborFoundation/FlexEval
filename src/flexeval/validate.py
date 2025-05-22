@@ -19,6 +19,8 @@ import os
 import unittest
 from typing import ForwardRef, get_args
 from dotenv import load_dotenv
+import importlib
+import importlib.util
 
 import jsonschema
 import yaml
@@ -53,6 +55,8 @@ class TestConfiguration(unittest.TestCase):
                 for key, value in new_rubrics.items():
                     if key not in self.rubric_metrics:
                         self.rubric_metrics[key] = value
+        
+        self.load_function_modules(self) # load function metrics modules from other files than default
 
         # Apply the defaults before any testing of validity, since
         # may only be valid with these defaults
@@ -61,6 +65,30 @@ class TestConfiguration(unittest.TestCase):
         self.user_evals[self.eval_suite_name] = helpers.apply_defaults(
             schema, self.user_evals[self.eval_suite_name]
         )
+    
+    def load_function_modules(self):
+        function_modules = self.config.get("function_modules", [])
+        if len(function_modules) > 0:
+            # convert from string module names or filepaths to Python modules
+            actual_modules = []
+            for i, function_module in enumerate(function_modules):
+                try:
+                    module = importlib.import_module(function_module)
+                except ModuleNotFoundError:
+                    try:
+                        spec = importlib.util.spec_from_file_location(
+                            f"function_module_{i}", function_module
+                        )
+                        module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+                    except Exception as ex:
+                        raise ValueError(
+                            f"Failed to load function module specified by {function_module} in validate.py."
+                        )
+                actual_modules.append(module)
+            function_modules = actual_modules
+        self.function_modules = function_modules
+        self.function_modules.append(function_metrics) # add the default function metrics at the end
 
     def skip_if_no_openai_checks(self):
         if os.getenv("SKIP_OPENAI_CHECKS", "false") == "true":
@@ -200,6 +228,18 @@ class TestConfiguration(unittest.TestCase):
                         key in allowed_keys
                     ), f"Unrecognized key `{key}` for metric {metric}. Must be one of {allowed_keys}"
 
+    def find_function(self, function_name: str):
+        for function_module in self.function_modules:
+            if hasattr(function_module, function_name) and callable(
+                getattr(function_module, function_name)
+            ):
+                metric_function = getattr(function_module, function_name)
+                metric_source = inspect.getsource(metric_function)
+                return metric_function, metric_source
+        raise ValueError(
+            f"Metric function with name `{function_name}` was not found in any of the {len(self.function_modules)} provided function modules."
+        )
+
     def test_function_metrics_exist(self):
         """
         Test that all function metrics specified in eval config exist and are called with appropriate args.
@@ -209,11 +249,7 @@ class TestConfiguration(unittest.TestCase):
             self.user_evals[self.eval_suite_name].get("metrics").get("function", [])
         ):
             name = function_metric["name"]
-            assert hasattr(function_metrics, name) and callable(
-                getattr(function_metrics, name, None)
-            ), f"No function named {name} exists in `function_metrics.py`"
-
-            metric_function = getattr(function_metrics, name, None)
+            metric_function, _ = self.find_function(name)
 
             # Go through arguments and make sure that the first argument has the right type and that
             # all later arguments are filled by keyword arguments
@@ -303,7 +339,7 @@ class TestConfiguration(unittest.TestCase):
             name = function_metric["name"]
             if function_metric.get("context_only", False):
                 # context_only can only be true for a string or list input function
-                metric_function = getattr(function_metrics, name, None)
+                metric_function, _ = self.find_function(name)
                 params = inspect.signature(metric_function).parameters
                 first_arg_type = next(
                     (arg_tuple[1].annotation for arg_tuple in iter(params.items())),
@@ -359,11 +395,7 @@ class TestConfiguration(unittest.TestCase):
             self.user_evals[self.eval_suite_name].get("metrics").get("function", [])
         ):
             name = function_metric["name"]
-            assert hasattr(function_metrics, name) and callable(
-                getattr(function_metrics, name, None)
-            ), f"No function named {name} exists in `function_metrics.py`"
-
-            metric_function = getattr(function_metrics, name, None)
+            metric_function, _ = self.find_function(name)
 
             first_argument_type = next(
                 iter(inspect.signature(metric_function).parameters.values())

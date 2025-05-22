@@ -40,7 +40,7 @@ def process_single_message(
         Args: 
         message (str): a single conversational message as a string
                 NOTE: Metrics that take a string as input are valid at the Turn
-                      and Message levels.
+                and Message levels.
         
         Returns:
         an integer (e.g., 2), \
@@ -332,23 +332,23 @@ def is_last_turn_in_thread(turn: Turn) -> int:
     )
     return int(max_turn_id == turn.id)
 
-def is_first_turn_in_thread(turn: Turn) -> int:
-    """
-    Returns 1 if this turn is the final turn in its thread, and 0 otherwise.
+# def is_first_turn_in_thread(turn: Turn) -> int:
+#     """
+#     Returns 1 if this turn is the final turn in its thread, and 0 otherwise.
 
-    Args:
-        turn: turn to evaluate
+#     Args:
+#         turn: turn to evaluate
 
-    Returns:
-        int: 1 for this being the temporally last turn in the thread, 0 otherwise
-    """
-    from peewee import fn
+#     Returns:
+#         int: 1 for this being the temporally last turn in the thread, 0 otherwise
+#     """
+#     from peewee import fn
 
-    # Select the id of the Turn in the current thread that has the max value
-    min_turn_id = (
-        Turn.select(fn.min(Turn.id)).where(Turn.thread_id == turn.thread.id).scalar()
-    )
-    return int(min_turn_id == turn.id)
+#     # Select the id of the Turn in the current thread that has the max value
+#     min_turn_id = (
+#         Turn.select(fn.min(Turn.id)).where(Turn.thread_id == turn.thread.id).scalar()
+#     )
+#     return int(min_turn_id == turn.id)
 
 def count_emojis(turn: str) -> int:
     """
