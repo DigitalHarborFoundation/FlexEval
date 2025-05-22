@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 class TestConfiguration(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+
         self.eval_suite_name = os.getenv("EVALUATION_NAME")
         self.config_file_name = os.getenv("CONFIG_FILENAME")
         # was set before this was called

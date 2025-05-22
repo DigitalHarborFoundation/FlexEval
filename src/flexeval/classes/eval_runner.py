@@ -10,7 +10,7 @@ import importlib
 import importlib.util
 import jsonschema
 import yaml
-from peewee import *
+from peewee import SqliteDatabase
 
 from flexeval import helpers, validate, compute_metrics
 from flexeval.classes.dataset import Dataset
@@ -21,11 +21,12 @@ from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 from flexeval.helpers import apply_defaults
+from flexeval.schema import Config, Eval
 
 logger = logging.getLogger(__name__)
 
 
-class EvalRunner(Model):
+class EvalRunner:
     """Class for maintaining database connection, logs, and run state
     Does not need to write anything to database itself.
     """
@@ -35,21 +36,18 @@ class EvalRunner(Model):
 
     def __init__(
         self,
-        eval_name: str,
-        config_path: str | Path,
-        evals_path: str | Path | None = None,
-        clear_tables: bool = False,
+        eval: Eval,
+        config: Config,
     ):
-        self.eval_name = eval_name
-        self.config_path = config_path
-        self.evals_path = evals_path
+        self.eval: Eval = eval
+        self.config: Config = config
 
         self.initialize_logger()
         self.load_configuration()
         self.add_file_logger()
         self.validate_settings()
         self.initialize_database_connection()
-        self.initialize_database_tables(clear_tables)
+        self.initialize_database_tables()
         self.load_evaluation_settings()
 
     def initialize_logger(self, add_stream_handler: bool = False):
@@ -98,23 +96,10 @@ class EvalRunner(Model):
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
 
-    def load_configuration(self):
-        """Load configuration file
-        This file contains information about relative paths, etc
-        It is NOT the file that specifies the evaluation
-        """
-
-        # Load configs
-        with open(self.config_path) as file:
-            self.configuration = yaml.safe_load(file)
-
     def validate_settings(self):
         self.logger.debug("Verifying configuration")
         # Locate the tests
         suite = unittest.defaultTestLoader.loadTestsFromModule(validate)
-        # Set args in environment so they're available in the test
-        os.environ["CONFIG_FILENAME"] = self.config_path
-        os.environ["EVALUATION_NAME"] = self.eval_name
         # Run the tests and capture the results
         validation_stream = io.StringIO()
         result = unittest.TextTestRunner(stream=validation_stream).run(suite)
@@ -141,11 +126,11 @@ class EvalRunner(Model):
         ) as conn:
             conn.execute("PRAGMA journal_mode=WAL;")  # Enable Write-Ahead Logging
 
-    def initialize_database_tables(self, clear_tables: bool = False):
-        """Initializes database tables. If clear_tables, then current contents of tables are dropped."""
+    def initialize_database_tables(self):
+        """Initializes database tables. If config.clear_tables, then current contents of tables are dropped."""
         database_path = self.configuration["database_path"]
         for cls in [EvalSetRun, Dataset, Thread, Turn, Message, ToolCall, Metric]:
-            cls.initialize_database(database_path, clear_table=clear_tables)
+            cls.initialize_database(database_path, clear_table=self.config.clear_tables)
 
     def load_evaluation_settings(self):
         """This function parses our eval suite and puts it in the data structure we'll need

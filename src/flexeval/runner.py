@@ -14,6 +14,7 @@ from flexeval.classes.eval_runner import EvalRunner
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.metric import Metric
 from flexeval.classes.turn import Turn
+from flexeval.schema import Config, Eval
 
 logger = logging.getLogger(__name__)
 
@@ -30,19 +31,19 @@ logger = logging.getLogger(__name__)
 # - allow comparison with 'ideal' responses
 
 
-def run(
-    eval_name: str, evals_path: str, config_path: str, clear_tables=False
-) -> EvalRunner:
+def run(eval: Eval, config: Config) -> EvalRunner:
     """Runs the evaluations.
 
     param: clear_tables - if True, deletes any existing data in the output database. Otherwise, appends
     """
     # TODO - make evals.yaml file path configurable
+    #         eval_name=eval_name,
+    #    config_path=config_path,
+    #    evals_path=evals_path,
+    # TODO load eval and config from paths
     runner = EvalRunner(
-        eval_name=eval_name,
-        config_path=config_path,
-        evals_path=evals_path,
-        clear_tables=clear_tables,
+        eval,
+        config,
     )
     if "env_file" in runner.configuration:
         if not Path(runner.configuration["env_file"]).exists():

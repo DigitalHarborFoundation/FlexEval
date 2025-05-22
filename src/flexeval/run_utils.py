@@ -23,7 +23,7 @@ def get_rubrics(runner: EvalRunner) -> dict:
     return rubrics
 
 
-def build_eval_set_run(runner: EvalRunner, clear_tables: bool = False) -> EvalSetRun:
+def build_eval_set_run(runner: EvalRunner) -> EvalSetRun:
     rubrics = get_rubrics(runner)
     evalsetrun = EvalSetRun.create(
         name=runner.eval.get("name", ""),
@@ -45,7 +45,6 @@ def build_eval_set_run(runner: EvalRunner, clear_tables: bool = False) -> EvalSe
                 if i["evaluation_type"] == "rubric"
             }
         ),
-        clear_tables=clear_tables,
     )
     return evalsetrun
 

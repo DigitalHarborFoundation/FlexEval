@@ -1,14 +1,10 @@
-import pathlib
-import tempfile
 import unittest
 import unittest.mock
 
-from flexeval import data_loader
-from flexeval.configuration import function_metrics
-from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_runner import EvalRunner
-from tests.unit import mixins
 from flexeval.classes.message import Message
+from flexeval.configuration import function_metrics
+from tests.unit import mixins
 
 
 class TestEvalRunner(mixins.DotenvMixin, unittest.TestCase):

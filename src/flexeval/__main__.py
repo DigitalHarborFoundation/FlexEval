@@ -47,7 +47,8 @@ def main():
     logger.debug("Command-line args: %s", str(args))
 
     # Evoke run()
-    runner.run(**vars(args))
+    eval, config = load_eval_and_config(**vars(args))
+    runner.run(eval, config)
 
 
 if __name__ == "__main__":
