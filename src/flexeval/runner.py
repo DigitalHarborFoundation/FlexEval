@@ -15,6 +15,7 @@ from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.metric import Metric
 from flexeval.classes.turn import Turn
 from flexeval.schema import Config, Eval
+from flexeval.io.parsers import yaml_parser
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +32,23 @@ logger = logging.getLogger(__name__)
 # - allow comparison with 'ideal' responses
 
 
-def run(eval: Eval, config: Config) -> EvalRunner:
-    """Runs the evaluations.
+def run_from_args(eval_name: str, config_path: str, evals_path: str, **kwargs):
+    config = yaml_parser.load_config_from_yaml(config_path)
+    evals = yaml_parser.load_evals_from_yaml(evals_path)
+    if eval_name not in evals:
+        raise ValueError(
+            f"Eval name {eval_name} not in defined evals: {list(evals.keys())}"
+        )
+    selected_eval = evals[eval_name]
+    if selected_eval.name is None:
+        selected_eval.name = eval_name
+    for key, value in kwargs.items():
+        setattr(config, key, value)
+    return run(selected_eval, config)
 
-    param: clear_tables - if True, deletes any existing data in the output database. Otherwise, appends
-    """
+
+def run(eval: Eval, config: Config) -> EvalRunner:
+    """Runs the evaluations."""
     # TODO - make evals.yaml file path configurable
     #         eval_name=eval_name,
     #    config_path=config_path,
@@ -54,7 +67,7 @@ def run(eval: Eval, config: Config) -> EvalRunner:
         # (runner.eval.get("metrics"))
         # TODO instead of raw 'metrics', pass in graph created when setting up the runner
 
-        evalsetrun = run_utils.build_eval_set_run(runner, clear_tables)
+        evalsetrun = run_utils.build_eval_set_run(runner)
         runner.logger.info(evalsetrun.metrics_graph_ordered_list)
     except Exception as e:
         runner.logger.exception(

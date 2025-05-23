@@ -39,14 +39,3 @@ def get_parser() -> argparse.ArgumentParser:
         default="src/flexeval/config.yaml",
     )
     return parser
-
-
-def load_eval_and_config(args: argparse.Namespace) -> tuple[Eval, Config]:
-    config = yaml_parser.load_config_from_yaml(args.config_path)
-    evals = yaml_parser.load_evals_from_yaml(args.evals_path)
-    if args.eval_name not in evals:
-        raise ValueError(
-            f"Eval name {args.eval_name} not in defined evals: {list(evals.keys())}"
-        )
-    selected_eval = evals[args.eval_name]
-    return selected_eval, config

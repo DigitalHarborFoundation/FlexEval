@@ -1,4 +1,3 @@
-import argparse
 import logging
 
 from flexeval import runner
@@ -17,8 +16,7 @@ def main():
     logger.debug("Command-line args: %s", str(args))
 
     # Evoke run()
-    eval, config = primary.load_eval_and_config(args)
-    runner.run(eval, config)
+    runner.run_from_args(**vars(args))
 
 
 if __name__ == "__main__":

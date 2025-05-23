@@ -24,7 +24,9 @@ def build_eval_set_run(runner: EvalRunner) -> EvalSetRun:
         notes=runner.eval.notes,
         metrics=runner.eval.metrics.model_dump_json(),
         metrics_graph_ordered_list=json.dumps(runner.metrics_graph_ordered_list),
-        dataset_files=runner.eval.data.model_dump_json(),
+        dataset_files=json.dumps(
+            runner.eval.model_dump(mode="json", include="data")["data"]
+        ),
         do_completion=runner.eval.do_completion,
         completion_llm=(
             runner.eval.completion_llm.model_dump_json()
@@ -50,20 +52,14 @@ def build_eval_set_run(runner: EvalRunner) -> EvalSetRun:
 
 
 def build_datasets(runner: EvalRunner, evalsetrun: EvalSetRun):
-    max_n_conversation_threads = runner.configuration.get(
-        "max_n_conversation_threads", None
-    )
-    nb_evaluations_per_thread = runner.configuration.get(
-        "nb_evaluations_per_thread", None
-    )
     for filename in evalsetrun.get_datasets():
         # these will automatically be saved as a property of evalsetrun
         Dataset.create(
             evalsetrun=evalsetrun,
             filename=filename,
-            max_n_conversation_threads=max_n_conversation_threads,
-            nb_evaluations_per_thread=nb_evaluations_per_thread,
+            max_n_conversation_threads=runner.config.max_n_conversation_threads,
+            nb_evaluations_per_thread=runner.config.nb_evaluations_per_thread,
         )
         runner.logger.info(
-            f"Created dataset from {filename}. Max number of conversation threads: {max_n_conversation_threads} - Nb of evaluations per thread: {nb_evaluations_per_thread}"
+            f"Created dataset from {filename}. Max number of conversation threads: {runner.config.max_n_conversation_threads} - Nb of evaluations per thread: {runner.config.nb_evaluations_per_thread}"
         )
