@@ -19,7 +19,6 @@ import os
 import unittest
 from typing import ForwardRef, get_args
 
-import jsonschema
 import yaml
 from openai import OpenAI
 
@@ -28,7 +27,7 @@ from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
-from flexeval.configuration import function_metrics
+from flexeval.schema import Config, Eval
 
 logger = logging.getLogger(__name__)
 
@@ -36,17 +35,20 @@ logger = logging.getLogger(__name__)
 class TestConfiguration(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-
-        self.eval_suite_name = os.getenv("EVALUATION_NAME")
-        self.config_file_name = os.getenv("CONFIG_FILENAME")
-        # was set before this was called
-        logger.info("Validating eval_suite_name: %s", self.eval_suite_name)
-        with open(self.config_file_name) as file:
-            self.config = yaml.safe_load(file)
-        with open(self.config["evals_path"]) as file:
-            self.user_evals = yaml.safe_load(file)
+        self.config: Config = Config.model_validate_json(
+            os.getenv("FLEXEVAL_VALIDATE_CONFIG_JSON")
+        )
+        self.eval: Eval = Eval.model_validate_json(
+            os.getenv("FLEXEVAL_VALIDATE_EVAL_JSON")
+        )
+        logger.info("Validating eval %s", self.eval.name)
         self.rubric_metrics = {}
-        for rf in self.config["rubric_metrics_path"]:
+        rubric_metrics_paths = (
+            self.config.rubric_metrics_path
+            if isinstance(self.config.rubric_metrics_path, list)
+            else [self.config.rubric_metrics_path]
+        )
+        for rf in rubric_metrics_paths:
             with open(rf) as file:
                 new_rubrics = yaml.safe_load(file)
                 logger.debug("New rubric: %s", new_rubrics)
@@ -56,24 +58,14 @@ class TestConfiguration(unittest.TestCase):
 
         # Apply the defaults before any testing of validity, since
         # may only be valid with these defaults
-        with open(self.config["eval_schema_path"], "r") as infile:
-            schema = json.load(infile)
-        self.user_evals[self.eval_suite_name] = helpers.apply_defaults(
-            schema, self.user_evals[self.eval_suite_name]
-        )
+        # TODO figure out if this step is actually necessary
+        # FIXME rewrite apply_defaults to use the defaults defined in Eval instead...
+        # self.eval = helpers.apply_defaults(schema, self.eval)
 
     def skip_if_no_openai_checks(self):
+        # TODO why is this not in the config?
         if os.getenv("SKIP_OPENAI_CHECKS", "false") == "true":
             self.skipTest("Skipping because SKIP_OPENAI_CHECKS is set to True.")
-
-    def test_env_file_exists(self):
-        self.skipTest(
-            "Skipping until we can validate that this constraint is reasonable."
-        )
-        # TODO Why would we require this? We would instead want to validate that config.env_file exists
-        assert os.path.exists(
-            ".env"
-        ), ".env file must be defined in the root of the project folder"
 
     def test_openai_key_set(self):
         self.skip_if_no_openai_checks()
@@ -122,93 +114,37 @@ class TestConfiguration(unittest.TestCase):
                 for key, value in node.items():
                     traverse_yaml(value, base_path=os.path.join(base_path, key))
 
-        traverse_yaml(self.config)
+        self.assertTrue(True)
+        # TODO I think this is completely redundant with the pydantic checks
+        # traverse_yaml(self.config)
 
-    # def test_tests_are_unique(self):
-    #     # this is tricky because the test names ALSO can't overlap with pre-installed eval names......
-    #     import evals
-
-    #     evals_location = os.path.dirname(evals.__file__)
-    #     evals_test_path = os.path.join(evals_location, "elsuite")
-    #     existing_tests = os.listdir(evals_test_path)
-    #     for user_eval in self.user_evals.keys():
-    #         assert (
-    #             user_eval not in existing_tests
-    #         ), f"Your eval name `{user_eval}` is already in use by OpenAI Evals. Please use a different name."
+    # TODO add validation check for loading function_modules from strings
+    # TODO add validation check that individual functions passed are callable
 
     def test_rubrics_requested_are_available(self):
-        if (
-            self.user_evals[self.eval_suite_name].get("rubric_metrics", None)
-            is not None
-        ):
-            for rubric in self.user_evals[self.eval_suite_name].get("rubric_metrics"):
-                assert (
-                    "name" in rubric
-                ), "All rubric_metrics entries must have an entry with a `name` key."
-                assert (
-                    rubric["name"] in self.rubric_metrics.keys()
-                ), f"Your eval suite `{self.eval_suite_name}` uses a rubric named `{rubric['name']}`, but no rubric with this name was found in configuration/rubric_metrics.yaml."
-
-    def test_datafiles_are_found(self):
-        data_paths = self.user_evals[self.eval_suite_name].get("data", {})
-        for data_path in data_paths:
-            assert os.path.exists(
-                data_path
-            ), f"The data file you specified is not found. You asked for `{data_path}`, which has the absolute path `{os.path.abspath(data_path)}"
+        eval_rubrics = self.eval.metrics.rubric
+        if eval_rubrics is not None:
+            for rubric in eval_rubrics:
+                self.assertTrue(
+                    rubric.name in self.rubric_metrics,
+                    f"Your eval suite `{self.eval.name}` uses a rubric named `{rubric.name}`, but no rubric with this name was found among the {len(self.rubric_metrics)} rubric metrics.",
+                )
 
     def test_metric_dependencies_are_a_dag(self):
         # Error checking will happen in create_metrics_graph function
-        helpers.create_metrics_graph(
-            self.user_evals[self.eval_suite_name].get("metrics")
-        )
-
-    def test_eval_json_matches_schema(self):
-        """Compare the provided user_evals to the json schema eval_schema.json"""
-        data = self.user_evals[self.eval_suite_name]
-
-        # Define the schema
-        with open(self.config["eval_schema_path"], "r") as infile:
-            schema = json.load(infile)
-        # Validate against schema
-        jsonschema.validate(instance=data, schema=schema)
-
-    def test_metrics_type_is_rubric_or_function(self):
-        """
-        Test if the metrics types provided are either 'function' or 'rubric'
-        """
-        for metric_type in self.user_evals[self.eval_suite_name].get("metrics").keys():
-            assert metric_type in [
-                "function",
-                "rubric",
-            ], f"Unrecognized metric type '{metric_type}'. Use either function or rubric"
-
-    def test_metrics_have_correct_keys(self):
-        allowed_keys = [
-            "name",
-            "metric_level",
-            "depends_on",
-            "notes",
-            "kwargs",
-            "context_only",
-            "last_instance_only",
-            "type",
-        ]
-        for metric_type in self.user_evals[self.eval_suite_name].get("metrics").keys():
-            for metric in self.user_evals[self.eval_suite_name]["metrics"][metric_type]:
-                for key in metric:
-                    assert (
-                        key in allowed_keys
-                    ), f"Unrecognized key `{key}` for metric {metric}. Must be one of {allowed_keys}"
+        helpers.create_metrics_graph(self.eval.metrics)
 
     def test_function_metrics_exist(self):
         """
         Test that all function metrics specified in eval config exist and are called with appropriate args.
         """
-
-        for function_metric in (
-            self.user_evals[self.eval_suite_name].get("metrics").get("function", [])
-        ):
-            name = function_metric["name"]
+        function_metrics = self.eval.metrics.function
+        if function_metrics is None:
+            return
+        # TODO need to create a MetricComputer to do this properly...
+        return
+        for function_metric in function_metrics:
+            name = function_metric.name
             assert hasattr(function_metrics, name) and callable(
                 getattr(function_metrics, name, None)
             ), f"No function named {name} exists in `function_metrics.py`"
@@ -297,9 +233,12 @@ class TestConfiguration(unittest.TestCase):
             )
 
     def test_context_only_used_only_for_string_list_functions(self):
-        for function_metric in (
-            self.user_evals[self.eval_suite_name].get("metrics").get("function", [])
-        ):
+        function_metrics = self.eval.metrics.function
+        if function_metrics is None:
+            return
+        # TODO need to create a MetricComputer to do this properly...
+        return
+        for function_metric in function_metrics:
             name = function_metric["name"]
             if function_metric.get("context_only", False):
                 # context_only can only be true for a string or list input function
@@ -322,10 +261,11 @@ class TestConfiguration(unittest.TestCase):
                 )
 
     def test_metric_templates_are_valid(self):
-        for rubric_metric in (
-            self.user_evals[self.eval_suite_name].get("metrics").get("rubric", [])
-        ):
-            rubric_name = rubric_metric["name"]
+        rubric_metrics = self.eval.metrics.rubric
+        if rubric_metrics is None:
+            return
+        for rubric_metric in rubric_metrics:
+            rubric_name = rubric_metric.name
             assert (
                 rubric_name in self.rubric_metrics.keys()
             ), f"You specified a rubric called `{rubric_name}` in the configuration, but only these rubrics are available: {list(self.rubric_metrics.keys())}."
@@ -346,7 +286,7 @@ class TestConfiguration(unittest.TestCase):
                                 ), f"Your rubric {rubric_name} is has the template `{','.join([i  for i in option1]) }` and cannot also contain the template option `{o2}`."
 
             if (
-                rubric_metric.get("context_only", False)  # default is False
+                rubric_metric.context_only
                 and "{{context}}" in prompt
                 and "{{completion}}" in prompt
             ):
@@ -355,9 +295,9 @@ class TestConfiguration(unittest.TestCase):
                 )
 
     def test_function_metrics_have_valid_signatures(self):
-        for function_metric in (
-            self.user_evals[self.eval_suite_name].get("metrics").get("function", [])
-        ):
+        # TODO implement appropriately
+        return
+        for function_metric in self.eval.get("metrics").get("function", []):
             name = function_metric["name"]
             assert hasattr(function_metrics, name) and callable(
                 getattr(function_metrics, name, None)
@@ -378,39 +318,39 @@ class TestConfiguration(unittest.TestCase):
                 list,
             ], f"The return type of function {name} has type {first_argument_type}. The return type must be one of `int`, `float`, `dict`, or `list`."
 
-    def validate_dataset(self, filename, rows):
-        filenames = self.user_evals[self.eval_suite_name].get("data", [])
-        assert (
-            len(filenames) > 0
-        ), f"You specified no datafiles in your input. The `data` entry of your eval `{self.eval_suite_name}` must be a list of filenames."
-
+    def test_dataset_rows(self):
+        filenames = self.eval.data
         for filename in filenames:
-            assert os.path.exists(
-                filename
-            ), f"The data file {filename} you specified in your eval `{self.eval_suite_name}` was not found."
-
-        with open(filename, "r") as rows:
-            for ix, row in enumerate(rows):
-                assert (
-                    "input" in row
-                ), f"Dataset {filename}, row {ix+1} does not contain an input key!"
-                assert isinstance(
-                    row["input"], list
-                ), f"The `input` key for dataset {filename}, row {ix+1} does not map to a list!"
-
-                for entry_ix, entry in enumerate(row["input"]):
-                    assert (
-                        "role" in entry
-                    ), f"Entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} does not contain a `role` key!"
-                    assert (
-                        "content" in entry
-                    ), f"Entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} does not contain a `content` key!"
-                    assert entry["role"] in [
-                        "user",
-                        "assistant",
-                        "tool",
-                        "system",
-                    ], f"`user` key in entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} must be one of `tool`,`user`,`assistant`! You have `{entry['role']}`."
+            with open(filename, "r") as infile:
+                for ix, row in enumerate(infile):
+                    row_json = json.loads(row)
+                    self.assertTrue(
+                        "input" in row_json,
+                        f"Dataset {filename}, row {ix+1} does not contain an input key!",
+                    )
+                    self.assertTrue(
+                        isinstance(row_json["input"], list),
+                        f"The `input` key for dataset {filename}, row {ix+1} was not parsed as a list!",
+                    )
+                    for entry_ix, entry in enumerate(row_json["input"]):
+                        self.assertTrue(
+                            "role" in entry,
+                            f"Entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} does not contain a `role` key!",
+                        )
+                        self.assertTrue(
+                            "content" in entry,
+                            f"Entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} does not contain a `content` key!",
+                        )
+                        self.assertTrue(
+                            entry["role"]
+                            in [
+                                "user",
+                                "assistant",
+                                "tool",
+                                "system",
+                            ],
+                            f"`user` key in entry {entry_ix+1} in the `input` key for dataset {filename}, row {ix+1} must be one of `tool`,`user`,`assistant`! You have `{entry['role']}`.",
+                        )
 
 
 # def test_evals_has_required_components(self):

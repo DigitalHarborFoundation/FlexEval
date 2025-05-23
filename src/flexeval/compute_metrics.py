@@ -12,7 +12,9 @@ from flexeval.configuration import completion_functions, function_metrics
 
 
 class MetricComputer:
-    def __init__(self, function_modules: list, include_default_functions: bool = True):
+    def __init__(
+        self, function_modules: list[str], include_default_functions: bool = True
+    ):
         self.function_modules = function_modules
         if include_default_functions:
             self.function_modules.append(function_metrics)

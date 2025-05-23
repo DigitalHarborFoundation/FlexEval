@@ -45,12 +45,6 @@ def run(eval: Eval, config: Config) -> EvalRunner:
         eval,
         config,
     )
-    if "env_file" in runner.configuration:
-        if not Path(runner.configuration["env_file"]).exists():
-            raise ValueError(
-                f"Environment file not present at path '{runner.configuration['env_file']}'."
-            )
-        dotenv.load_dotenv(runner.configuration["env_file"], verbose=True)
 
     #######################################################
     ############  Create Test Run  ########################

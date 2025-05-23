@@ -5,6 +5,8 @@ from typing import Any, AnyStr, Dict, List, Union
 
 import networkx as nx
 
+from flexeval.schema.eval_schema import Metrics
+
 
 def generate_hash():
     """Create a random 8-digit id"""
@@ -21,7 +23,7 @@ def generate_hash():
     return full_hash[:8]
 
 
-def create_metrics_graph(user_metrics: dict) -> List[Any]:
+def create_metrics_graph(metrics: Metrics) -> List[Any]:
     """Input is the metrics dictionary with keys 'function' and 'rubric', each of which maps to a list
     Output is list of string representations of the nodes in the graph, in topological order
 
@@ -37,17 +39,19 @@ def create_metrics_graph(user_metrics: dict) -> List[Any]:
 
     # make an intermediate datastructure that adds IDs to all listed evaluations
     user_metrics_with_ids = {}
-    for evaluation_type in user_metrics.keys():
+    for evaluation_type in ["function", "rubric"]:
         user_metrics_with_ids[evaluation_type] = []
         # add a hash to every metric in the list
-        for metric_dict in user_metrics[evaluation_type]:
-            metric_with_id = {"id": generate_hash()}
-            for k, v in metric_dict.items():
-                metric_with_id[k] = v
-            user_metrics_with_ids[evaluation_type].append(metric_with_id)
+        item_list = getattr(metrics, evaluation_type)
+        if item_list is not None:
+            for item in item_list:
+                metric_with_id = {"id": generate_hash()}
+                for k, v in item.model_dump().items():
+                    metric_with_id[k] = v
+                user_metrics_with_ids[evaluation_type].append(metric_with_id)
 
     # now that all potential parents have IDs, find parents for each child
-    for evaluation_type in user_metrics.keys():
+    for evaluation_type in ["function", "rubric"]:
         for metric_dict in user_metrics_with_ids[evaluation_type]:
             parent_metrics, depends_on_with_parent_ids = get_parent_metrics(
                 all_metrics=user_metrics_with_ids, child=metric_dict
@@ -100,9 +104,10 @@ def create_metrics_graph(user_metrics: dict) -> List[Any]:
     graph_string = "Metric Dependencies:"
     for edge in G.edges():
         graph_string += f"\n{'' if edge[1] == 'root' else edge[1]} -> {edge[0]}"
-    assert nx.is_directed_acyclic_graph(
-        G
-    ), "The set of metric dependencies must be acyclic! You have cyclical dependencies. {graph_string}"
+    if not nx.is_directed_acyclic_graph(G):
+        raise ValueError(
+            "The set of metric dependencies must be acyclic! You have cyclical dependencies. {graph_string}"
+        )
 
     # Set up sequence of evaluations
     # Perform topological sort

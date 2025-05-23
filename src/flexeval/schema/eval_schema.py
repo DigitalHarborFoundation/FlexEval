@@ -6,7 +6,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Literal
 
-from pydantic import BaseModel, Field
+import pydantic
+from pydantic import BaseModel, Field, conlist
+
+from flexeval.schema import schema_utils
 
 
 class ConfigOverrides(BaseModel):
@@ -56,51 +59,41 @@ class DependsOnItem(BaseModel):
     )
 
 
-class FunctionItem(BaseModel):
-    name: str = Field(..., description="The function to call to compute this metric.")
-    kwargs: Optional[Dict[str, Any]] = Field(
-        {},
-        description="Keyword arguments for the function. Each key must correspond to an argument in the function as implemented in `function_metrics.py`. Extra keys will cause an error.",
+class MetricItem(BaseModel):
+    name: str = Field(
+        ...,
+        description="The function to call or name of rubric to use to compute this metric.",
     )
     depends_on: Optional[List[DependsOnItem]] = Field(
-        [],
+        default_factory=list,
         description="List of dependencies that must be satisfied for this metric to be computed.",
     )
     metric_level: Optional[str] = Field(
         "Turn",
         description="What level of granularity (ToolCall, Message, Turn, or Thread) this rubric should be applied to",
     )
-    context_only: Optional[bool] = Field(
+    context_only: bool = Field(
         False,
         description="If true, only the context (that is, the previous messages) will be evaluated, not the current object. Cannot be done with only thread",
     )
-    last_instance_only: Optional[bool] = Field(
+    last_instance_only: bool = Field(
         False,
         description="If true, the object will only be evaluated if it's the last instance (i.e., turn or message depending on metric_level) in an existing conversation, or if it's a new completion.",
     )
 
 
-class RubricItem(BaseModel):
-    name: str = Field(..., description="The rubric to use to evaluate this metric.")
+class FunctionItem(MetricItem):
+    kwargs: schema_utils.OptionalDict = Field(
+        default_factory=dict,
+        description="Keyword arguments for the function. Each key must correspond to an argument in the function. Extra keys will cause an error.",
+    )
+
+
+class RubricItem(MetricItem):
+    # TODO is RubricItem.kwargs actually used?
     kwargs: Optional[Dict[str, Any]] = Field(
-        {},
-        description="Keyword arguments for the function. Each key must correspond to an argument in the function as implemented in `function_metrics.py`. Extra keys will cause an error.",
-    )
-    metric_level: Optional[str] = Field(
-        "Turn",
-        description="What level of granularity (ToolCall, Message, Turn, or Thread) this rubric should be applied to",
-    )
-    context_only: Optional[bool] = Field(
-        False,
-        description="If true, only the context (that is, the previous messages) will be evaluated, not the current object. Cannot be done with only thread",
-    )
-    last_instance_only: Optional[bool] = Field(
-        False,
-        description="If true, the object will only be evaluated if it's the last instance (i.e., turn or message depending on metric_level) in an existing conversation, or if it's a new completion.",
-    )
-    depends_on: Optional[List[DependsOnItem]] = Field(
-        [],
-        description="List of dependencies that must be satisfied for this metric to be computed.",
+        default_factory=dict,
+        description="Keyword arguments for the rubric evaluation.",
     )
 
 
@@ -123,7 +116,7 @@ class CompletionLlm(BaseModel):
     )
     include_system_prompt: Optional[bool] = False
     kwargs: Optional[Dict[str, Any]] = Field(
-        {},
+        default_factory=dict,
         description="Additional arguments that will be passed to the completion function. Must correspond to arguments in tne named function.",
     )
 
@@ -137,7 +130,7 @@ class GraderLlm(BaseModel):
         description="Function defined in `completion_functions.py`. We're not really completing a conversation, but we ARE asking an LLM to provide a response to an input - in this case, the rubric.",
     )
     kwargs: Optional[Dict[str, Any]] = Field(
-        {},
+        default_factory=dict,
         description="Additional arguments that will be passed to the completion function. Must correspond to arguments in tne named function.",
     )
 
@@ -146,7 +139,7 @@ class Eval(BaseModel):
     class Config:
         extra = "allow"
 
-    data: List[str] = Field(
+    data: conlist(pydantic.FilePath, min_length=1) = Field(
         ...,
         description="List of absolute or relative paths to data files. Each file must be in *.jsonl format, with one conversation per line.",
     )
