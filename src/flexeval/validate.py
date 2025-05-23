@@ -19,10 +19,9 @@ import os
 import unittest
 from typing import ForwardRef, get_args
 
-import yaml
 from openai import OpenAI
 
-from flexeval import helpers
+from flexeval import helpers, rubric
 from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
@@ -42,19 +41,7 @@ class TestConfiguration(unittest.TestCase):
             os.getenv("FLEXEVAL_VALIDATE_EVAL_JSON")
         )
         logger.info("Validating eval %s", self.eval.name)
-        self.rubric_metrics = {}
-        rubric_metrics_paths = (
-            self.config.rubric_metrics_path
-            if isinstance(self.config.rubric_metrics_path, list)
-            else [self.config.rubric_metrics_path]
-        )
-        for rf in rubric_metrics_paths:
-            with open(rf) as file:
-                new_rubrics = yaml.safe_load(file)
-                logger.debug("New rubric: %s", new_rubrics)
-                for key, value in new_rubrics.items():
-                    if key not in self.rubric_metrics:
-                        self.rubric_metrics[key] = value
+        self.rubric_metrics = rubric.load_rubrics_from_config(self.config)
 
         # Apply the defaults before any testing of validity, since
         # may only be valid with these defaults

@@ -2,6 +2,7 @@ import json
 import yaml
 import logging
 
+from flexeval import rubric
 from flexeval.classes.eval_runner import EvalRunner
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.dataset import Dataset
@@ -10,33 +11,32 @@ from flexeval.classes.dataset import Dataset
 logger = logging.getLogger(__name__)
 
 
-def get_rubrics(runner: EvalRunner) -> dict:
-    rubrics = {}
-    for rf in runner.configuration["rubric_metrics_path"]:
-        logger.debug("Found rubric file: %s", rf)
-        with open(rf) as file:
-            new_rubrics = yaml.safe_load(file)
-            for key, value in new_rubrics.items():
-                if key not in rubrics:
-                    rubrics[key] = value
-    logger.debug("Loaded rubrics: %s", rubrics)
-    return rubrics
-
-
 def build_eval_set_run(runner: EvalRunner) -> EvalSetRun:
-    rubrics = get_rubrics(runner)
+    rubrics = rubric.load_rubrics_from_config(runner.config)
+
+    # TODO this code uses a model_name that does not appear in the Eval schema; should look into this
+    model_name = json.dumps(None)
+    # model_name = json.dumps(
+    #        runner.eval.get("completion_llm", {}).get("model_name", None)
+    #    )
     evalsetrun = EvalSetRun.create(
-        name=runner.eval.get("name", ""),
-        notes=runner.eval.get("notes", ""),
-        metrics=json.dumps(runner.eval.get("metrics", "")),
+        name=runner.eval.name,
+        notes=runner.eval.notes,
+        metrics=runner.eval.metrics.model_dump_json(),
         metrics_graph_ordered_list=json.dumps(runner.metrics_graph_ordered_list),
-        dataset_files=json.dumps(runner.eval.get("data", "")),
-        do_completion=runner.eval.get("do_completion", False),
-        completion_llm=json.dumps(runner.eval.get("completion_llm", None)),
-        model_name=json.dumps(
-            runner.eval.get("completion_llm", {}).get("model_name", None)
+        dataset_files=runner.eval.data.model_dump_json(),
+        do_completion=runner.eval.do_completion,
+        completion_llm=(
+            runner.eval.completion_llm.model_dump_json()
+            if runner.eval.completion_llm is not None
+            else json.dumps(None)
         ),
-        grader_llm=json.dumps(runner.eval.get("grader_llm", None)),
+        model_name=model_name,
+        grader_llm=(
+            runner.eval.grader_llm.model_dump_json()
+            if runner.eval.grader_llm is not None
+            else json.dumps(None)
+        ),
         # only save rubrics that will actually be used
         rubrics=json.dumps(
             {

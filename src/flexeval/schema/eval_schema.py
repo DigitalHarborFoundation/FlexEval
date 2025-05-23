@@ -143,7 +143,7 @@ class Eval(BaseModel):
         ...,
         description="List of absolute or relative paths to data files. Each file must be in *.jsonl format, with one conversation per line.",
     )
-    do_completion: Optional[bool] = Field(
+    do_completion: bool = Field(
         False,
         description="Flag to determine if completions should be done for each conversation. Set to 'true' if you are testing a new API and want to evaluate the API responses. Set to 'false' (default) if you are evaluating past conversations and do not need to generate new completions.",
     )

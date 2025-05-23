@@ -8,6 +8,7 @@ from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
 from flexeval import run_utils
+from flexeval.io.parsers import yaml_parser
 from flexeval.classes.eval_runner import EvalRunner
 from tests.unit import mixins
 
@@ -15,13 +16,12 @@ from tests.unit import mixins
 class TestDataLoader(mixins.DotenvMixin, unittest.TestCase):
     def test_load_jsonl(self):
         config_path = "tests/resources/test_config.yaml"
+        config = yaml_parser.load_config_from_yaml(config_path)
         evals_path = "tests/resources/test_evals.yaml"
-        runner = EvalRunner(
-            eval_name="length_test",
-            config_path=config_path,
-            evals_path=evals_path,
-            clear_tables=True,
-        )
+        evals = yaml_parser.load_evals_from_yaml(evals_path)
+        eval = evals["length_test"]
+        runner = EvalRunner(eval, config)
+
         eval_set_run = run_utils.build_eval_set_run(runner)
         run_utils.build_datasets(runner, eval_set_run)
         for dataset in eval_set_run.datasets:
