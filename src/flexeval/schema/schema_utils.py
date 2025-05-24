@@ -1,6 +1,7 @@
 import types
 from typing import Annotated, Any
-from pydantic import BeforeValidator, PlainValidator, PlainSerializer
+
+from pydantic import BeforeValidator, PlainSerializer, PlainValidator
 
 
 def validate_python_module(value: Any) -> Any:

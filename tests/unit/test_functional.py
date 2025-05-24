@@ -14,13 +14,14 @@ import unittest
 
 import pandas as pd
 
-from flexeval import runner
+from flexeval import runner, log_utils
 from tests.unit import mixins
 
 
 def setUpModule():
-    logger = logging.getLogger()
-    logger.addHandler(logging.NullHandler())
+    log_utils.set_up_logging()
+    # logger = logging.getLogger()
+    # logger.addHandler(logging.NullHandler())
 
 
 class TestSuite01(mixins.DotenvMixin, unittest.TestCase):

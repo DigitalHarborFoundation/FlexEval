@@ -4,25 +4,16 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Literal
+from typing import Any, Dict, List, Literal, Optional
 
 import pydantic
 from pydantic import BaseModel, Field, conlist
 
-from flexeval.schema import schema_utils
-
-
-class ConfigOverrides(BaseModel):
-    class Config:
-        extra = "allow"
-
-    max_workers: Optional[int] = Field(
-        None,
-        description="The maximum number of worker threads allowed when computing metrics.",
-    )
+from flexeval.schema import evalrun_schema, schema_utils
 
 
 class DependsOnItem(BaseModel):
+    # TODO make this a subclass of MetricItem
     class Config:
         extra = "forbid"
 
@@ -87,6 +78,7 @@ class FunctionItem(MetricItem):
         default_factory=dict,
         description="Keyword arguments for the function. Each key must correspond to an argument in the function. Extra keys will cause an error.",
     )
+    # TODO add the ability to provide a function source: Path | FunctionsCollection | schema_utils.ModuleType
 
 
 class RubricItem(MetricItem):
@@ -95,6 +87,7 @@ class RubricItem(MetricItem):
         default_factory=dict,
         description="Keyword arguments for the rubric evaluation.",
     )
+    # TODO add the ability to provide a rubric source: Path | RubricsCollection
 
 
 class Metrics(BaseModel):
@@ -137,27 +130,20 @@ class GraderLlm(BaseModel):
 
 class Eval(BaseModel):
     class Config:
+        # TODO don't permit additional fields in Eval
         extra = "allow"
 
-    data: conlist(pydantic.FilePath, min_length=1) = Field(
-        ...,
-        description="List of absolute or relative paths to data files. Each file must be in *.jsonl format, with one conversation per line.",
-    )
     do_completion: bool = Field(
         False,
         description="Flag to determine if completions should be done for each conversation. Set to 'true' if you are testing a new API and want to evaluate the API responses. Set to 'false' (default) if you are evaluating past conversations and do not need to generate new completions.",
     )
     name: Optional[str] = Field(
-        "",
+        None,
         description="Name of the test suite. Used as metadata only. Does not need to match the key of the entry in the evals.yaml file.",
     )
     notes: Optional[str] = Field(
         "",
         description="Additional notes regarding the configuration. Used as metadata only.",
-    )
-    config: Optional[ConfigOverrides] = Field(
-        None,
-        description="Specific configuration settings that may override default settings. Look in `src/flexeval/config.yaml` for other fun things to put here.",
     )
     metrics: Metrics
     completion_llm: Optional[CompletionLlm] = Field(

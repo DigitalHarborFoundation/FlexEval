@@ -40,7 +40,7 @@ def run_from_args(eval_name: str, config_path: str, evals_path: str, **kwargs):
             f"Eval name {eval_name} not in defined evals: {list(evals.keys())}"
         )
     selected_eval = evals[eval_name]
-    if selected_eval.name is None:
+    if selected_eval.name is None or selected_eval.name.strip() == "":
         selected_eval.name = eval_name
     for key, value in kwargs.items():
         setattr(config, key, value)
@@ -49,11 +49,6 @@ def run_from_args(eval_name: str, config_path: str, evals_path: str, **kwargs):
 
 def run(eval: Eval, config: Config) -> EvalRunner:
     """Runs the evaluations."""
-    # TODO - make evals.yaml file path configurable
-    #         eval_name=eval_name,
-    #    config_path=config_path,
-    #    evals_path=evals_path,
-    # TODO load eval and config from paths
     runner = EvalRunner(
         eval,
         config,
@@ -64,7 +59,6 @@ def run(eval: Eval, config: Config) -> EvalRunner:
     #######################################################
     try:
         runner.logger.info("Creating EvalSetRun")
-        # (runner.eval.get("metrics"))
         # TODO instead of raw 'metrics', pass in graph created when setting up the runner
 
         evalsetrun = run_utils.build_eval_set_run(runner)

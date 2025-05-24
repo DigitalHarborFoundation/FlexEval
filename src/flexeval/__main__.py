@@ -1,6 +1,6 @@
 import logging
 
-from flexeval import runner
+from flexeval import runner, log_utils
 from flexeval.cli import primary
 
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ def main():
     parser = primary.get_parser()
     args = parser.parse_args()
 
-    primary.set_up_logging()
+    log_utils.set_up_logging()
 
     logger.debug("Command-line args: %s", str(args))
 
