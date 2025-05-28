@@ -8,16 +8,12 @@ from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
-from flexeval.configuration import completion_functions, function_metrics
+from flexeval.configuration import completion_functions
 
 
 class MetricComputer:
-    def __init__(
-        self, function_modules: list[str], include_default_functions: bool = True
-    ):
+    def __init__(self, function_modules: list):
         self.function_modules = function_modules
-        if include_default_functions:
-            self.function_modules.append(function_metrics)
 
     def compute_metrics(self, object: Union[Thread, Turn, Message, ToolCall]):
         """we've defined a variable called metrics_to_evaluate

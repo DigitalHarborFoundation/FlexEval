@@ -14,7 +14,7 @@ from flexeval.classes.eval_runner import EvalRunner
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.metric import Metric
 from flexeval.classes.turn import Turn
-from flexeval.schema import Config, Eval
+from flexeval.schema import Config, Eval, EvalRun, FileDataSource
 from flexeval.io.parsers import yaml_parser
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,15 @@ logger = logging.getLogger(__name__)
 # - allow comparison with 'ideal' responses
 
 
-def run_from_args(eval_name: str, config_path: str, evals_path: str, **kwargs):
+def run_from_name_args(
+    input_data: list[Path],
+    database_path: Path,
+    eval_name: str,
+    config_path: str,
+    evals_path: str,
+    **kwargs,
+):
+    data_sources = [FileDataSource(input_path) for input_path in input_data]
     config = yaml_parser.load_config_from_yaml(config_path)
     evals = yaml_parser.load_evals_from_yaml(evals_path)
     if eval_name not in evals:
@@ -44,15 +52,18 @@ def run_from_args(eval_name: str, config_path: str, evals_path: str, **kwargs):
         selected_eval.name = eval_name
     for key, value in kwargs.items():
         setattr(config, key, value)
-    return run(selected_eval, config)
-
-
-def run(eval: Eval, config: Config) -> EvalRunner:
-    """Runs the evaluations."""
-    runner = EvalRunner(
-        eval,
-        config,
+    eval_run = EvalRun(
+        data_sources=data_sources,
+        database_path=database_path,
+        eval=selected_eval,
+        config=config,
     )
+    return run(eval_run)
+
+
+def run(eval_run: EvalRun) -> EvalRunner:
+    """Runs the evaluations."""
+    runner = EvalRunner(eval_run)
 
     #######################################################
     ############  Create Test Run  ########################

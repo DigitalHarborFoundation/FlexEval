@@ -1,11 +1,9 @@
-import importlib.resources
 from pathlib import Path
 from typing import Annotated, Callable, Iterable, Literal
 
 from annotated_types import Len
-from pydantic import BaseModel, Field, FilePath, AfterValidator
+from pydantic import BaseModel, Field, FilePath
 
-import flexeval.configuration
 from flexeval.configuration import function_metrics
 from flexeval.schema import config_schema, eval_schema, schema_utils, rubric_schema
 
@@ -37,6 +35,12 @@ class FunctionsCollection(BaseModel):
     )
 
 
+def get_default_rubrics() -> list[Path | rubric_schema.RubricsCollection]:
+    from flexeval import rubric
+
+    return [rubric.get_default_rubric_collection()]
+
+
 class EvalRun(BaseModel):
     data_sources: Annotated[list[DataSource], Len(min_length=1)] = Field(
         default_factory=list,
@@ -48,13 +52,14 @@ class EvalRun(BaseModel):
     )
     eval: eval_schema.Eval
     config: config_schema.Config
-    # FIXME: this approach for getting the rubric_metrics is cheating,
-    # as it returns a Traversable and not a Path if the source is a ZIP file (for example)
-    # We should instead load the defaults into a cached RubricsCollection (using importlib.resoruces.files.read_text())
     rubric_paths: list[Path | rubric_schema.RubricsCollection] = Field(
-        [importlib.resources.files(flexeval.configuration) / "rubric_metrics.yaml"],
+        default_factory=get_default_rubrics,
         description="Additional sources for rubrics. If a Path, should be a YAML file in the expected format.",
     )
     function_modules: list[Path | FunctionsCollection | schema_utils.ModuleType] = (
         Field([function_metrics], description="Additional sources for functions.")
+    )
+    add_default_functions: bool = Field(
+        True,
+        description="If the default functions at flexeval.configuration.function_metrics should be made available.",
     )

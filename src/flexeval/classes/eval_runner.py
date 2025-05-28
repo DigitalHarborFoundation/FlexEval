@@ -20,7 +20,8 @@ from flexeval.classes.metric import Metric
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
-from flexeval.schema import Config, Eval
+from flexeval.configuration import function_metrics
+from flexeval.schema import EvalRun, FunctionsCollection
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +35,9 @@ class EvalRunner:
 
     def __init__(
         self,
-        eval: Eval,
-        config: Config,
+        evalrun: EvalRun,
     ):
-        self.eval: Eval = eval
-        self.config: Config = config
+        self.evalrun: EvalRun = evalrun
 
         self.initialize_logger()
         self.add_file_logger()
@@ -49,11 +48,16 @@ class EvalRunner:
         self.load_evaluation_settings()
 
     def initialize_logger(self, add_stream_handler: bool = False):
-        # Configure the logger
+        """Configure the logger for this class.
+
+        Args:
+            add_stream_handler (bool, optional): If True, will add a stream handler at the INFO level. Defaults to False.
+        """
         self.logger = logging.getLogger("FlexEval")
         self.logger.setLevel(logging.DEBUG)
 
         if add_stream_handler:
+            # TODO this stream handler logic should probably be removed
             # Create a console handler for lower level messages to output to console
             ch = logging.StreamHandler()
             ch.setLevel(logging.INFO)
@@ -68,10 +72,10 @@ class EvalRunner:
             self.logger.addHandler(ch)
 
     def add_file_logger(self):
-        if self.config.logs_path is None:
+        if self.evalrun.config.logs_path is None:
             logger.info(f"No log path specified, so not doing any file logging.")
             return
-        logs_path = self.config.logs_path
+        logs_path = self.evalrun.config.logs_path
         if logs_path.is_file():
             raise ValueError(
                 f"Config logs_path expects a directory, but was set to existing file '{logs_path}'."
@@ -87,7 +91,7 @@ class EvalRunner:
         current_date = datetime.now().strftime("%Y-%m-%d")
 
         # Create a file handler that logs debug and higher level messages to a date-based file
-        log_filepath = logs_path / f"{current_date}_{self.eval.name}.log"
+        log_filepath = logs_path / f"{current_date}_{self.evalrun.eval.name}.log"
         fh = logging.FileHandler(log_filepath)
         fh.setLevel(logging.DEBUG)
 
@@ -100,27 +104,25 @@ class EvalRunner:
         self.logger.info(f"Started logging to log file '{log_filepath}'.")
 
     def load_env(self):
-        if (
-            self.config.env_filepath is not None
-            and self.config.env_filepath.strip() != ""
-        ):
-            if not self.config.env_filepath.exists():
+        env_filepath = self.evalrun.config.env_filepath
+        if env_filepath is not None and env_filepath.strip() != "":
+            if not env_filepath.exists():
                 raise ValueError(
-                    f"Environment file not present at configured path '{self.config.env_filepath}'."
+                    f"Environment file not present at configured path '{env_filepath}'."
                 )
-            dotenv.load_dotenv(self.config.env_filepath, verbose=True)
-            self.logger.debug(
-                f"Finished loading .env file from '{self.config.env_filepath}'."
-            )
+            dotenv.load_dotenv(env_filepath, verbose=True)
+            self.logger.debug(f"Finished loading .env file from '{env_filepath}'.")
         else:
             self.logger.debug(
-                f"Skipping .env file loading as config env_filepath is '{self.config.env_filepath}'."
+                f"Skipping .env file loading as config env_filepath is '{env_filepath}'."
             )
 
     def validate_settings(self):
         self.logger.debug("Attempting to verify configuration.")
-        os.environ["FLEXEVAL_VALIDATE_CONFIG_JSON"] = self.config.model_dump_json()
-        os.environ["FLEXEVAL_VALIDATE_EVAL_JSON"] = self.eval.model_dump_json()
+        os.environ["FLEXEVAL_VALIDATE_CONFIG_JSON"] = (
+            self.evalrun.config.model_dump_json()
+        )
+        os.environ["FLEXEVAL_VALIDATE_EVAL_JSON"] = self.evalrun.model_dump_json()
         # Locate the tests
         suite = unittest.defaultTestLoader.loadTestsFromModule(validate)
         # Run the tests and capture the results
@@ -136,7 +138,7 @@ class EvalRunner:
         self.logger.debug("Verified configuration successfully.")
 
     def get_database_path(self) -> Path:
-        return self.config.database_path
+        return self.evalrun.database_path
 
     def initialize_database_connection(self):
         """In peewee, each object has its own database connection
@@ -153,7 +155,9 @@ class EvalRunner:
         """Initializes database tables. If config.clear_tables, then current contents of tables are dropped."""
         database_path = self.get_database_path()
         for cls in [EvalSetRun, Dataset, Thread, Turn, Message, ToolCall, Metric]:
-            cls.initialize_database(database_path, clear_table=self.config.clear_tables)
+            cls.initialize_database(
+                database_path, clear_table=self.evalrun.config.clear_tables
+            )
 
     def load_evaluation_settings(self):
         """This function parses our eval suite and puts it in the data structure we'll need
@@ -161,14 +165,14 @@ class EvalRunner:
         """
         # if the current eval has a 'config' entry, overwrite configuration options with its entries
         if self.eval.config is not None:
-            for field_name in self.eval.config.model_fields_set:
-                if hasattr(self.config, field_name):
-                    value = getattr(self.eval.config, field_name)
-                    old_value = getattr(self.config, field_name, "unset")
+            for field_name in self.evalrun.config.model_fields_set:
+                if hasattr(self.evalrun.config, field_name):
+                    value = getattr(self.evalrun.config, field_name)
+                    old_value = getattr(self.evalrun.config, field_name, "unset")
                     self.logger.info(
                         f"Updating configuration setting: {field_name}={value} (old={old_value})"
                     )
-                    setattr(self.config, field_name, value)
+                    setattr(self.evalrun.config, field_name, value)
                 else:
                     # TODO is this the expected behavior here?
                     self.logger.warning(
@@ -181,7 +185,7 @@ class EvalRunner:
 
         # convert into graph structure
         self.metrics_graph_ordered_list = helpers.create_metrics_graph(
-            self.eval.metrics
+            self.evalrun.eval.metrics
         )
 
     def shutdown_logging(self):
@@ -192,11 +196,7 @@ class EvalRunner:
             self.logger.removeHandler(handler)
 
     def get_metric_computer(self):
-        function_modules = (
-            self.config.function_modules
-            if self.config.function_modules is not None
-            else []
-        )
+        function_modules = self.evalrun.function_modules
         # convert from string module names or filepaths to Python modules
         actual_modules = []
         for i, function_module in enumerate(function_modules):
@@ -204,6 +204,8 @@ class EvalRunner:
                 # already a module
                 actual_modules.append(function_module)
                 continue
+            elif isinstance(function_module, FunctionsCollection):
+                raise ValueError("FunctionsCollection not yet implemented!")
             try:
                 module = importlib.import_module(function_module)
 
@@ -219,6 +221,9 @@ class EvalRunner:
                         f"Failed to load function module specified by {function_module}. (module not found: {module_not_found}, and failed to load from file location: {module_not_loaded})"
                     )
             actual_modules.append(module)
-        return compute_metrics.MetricComputer(
-            actual_modules, self.config.include_default_functions
-        )
+        if (
+            self.evalrun.add_default_functions
+            and function_metrics not in actual_modules
+        ):
+            actual_modules.append(function_metrics)
+        return compute_metrics.MetricComputer(actual_modules)
