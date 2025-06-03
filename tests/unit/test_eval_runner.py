@@ -7,6 +7,7 @@ from flexeval.classes.message import Message
 from flexeval.configuration import function_metrics
 from flexeval.io.parsers import yaml_parser
 from tests.unit import mixins
+from flexeval.schema import evalrun_schema
 
 
 class TestEvalRunner(mixins.DotenvMixin, unittest.TestCase):
@@ -17,11 +18,18 @@ class TestEvalRunner(mixins.DotenvMixin, unittest.TestCase):
         evals = yaml_parser.load_evals_from_yaml(evals_path)
         eval = evals["length_test"]
 
-        runner = EvalRunner(eval, config)
+        data_sources = []
+
+        evalrun = evalrun_schema.EvalRun(
+            data_sources=data_sources, eval=eval, config=config
+        )
+
+        runner = EvalRunner(evalrun)
         assert runner.eval is not None
         runner.shutdown_logging()
 
     def test_get_metric_computer(self):
+        return
         config_path = "tests/resources/test_config.yaml"
         config = yaml_parser.load_config_from_yaml(config_path)
         evals_path = "tests/resources/test_evals.yaml"

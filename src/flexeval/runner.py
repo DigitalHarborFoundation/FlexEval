@@ -4,17 +4,12 @@ import random as rd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-import dotenv
-import yaml
-
 from flexeval import compute_metrics
 from flexeval import run_utils
-from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_runner import EvalRunner
-from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.metric import Metric
 from flexeval.classes.turn import Turn
-from flexeval.schema import Config, Eval, EvalRun, FileDataSource
+from flexeval.schema import EvalRun, FileDataSource
 from flexeval.io.parsers import yaml_parser
 
 logger = logging.getLogger(__name__)
@@ -88,7 +83,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
         runner.logger.debug("Loading data")
 
         # set random seed
-        rd_seed = runner.configuration.get("random_seed_conversation_sampling", 1)
+        rd_seed = runner.evalrun.config.random_seed_conversation_sampling
         rd.seed(rd_seed)
         runner.logger.info(f"Set random seed to {rd_seed}")
 
@@ -113,13 +108,13 @@ def run(eval_run: EvalRun) -> EvalRunner:
             runner.logger.info("Generating completions")
 
             # Set up a ThreadPoolExecutor to manage threading
-            n_workers = runner.configuration.get("max_workers", 1)
+            n_workers = runner.evalrun.config.max_workers
             runner.logger.info(f"Generating completions with {n_workers} workers.")
             if n_workers == 1:
                 completions = []
                 for turn in evalsetrun.turns:
                     completion = turn.get_completion(
-                        include_system_prompt=False  # TODO - pull this from config
+                        include_system_prompt=False  # TODO - pull this from config, maybe from runner.evalrun.eval.completion_llm.include_system_prompt
                     )
                     if completion is not None:
                         completions.append(completion)
@@ -129,7 +124,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
                     futures = [
                         executor.submit(
                             turn.get_completion, include_system_prompt=False
-                        )  # TODO - pull this from config
+                        )  # TODO - pull this from config, maybe from runner.evalrun.eval.completion_llm.include_system_prompt
                         for turn in evalsetrun.turns
                     ]
 
@@ -180,7 +175,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
 
     try:
         # Set up a ThreadPoolExecutor to manage threading
-        n_workers = runner.configuration.get("max_workers", 1)
+        n_workers = runner.evalrun.config.max_workers
         runner.logger.info(f"Generating metrics with {n_workers} workers.")
 
         # collect turns to run metrics on

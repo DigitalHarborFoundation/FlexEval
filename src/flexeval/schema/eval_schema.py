@@ -144,7 +144,9 @@ class Eval(BaseModel):
         "",
         description="Additional notes regarding the configuration. Used as metadata only.",
     )
-    metrics: Metrics
+    metrics: Metrics = Field(
+        default_factory=Metrics, description="Metrics to use in the evaluation."
+    )
     completion_llm: Optional[CompletionLlm] = Field(
         None,
         description="Specification of the LLM or API used to perform new completions. Must be defined if `do_completions: true` is set.",

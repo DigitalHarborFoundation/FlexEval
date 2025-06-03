@@ -41,6 +41,12 @@ def get_default_rubrics() -> list[Path | rubric_schema.RubricsCollection]:
     return [rubric.get_default_rubric_collection()]
 
 
+def get_default_function_metrics() -> (
+    list[Path | FunctionsCollection | schema_utils.ModuleType]
+):
+    return [function_metrics]
+
+
 class EvalRun(BaseModel):
     data_sources: Annotated[list[DataSource], Len(min_length=1)] = Field(
         default_factory=list,
@@ -57,7 +63,10 @@ class EvalRun(BaseModel):
         description="Additional sources for rubrics. If a Path, should be a YAML file in the expected format.",
     )
     function_modules: list[Path | FunctionsCollection | schema_utils.ModuleType] = (
-        Field([function_metrics], description="Additional sources for functions.")
+        Field(
+            default_factory=get_default_function_metrics,
+            description="Additional sources for functions.",
+        )
     )
     add_default_functions: bool = Field(
         True,

@@ -120,3 +120,4 @@ The codebase is undergoing a Pydantic refactor (branch: `pydantic-refactor`) to:
 - Introduce EvalRun as the primary execution abstraction
 - Move from argparse to Typer for CLI
 - Improve type safety and validation throughout
+- Fixing the unit tests to use the new configuration approach

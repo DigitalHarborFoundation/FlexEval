@@ -29,7 +29,7 @@ def load_models_from_yaml_filepath(
 ) -> dict[str, T]:
     try:
         with open(filename) as file:
-            load_models_from_yaml_stream(file, model_type)
+            return load_models_from_yaml_stream(file, model_type)
     except (OSError, ValueError) as ex:
         raise ValueError(
             f"Failed to load {filename} as a list of {model_type.__name__} models: {ex}"

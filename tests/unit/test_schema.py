@@ -1,0 +1,26 @@
+import unittest
+
+from flexeval.schema import eval_schema, evalrun_schema, config_schema, rubric_schema
+from pydantic import ValidationError
+
+
+class TestSchema(unittest.TestCase):
+    def test_eval(self):
+        model = eval_schema.Eval()
+        self.assertIsNotNone(model.model_dump())
+
+    def test_config(self):
+        model = config_schema.Config()
+        self.assertIsNotNone(model.model_dump())
+
+    def test_rubric(self):
+        with self.assertRaises(ValidationError):
+            rubric_schema.Rubric(prompt="", choice_scores={})
+        model = rubric_schema.Rubric(prompt="", choice_scores={"a": 0, "b": 1})
+        self.assertIsNotNone(model.model_dump())
+
+    def test_evalrun(self):
+        model = evalrun_schema.EvalRun(
+            eval=eval_schema.Eval(), config=config_schema.Config()
+        )
+        self.assertIsNotNone(model.model_dump())

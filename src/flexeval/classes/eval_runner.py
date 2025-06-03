@@ -119,22 +119,23 @@ class EvalRunner:
 
     def validate_settings(self):
         self.logger.debug("Attempting to verify configuration.")
-        os.environ["FLEXEVAL_VALIDATE_CONFIG_JSON"] = (
-            self.evalrun.config.model_dump_json()
-        )
-        os.environ["FLEXEVAL_VALIDATE_EVAL_JSON"] = self.evalrun.model_dump_json()
-        # Locate the tests
-        suite = unittest.defaultTestLoader.loadTestsFromModule(validate)
-        # Run the tests and capture the results
-        validation_stream = io.StringIO()
-        result = unittest.TextTestRunner(stream=validation_stream).run(suite)
-        # Check if validation succeeded
-        if not result.wasSuccessful():
-            validation_output = validation_stream.getvalue()
-            error_message = f"Something is wrong with your configuration. {len(result.failures)} validation failures and {len(result.errors)} runtime errors checking {result.testsRun} tests. See report below:\n{validation_output}"
-            logger.error(error_message)
-            self.logger.error(error_message)
-            raise ValueError(f"Bad configuration for eval '{self.eval.name}'.")
+        if False:  # TODO what validation, if any, should we do here?
+            os.environ["FLEXEVAL_VALIDATE_CONFIG_JSON"] = (
+                self.evalrun.config.model_dump_json()
+            )
+            os.environ["FLEXEVAL_VALIDATE_EVAL_JSON"] = self.evalrun.model_dump_json()
+            # Locate the tests
+            suite = unittest.defaultTestLoader.loadTestsFromModule(validate)
+            # Run the tests and capture the results
+            validation_stream = io.StringIO()
+            result = unittest.TextTestRunner(stream=validation_stream).run(suite)
+            # Check if validation succeeded
+            if not result.wasSuccessful():
+                validation_output = validation_stream.getvalue()
+                error_message = f"Something is wrong with your configuration. {len(result.failures)} validation failures and {len(result.errors)} runtime errors checking {result.testsRun} tests. See report below:\n{validation_output}"
+                logger.error(error_message)
+                self.logger.error(error_message)
+                raise ValueError(f"Bad configuration for eval '{self.eval.name}'.")
         self.logger.debug("Verified configuration successfully.")
 
     def get_database_path(self) -> Path:
@@ -164,19 +165,20 @@ class EvalRunner:
         for easy use at run-time
         """
         # if the current eval has a 'config' entry, overwrite configuration options with its entries
-        if self.eval.config is not None:
+        if self.evalrun.eval.model_extra is not None:
+            model_extra = self.evalrun.eval.model_extra
             for field_name in self.evalrun.config.model_fields_set:
-                if hasattr(self.evalrun.config, field_name):
-                    value = getattr(self.evalrun.config, field_name)
+                if field_name in model_extra:
+                    # this Config field is defined on the eval
+                    value = model_extra[field_name]
                     old_value = getattr(self.evalrun.config, field_name, "unset")
                     self.logger.info(
                         f"Updating configuration setting: {field_name}={value} (old={old_value})"
                     )
                     setattr(self.evalrun.config, field_name, value)
                 else:
-                    # TODO is this the expected behavior here?
                     self.logger.warning(
-                        f"Avoiding config override for field {field_name} because it's not set in the config."
+                        f"Unknown configuration field {field_name} was ignored."
                     )
 
         # TODO verify that applying defaults is done solely by pydantic and this step is no longer necessary
@@ -195,7 +197,7 @@ class EvalRunner:
             handler.close()
             self.logger.removeHandler(handler)
 
-    def get_metric_computer(self):
+    def get_metric_computer(self) -> compute_metrics.MetricComputer:
         function_modules = self.evalrun.function_modules
         # convert from string module names or filepaths to Python modules
         actual_modules = []

@@ -1,5 +1,5 @@
 from typing import Annotated
-from pydantic import AfterValidator, Field, BaseModel
+from pydantic import AfterValidator, Field, BaseModel, field_validator
 
 
 def is_rubric_prompt_valid(prompt: str):
@@ -16,6 +16,7 @@ def is_rubric_prompt_valid(prompt: str):
 
 
 class Rubric(BaseModel):
+
     prompt: Annotated[str, AfterValidator(is_rubric_prompt_valid)] = Field(
         description="Prompt for the rubric."
     )
@@ -24,6 +25,13 @@ class Rubric(BaseModel):
     )
     name: str | None = Field(None, description="Optional name of the rubric.")
     notes: str | None = Field(None, description="Optional notes.")
+
+    @field_validator("choice_scores")
+    @classmethod
+    def check_non_empty(cls, v):
+        if not v:
+            raise ValueError(f"Must provide at least two choice scores.")
+        return v
 
 
 class RubricsCollection(BaseModel):
