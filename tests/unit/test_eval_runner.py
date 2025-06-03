@@ -18,25 +18,35 @@ class TestEvalRunner(mixins.DotenvMixin, unittest.TestCase):
         evals = yaml_parser.load_evals_from_yaml(evals_path)
         eval = evals["length_test"]
 
-        data_sources = []
-
+        data_sources = [evalrun_schema.FileDataSource(path="tests/data/simple.jsonl")]
+        database_path = ".unittest/unittest.db"
         evalrun = evalrun_schema.EvalRun(
-            data_sources=data_sources, eval=eval, config=config
+            data_sources=data_sources,
+            database_path=database_path,
+            eval=eval,
+            config=config,
         )
 
         runner = EvalRunner(evalrun)
-        assert runner.eval is not None
         runner.shutdown_logging()
 
     def test_get_metric_computer(self):
-        return
         config_path = "tests/resources/test_config.yaml"
         config = yaml_parser.load_config_from_yaml(config_path)
         evals_path = "tests/resources/test_evals.yaml"
         evals = yaml_parser.load_evals_from_yaml(evals_path)
         eval = evals["length_test"]
 
-        runner = EvalRunner(eval, config)
+        data_sources = [evalrun_schema.FileDataSource(path="tests/data/simple.jsonl")]
+        database_path = ".unittest/unittest.db"
+        evalrun = evalrun_schema.EvalRun(
+            data_sources=data_sources,
+            database_path=database_path,
+            eval=eval,
+            config=config,
+        )
+        runner = EvalRunner(evalrun)
+
         # default case
         mc = runner.get_metric_computer()
         self.assertEqual(len(mc.function_modules), 1)
@@ -47,27 +57,27 @@ class TestEvalRunner(mixins.DotenvMixin, unittest.TestCase):
         self.assertEqual(mc.invoke_function(metric_function, test_object, {}, False), 1)
 
         # non-existent module
-        runner.config.function_modules = [
+        runner.evalrun.function_modules = [
             "nonexistent_module",
         ]
         with self.assertRaises(ValueError):
             runner.get_metric_computer()
 
         # built-in module
-        runner.config.function_modules = ["re"]
+        runner.evalrun.function_modules = ["re"]
         runner.get_metric_computer()
 
         # built-in module, direct module reference
-        runner.config.function_modules = [re]
+        runner.evalrun.function_modules = [re]
         runner.get_metric_computer()
 
         # module-style path
-        runner.config.function_modules = ["tests.resources.function_metric"]
+        runner.evalrun.function_modules = ["tests.resources.function_metric"]
         mc = runner.get_metric_computer()
         self.assertTrue(mc.function_modules[0].this_function_returns_true())
 
         # file path
-        runner.config.function_modules = ["tests/resources/function_metric.py"]
+        runner.evalrun.function_modules = ["tests/resources/function_metric.py"]
         mc = runner.get_metric_computer()
         self.assertTrue(mc.function_modules[0].this_function_returns_true())
         self.assertEqual(len(mc.function_modules), 2)

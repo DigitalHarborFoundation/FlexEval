@@ -20,7 +20,12 @@ class TestSchema(unittest.TestCase):
         self.assertIsNotNone(model.model_dump())
 
     def test_evalrun(self):
+        data_sources = [
+            evalrun_schema.FileDataSource(path="tests/resources/test_dataset.jsonl")
+        ]
         model = evalrun_schema.EvalRun(
-            eval=eval_schema.Eval(), config=config_schema.Config()
+            data_sources=data_sources,
+            eval=eval_schema.Eval(),
+            config=config_schema.Config(),
         )
         self.assertIsNotNone(model.model_dump())

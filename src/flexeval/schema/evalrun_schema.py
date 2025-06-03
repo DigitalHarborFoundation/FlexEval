@@ -49,7 +49,6 @@ def get_default_function_metrics() -> (
 
 class EvalRun(BaseModel):
     data_sources: Annotated[list[DataSource], Len(min_length=1)] = Field(
-        default_factory=list,
         description="List of data sources.",
     )
     database_path: Path = Field(
@@ -62,7 +61,7 @@ class EvalRun(BaseModel):
         default_factory=get_default_rubrics,
         description="Additional sources for rubrics. If a Path, should be a YAML file in the expected format.",
     )
-    function_modules: list[Path | FunctionsCollection | schema_utils.ModuleType] = (
+    function_modules: list[FilePath | FunctionsCollection | schema_utils.ModuleType] = (
         Field(
             default_factory=get_default_function_metrics,
             description="Additional sources for functions.",
