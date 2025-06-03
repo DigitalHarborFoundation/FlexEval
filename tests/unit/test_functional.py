@@ -8,7 +8,6 @@ Then run
 
 """
 
-import logging
 import sqlite3
 import unittest
 
@@ -16,12 +15,22 @@ import pandas as pd
 
 from flexeval import runner, log_utils
 from tests.unit import mixins
+from flexeval.classes.eval_runner import EvalRunner
 
 
 def setUpModule():
     log_utils.set_up_logging()
-    # logger = logging.getLogger()
-    # logger.addHandler(logging.NullHandler())
+
+
+def run_eval(eval_name: str) -> EvalRunner:
+    return runner.run_from_name_args(
+        input_data=["tests/data/simple.jsonl"],
+        database_path="tests/data/unit_functional_results.db",
+        eval_name=eval_name,
+        config_path="tests/resources/functional_config.yaml",
+        evals_path="tests/resources/functional_evals.yaml",
+        clear_tables=True,
+    )
 
 
 class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
@@ -30,12 +39,7 @@ class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
         # in this case, we run the evals via main.py
-        cls.runner = runner.run_from_args(
-            eval_name="test_suite_01",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        cls.runner = run_eval("test_suite_01")
         cls.database_path = cls.runner.get_database_path()
 
     @classmethod
@@ -160,12 +164,7 @@ class TestSuite02(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
         # in this case, we run the evals via main.py
-        cls.runner = runner.run_from_args(
-            eval_name="test_suite_02",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        cls.runner = run_eval("test_suite_02")
         cls.database_path = cls.runner.get_database_path()
 
     def test_simple_condition_is_met_once(self):

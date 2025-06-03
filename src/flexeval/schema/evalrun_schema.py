@@ -9,6 +9,8 @@ from flexeval.schema import config_schema, eval_schema, schema_utils, rubric_sch
 
 
 class DataSource(BaseModel):
+    # TODO support more generic DataSource interface
+    # for now, we need to use FileDataSource because we path the JSONL paths along
     name: str | None = Field(None, description="")
     notes: str | None = Field(None, description="")
 
@@ -48,7 +50,7 @@ def get_default_function_metrics() -> (
 
 
 class EvalRun(BaseModel):
-    data_sources: Annotated[list[DataSource], Len(min_length=1)] = Field(
+    data_sources: Annotated[list[FileDataSource], Len(min_length=1)] = Field(
         description="List of data sources.",
     )
     database_path: Path = Field(

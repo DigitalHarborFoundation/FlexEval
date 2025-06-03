@@ -35,7 +35,7 @@ def run_from_name_args(
     evals_path: str,
     **kwargs,
 ):
-    data_sources = [FileDataSource(input_path) for input_path in input_data]
+    data_sources = [FileDataSource(path=input_path) for input_path in input_data]
     config = yaml_parser.load_config_from_yaml(config_path)
     evals = yaml_parser.load_evals_from_yaml(evals_path)
     if eval_name not in evals:

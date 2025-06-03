@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def build_eval_set_run(runner: EvalRunner) -> EvalSetRun:
-    rubrics = rubric.load_rubrics_from_config(runner.config)
+    rubrics = rubric.load_rubric_metrics(runner.evalrun.rubric_paths)
 
     # TODO this code uses a model_name that does not appear in the Eval schema; should look into this
     model_name = json.dumps(None)
@@ -20,23 +20,23 @@ def build_eval_set_run(runner: EvalRunner) -> EvalSetRun:
     #        runner.eval.get("completion_llm", {}).get("model_name", None)
     #    )
     evalsetrun = EvalSetRun.create(
-        name=runner.eval.name,
-        notes=runner.eval.notes,
-        metrics=runner.eval.metrics.model_dump_json(),
+        name=runner.evalrun.eval.name,
+        notes=runner.evalrun.eval.notes,
+        metrics=runner.evalrun.eval.metrics.model_dump_json(),
         metrics_graph_ordered_list=json.dumps(runner.metrics_graph_ordered_list),
         dataset_files=json.dumps(
-            runner.eval.model_dump(mode="json", include="data")["data"]
+            [str(data_source.path) for data_source in runner.evalrun.data_sources]
         ),
-        do_completion=runner.eval.do_completion,
+        do_completion=runner.evalrun.eval.do_completion,
         completion_llm=(
-            runner.eval.completion_llm.model_dump_json()
-            if runner.eval.completion_llm is not None
+            runner.evalrun.eval.completion_llm.model_dump_json()
+            if runner.evalrun.eval.completion_llm is not None
             else json.dumps(None)
         ),
         model_name=model_name,
         grader_llm=(
-            runner.eval.grader_llm.model_dump_json()
-            if runner.eval.grader_llm is not None
+            runner.evalrun.eval.grader_llm.model_dump_json()
+            if runner.evalrun.eval.grader_llm is not None
             else json.dumps(None)
         ),
         # only save rubrics that will actually be used
@@ -57,9 +57,9 @@ def build_datasets(runner: EvalRunner, evalsetrun: EvalSetRun):
         Dataset.create(
             evalsetrun=evalsetrun,
             filename=filename,
-            max_n_conversation_threads=runner.config.max_n_conversation_threads,
-            nb_evaluations_per_thread=runner.config.nb_evaluations_per_thread,
+            max_n_conversation_threads=runner.evalrun.config.max_n_conversation_threads,
+            nb_evaluations_per_thread=runner.evalrun.config.nb_evaluations_per_thread,
         )
         runner.logger.info(
-            f"Created dataset from {filename}. Max number of conversation threads: {runner.config.max_n_conversation_threads} - Nb of evaluations per thread: {runner.config.nb_evaluations_per_thread}"
+            f"Created dataset from {filename}. Max number of conversation threads: {runner.evalrun.config.max_n_conversation_threads} - Nb of evaluations per thread: {runner.evalrun.config.nb_evaluations_per_thread}"
         )

@@ -26,6 +26,7 @@ class EvalSetRun(BaseModel):
     )  # Automatically set to current date and time
 
     def get_datasets(self) -> list[str]:
+        # TODO Turn these into DataSource instances instead, returning list[DataSource]
         temp = json.loads(self.dataset_files)
         assert isinstance(temp, list), "The `data` entry in evals.yaml must be a list."
         return temp
