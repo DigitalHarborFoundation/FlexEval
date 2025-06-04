@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import sys
+
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -12,7 +14,6 @@ from flexeval.schema import schema_utils
 
 
 class DependsOnItem(BaseModel):
-    # TODO make this a subclass of MetricItem
     class Config:
         extra = "forbid"
 
@@ -40,11 +41,11 @@ class DependsOnItem(BaseModel):
         description="Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key.",
     )
     metric_min_value: Optional[float] = Field(
-        "-1e20",
+        -sys.float_info.max,
         description="Minimum value of the dependency to consider it as satisfied.",
     )
     metric_max_value: Optional[float] = Field(
-        "1e20",
+        sys.float_info.max,
         description="Maximum value of the dependency to consider it as satisfied.",
     )
 

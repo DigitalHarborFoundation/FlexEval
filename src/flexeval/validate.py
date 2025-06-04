@@ -21,7 +21,7 @@ from typing import ForwardRef, get_args
 
 from openai import OpenAI
 
-from flexeval import helpers, rubric
+from flexeval import dependency_graph, rubric
 from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
@@ -119,7 +119,7 @@ class TestConfiguration(unittest.TestCase):
 
     def test_metric_dependencies_are_a_dag(self):
         # Error checking will happen in create_metrics_graph function
-        helpers.create_metrics_graph(self.eval.metrics)
+        dependency_graph.create_metrics_graph(self.eval.metrics)
 
     def test_function_metrics_exist(self):
         """

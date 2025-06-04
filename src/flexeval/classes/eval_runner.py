@@ -12,7 +12,7 @@ from pathlib import Path
 import dotenv
 from peewee import SqliteDatabase
 
-from flexeval import compute_metrics, helpers, validate
+from flexeval import compute_metrics, dependency_graph, validate
 from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.message import Message
@@ -186,7 +186,7 @@ class EvalRunner:
         # self.eval = apply_defaults(schema=target_schema, data=self.eval)
 
         # convert into graph structure
-        self.metrics_graph_ordered_list = helpers.create_metrics_graph(
+        self.metrics_graph_ordered_list = dependency_graph.create_metrics_graph(
             self.evalrun.eval.metrics
         )
 
