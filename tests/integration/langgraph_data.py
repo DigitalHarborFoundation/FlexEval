@@ -72,7 +72,7 @@ def generate_langgraph_data(
 
 
 if __name__ == "__main__":
-    load_dotenv()
+    load_dotenv(override=True)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d (%(funcName)s) - %(message)s",

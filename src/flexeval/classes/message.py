@@ -150,7 +150,10 @@ class Message(BaseModel):
             output_minus_completion += f"{i['role']}: {i['content']}\n"
         completion = f"{input[-1]['content']}"
         output = output_minus_completion + completion
-
+        # get message before the last one
+        last_message = ""
+        if len(input) > 1:
+            last_message = f"{input[-2]['role']}: {input[-2]['content']}\n"
         tool_call_text = ""
         for tc in self.toolcalls:
             tool_call_text += """
@@ -168,7 +171,7 @@ Function output: {response_content}
         # output_minus_completion - all turns except the last
         # completion - last turn
         # tool_call_text - all tool calls
-        return output, output_minus_completion, completion, tool_call_text
+        return output, output_minus_completion, completion, tool_call_text, last_message
 
     def get_content(self):
         return self.content

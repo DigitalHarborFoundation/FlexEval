@@ -18,7 +18,7 @@ def load_jsonl(
     dataset: Dataset,
     filename: str | pathlib.Path,
     max_n_conversation_threads: int | None = None,
-    nb_evaluations_per_thread: int | None = 1
+    nb_evaluations_per_thread: int | None = 1,
 ):
     with open(filename, "r") as infile:
         contents = infile.read()  # will be a big string
@@ -40,15 +40,17 @@ def load_jsonl(
                 f"You requested {max_n_conversation_threads} conversations but only {len(all_lines)} are present in Jsonl dataset."
             )
             selected_thread_ids = list(range(len(all_lines)))
-            
+
         ### should duplicate the select threads nb_evaluations_per_thread times
         if nb_evaluations_per_thread is None:
             nb_evaluations_per_thread = 1
 
         for thread_id, thread in enumerate(all_lines):
-            
-            for thread_eval_run_id in range(max(1, nb_evaluations_per_thread)): # duplicate stored threads for averaged evaluation results
-                
+
+            for thread_eval_run_id in range(
+                max(1, nb_evaluations_per_thread)
+            ):  # duplicate stored threads for averaged evaluation results
+
                 if thread_id in selected_thread_ids:
                     # The code snippet you provided is not complete and does not perform any specific
                     # action. It seems to be a partial line of code in Python that declares a variable
@@ -59,7 +61,9 @@ def load_jsonl(
                         evalsetrun=dataset.evalsetrun,
                         dataset=dataset,
                         jsonl_thread_id=thread_id,
-                        eval_run_thread_id=str(thread_id)+'_'+str(thread_eval_run_id)
+                        eval_run_thread_id=str(thread_id)
+                        + "_"
+                        + str(thread_eval_run_id),
                     )
 
                     # Context
@@ -104,9 +108,21 @@ def load_jsonl(
 
 
 def load_langgraph_sqlite(
-    dataset: Dataset, filename: str, max_n_conversation_threads: int | None = None, nb_evaluations_per_thread: int | None = 1
+    dataset: Dataset,
+    filename: str,
+    max_n_conversation_threads: int | None = None,
+    nb_evaluations_per_thread: int | None = 1,
+    langgraph_nodes_to_ignore: list = []
 ):
     serializer = JsonPlusSerializer()
+
+    langgraph_nodes_to_ignore = dataset.langgraph_nodes_to_ignore
+    if langgraph_nodes_to_ignore is None:
+        langgraph_nodes_to_ignore = []
+    elif isinstance(langgraph_nodes_to_ignore, str):
+        langgraph_nodes_to_ignore = json.loads(langgraph_nodes_to_ignore)
+    elif isinstance(langgraph_nodes_to_ignore, list):
+        pass
 
     with sqlite3.connect(filename) as conn:
         # Set the row factory to sqlite3.Row
@@ -125,6 +141,9 @@ def load_langgraph_sqlite(
         query = "select distinct thread_id from checkpoints"
         cursor.execute(query)
         thread_ids = cursor.fetchall()
+        if max_n_conversation_threads is not None:
+            thread_ids = thread_ids[:max_n_conversation_threads]
+        print(f"Loading data from {len(thread_ids)} threads")
 
         nb_threads = len(thread_ids)
         if max_n_conversation_threads is None:
@@ -137,17 +156,19 @@ def load_langgraph_sqlite(
                 f"You requested {max_n_conversation_threads} conversations but only {nb_threads} are present in Sqlite dataset."
             )
             selected_thread_ids = thread_ids
-        
-        print(" DEBUG DUPLICATE SELECT THREAD IDS\n", selected_thread_ids[0])
-        
-        for thread_eval_run_id in range(max(1, nb_evaluations_per_thread)): # duplicate stored threads for averaged evaluation results
-        
+
+        for thread_eval_run_id in range(
+            max(1, nb_evaluations_per_thread)
+        ):  # duplicate stored threads for averaged evaluation results
+
             for thread_id in selected_thread_ids:
                 thread = Thread.create(
                     evalsetrun=dataset.evalsetrun,
                     dataset=dataset,
                     langgraph_thread_id=thread_id[0],
-                    eval_run_thread_id=str(thread_id[0])+'_'+str(thread_eval_run_id)
+                    eval_run_thread_id=str(thread_id[0])
+                    + "_"
+                    + str(thread_eval_run_id),
                 )
 
                 # Create messages
@@ -247,8 +268,9 @@ def load_langgraph_sqlite(
                         if len(context) == 0:
                             context.append({"role": "system", "content": system_prompt})
 
-                        # iterate through nodes - there is probably only 1
+                        
                         for node, value in update_dict.items():
+                            #print("NODE", node)
                             # iterate through list of message updates
                             if "messages" in value:
                                 if isinstance(value["messages"], dict):
@@ -258,20 +280,42 @@ def load_langgraph_sqlite(
                                     messagelist = value["messages"]
                                 for message in messagelist:
                                     if role == "user":
-                                        content = (
-                                            message.get("kwargs", {})
-                                            .get("content", {})
-                                            .get("kwargs", {})
-                                            .get("content", None)
-                                        )
+                                        if (
+                                            isinstance(
+                                                message.get("content", None), str
+                                            )
+                                            and message.get("content", "") != ""
+                                        ):
+                                            content = message["content"]
+                                        else:
+                                            content = (
+                                                message.get("kwargs", {})
+                                                .get("content", {})
+                                                .get("kwargs", {})
+                                                .get("content", None)
+                                            )
                                     elif role == "assistant":
-                                        content = message.get("kwargs", {}).get(
-                                            "content", None
-                                        )
+                                        if isinstance(
+                                            message.get("content", None), str
+                                        ):
+                                            content = message["content"]
+                                        else:
+                                            content = message.get("kwargs", {}).get(
+                                                "content", None
+                                            )
+                                        import pprint
+
+                                        # print("MESSAGE", node)
+                                        # pprint.pprint(message)
+                                        # print("CONTENT", node)
+                                        # pprint.pprint(content)
+                                        # input()
                                     else:
                                         raise Exception(
                                             "`role` should be either user or assistant."
                                         )
+                                    if node in langgraph_nodes_to_ignore:
+                                        content = ''
                                     Message.create(
                                         evalsetrun=dataset.evalsetrun,
                                         dataset=dataset,
@@ -283,7 +327,9 @@ def load_langgraph_sqlite(
                                         system_prompt=system_prompt,
                                         # language model stats
                                         tool_calls=json.dumps(
-                                            message.get("kwargs", {}).get("tool_calls", [])
+                                            message.get("kwargs", {}).get(
+                                                "tool_calls", []
+                                            )
                                         ),
                                         tool_call_ids=[
                                             tc["id"]
@@ -292,7 +338,9 @@ def load_langgraph_sqlite(
                                             )
                                         ],
                                         n_tool_calls=len(
-                                            message.get("kwargs", {}).get("tool_calls", [])
+                                            message.get("kwargs", {}).get(
+                                                "tool_calls", []
+                                            )
                                         ),
                                         prompt_tokens=message.get("kwargs", {})
                                         .get("response_metadata", {})
@@ -320,7 +368,9 @@ def load_langgraph_sqlite(
                                         ),  # Have to re-dump this because of the de-serialization#completion_row["checkpoint"],
                                         langgraph_metadata=completion_row["metadata"],
                                         langgraph_node=node,
-                                        langgraph_message_type=message["id"][-1],
+                                        langgraph_message_type=message.get(
+                                            "id", [None]
+                                        )[-1],
                                         langgraph_type=message.get("kwargs", {}).get(
                                             "type"
                                         ),
@@ -335,15 +385,18 @@ def load_langgraph_sqlite(
                                         {
                                             "role": role,
                                             "content": content,
-                                            "langgraph_role": message["id"][-1],
+                                            "langgraph_role": message.get("id", [None])[
+                                                -1
+                                            ],
                                         }
                                     )
-
                                     # record tool call info so we can match them up later
                                     if message.get("kwargs", {}).get("type") == "tool":
                                         # this should have a mapping between tool_call_id and the RESPONSE to to the tool call
                                         tool_responses_dict[
-                                            message.get("kwargs", {}).get("tool_call_id")
+                                            message.get("kwargs", {}).get(
+                                                "tool_call_id"
+                                            )
                                         ] = message.get("kwargs", {}).get("content", "")
                                     else:
                                         for tool_call in message.get("kwargs", {}).get(
@@ -352,10 +405,10 @@ def load_langgraph_sqlite(
                                             # this should have all the info about the tool calls, including additional_kwargs
                                             # but NOT their responses
                                             tool_calls_dict[tool_call["id"]] = tool_call
-                                            tool_addional_kwargs_dict[tool_call["id"]] = (
-                                                message.get("kwargs", {}).get(
-                                                    "additional_kwargs", {}
-                                                )
+                                            tool_addional_kwargs_dict[
+                                                tool_call["id"]
+                                            ] = message.get("kwargs", {}).get(
+                                                "additional_kwargs", {}
                                             )
 
                 # Add turns to each message
@@ -367,7 +420,7 @@ def load_langgraph_sqlite(
                 for tool_call_id, tool_call_vals in tool_calls_dict.items():
                     # DEBUG
                     # tool_call_id is defined
-
+                    
                     assert (
                         tool_call_id in tool_responses_dict
                     ), f"Found a tool call without a tool response! id: {tool_call_id}"
@@ -375,7 +428,10 @@ def load_langgraph_sqlite(
                     matching_message = [
                         m for m in thread.messages if tool_call_id in m.tool_call_ids
                     ][0]
-
+                    if matching_message.langgraph_node in langgraph_nodes_to_ignore:
+                        response_content = ''
+                    else:
+                        response_content = tool_responses_dict.get(tool_call_id)
                     ToolCall.create(
                         evalsetrun=dataset.evalsetrun,
                         dataset=dataset,
@@ -388,10 +444,8 @@ def load_langgraph_sqlite(
                             tool_addional_kwargs_dict.get(tool_call_id)
                         ),
                         tool_call_id=tool_call_id,
-                        response_content=tool_responses_dict.get(tool_call_id),
+                        response_content=response_content
                     )
-
-                ## Add system prompt if available?
 
 
 def add_turns(thread: Thread):

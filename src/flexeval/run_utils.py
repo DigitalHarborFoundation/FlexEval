@@ -64,6 +64,7 @@ def build_datasets(runner: EvalRunner, evalsetrun: EvalSetRun):
             filename=filename,
             max_n_conversation_threads=max_n_conversation_threads,
             nb_evaluations_per_thread=nb_evaluations_per_thread,
+            langgraph_nodes_to_ignore=json.dumps(runner.configuration.get('langgraph_nodes_to_ignore', [])),
         )
         runner.logger.info(
             f"Created dataset from {filename}. Max number of conversation threads: {max_n_conversation_threads} - Nb of evaluations per thread: {nb_evaluations_per_thread}"

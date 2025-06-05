@@ -1,3 +1,5 @@
+# Default configuration paths. 
+# These can be overridden by specifying entries in the 'config' option in your evals.yaml
 
 
 # paths are relative to the root of the repo
@@ -11,12 +13,12 @@ eval_schema_path: src/flexeval/eval_schema.json
 
 database_path: data/results/results.db
 
+# These are defaults. None means 'all'
 max_workers: 1
-
 random_seed_conversation_sampling: 42
-max_n_conversation_threads: 50
+max_n_conversation_threads: None
 nb_evaluations_per_thread: 1
-
+langgraph_nodes_to_ignore: !!seq []
 
 
 # any additional environment variables
