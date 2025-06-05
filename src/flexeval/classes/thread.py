@@ -56,11 +56,14 @@ Function output: {response_content}
                 response_content=tc.response_content,
             )
 
+        # not sure how to handle this yet
+        last_message_before_turn = ""
+
         # output - all turns
         # output_minus_completion - all turns except the last
         # completion - last turn
         # tool_call_text - all tool calls
-        return output, output_minus_completion, completion, tool_call_text
+        return output, output_minus_completion, completion, tool_call_text, last_message_before_turn
 
     def get_formatted_prompt(self, include_system_prompt=False):
         formatted_prompt = []

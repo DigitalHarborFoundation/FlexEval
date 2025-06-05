@@ -160,10 +160,11 @@ class Turn(BaseModel):
                 {"role": "system", "content": self.system_prompt}
             )
 
-        for msg in self.get_context():  # input[:-1]:
+        turn_context = self.get_context()
+        for msg in turn_context:  # input[:-1]:
             # this outputs user: XYZ, or assistant: 123
             if len(msg["content"]) > 0 and (
-                include_tool_messages or msg["langgraph_role"] != "tool"
+                include_tool_messages or (hasattr(msg, "langgraph_role") and msg["langgraph_role"] != "tool")
             ):
                 output_minus_completion += f"{msg['role']}: {msg['content']}\n"
         # Including role as prefix to account for both tool and assistant
@@ -173,6 +174,12 @@ class Turn(BaseModel):
                 completion += f"{msg['role']}: {msg['content']}\n"
         # completion = f"{self.get_content()['content']}"
         output = output_minus_completion + completion
+
+        # get last message before this turn
+        last_message_before_turn = ""
+        if len(turn_context) > 1:
+            msg = turn_context[-1]
+            last_message_before_turn = f"{msg['role']}: {msg['content']}\n"
 
         tool_call_text = ""
         for tc in self.toolcalls:
@@ -197,4 +204,4 @@ class Turn(BaseModel):
         # output_minus_completion - all turns except the last
         # completion - last turn
         # tool_call_text - all tool calls
-        return output, output_minus_completion, completion, tool_call_text
+        return output, output_minus_completion, completion, tool_call_text, last_message_before_turn

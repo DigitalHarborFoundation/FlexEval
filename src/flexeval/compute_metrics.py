@@ -278,7 +278,7 @@ class MetricComputer:
         prompt = rubrics.get(rubric_name).get("prompt", "")
 
         # format input for rubric
-        conversation, context, content, tool_calls = object.format_input_for_rubric()
+        conversation, context, content, tool_calls, last_message = object.format_input_for_rubric()
         # conversation : all turns; context: all turns without the last entry; completion: only the last entry
         # use three keywords:
         # #{conversation} -- The whole conversation
@@ -311,6 +311,7 @@ class MetricComputer:
             context=context,
             content=content,
             tool_calls=tool_calls,
+            last_message=last_message
         )
 
         # with do_completion == True, only the completion is evaluated with or without the context.
