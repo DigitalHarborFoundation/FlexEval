@@ -177,7 +177,7 @@ class Turn(BaseModel):
 
         # get last message before this turn
         last_message_before_turn = ""
-        if len(turn_context) > 1:
+        if len(turn_context) > 0:
             msg = turn_context[-1]
             last_message_before_turn = f"{msg['role']}: {msg['content']}\n"
 
