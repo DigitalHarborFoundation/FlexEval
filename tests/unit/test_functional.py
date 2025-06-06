@@ -444,59 +444,31 @@ class ConfigFailures(mixins.DotenvMixin, unittest.TestCase):
 
     @unittest.expectedFailure
     def test_config_failure_01(cls):
-        runner.run_from_args(
-            eval_name="config_failure_01",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_01")
 
     @unittest.expectedFailure
     def test_config_failure_02(cls):
-        runner.run_from_args(
-            eval_name="config_failure_02",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_02")
 
     @unittest.expectedFailure
     def test_config_failure_03(cls):
-        runner.run_from_args(
-            eval_name="config_failure_03",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_03")
 
     @unittest.expectedFailure
     def test_config_failure_04(cls):
-        runner.run_from_args(
-            eval_name="config_failure_04",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_04")
 
     @unittest.expectedFailure
     def test_config_failure_05(cls):
-        runner.run_from_args(
-            eval_name="config_failure_05",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_05")
 
     @unittest.expectedFailure
     def test_config_failure_06(cls):
-        runner.run_from_args(
-            eval_name="config_failure_06",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_06")
 
     @unittest.expectedFailure
     def test_config_failure_07(cls):
-        runner.run_from_args(
-            eval_name="config_failure_07",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_07")
 
 
 class TestBasicFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
