@@ -68,7 +68,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
         # TODO instead of raw 'metrics', pass in graph created when setting up the runner
 
         evalsetrun = run_utils.build_eval_set_run(runner)
-        runner.logger.info(evalsetrun.metrics_graph_ordered_list)
+        runner.logger.info(f"Metric graph: {evalsetrun.metrics_graph_ordered_list}")
     except Exception as e:
         runner.logger.exception(
             "An error occurred creating the EvalSetRun.", exc_info=True

@@ -32,10 +32,6 @@ class DependsOnItem(BaseModel):
         None,
         description="The context_only value for the dependency. If provided, used to match which evaluation this dependency is for.",
     )
-    last_turn_only: Optional[bool] = Field(
-        None,
-        description="The last_turn_only value for the dependency. If provided, used to match which evaluation this dependency is for.",
-    )
     metric_name: Optional[str] = Field(
         None,
         description="Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key.",
@@ -66,10 +62,6 @@ class MetricItem(BaseModel):
     context_only: bool = Field(
         False,
         description="If true, only the context (that is, the previous messages) will be evaluated, not the current object. Cannot be done with only thread",
-    )
-    last_instance_only: bool = Field(
-        False,
-        description="If true, the object will only be evaluated if it's the last instance (i.e., turn or message depending on metric_level) in an existing conversation, or if it's a new completion.",
     )
 
 

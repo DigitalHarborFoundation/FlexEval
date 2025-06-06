@@ -104,7 +104,6 @@ class MetricComputer:
         metric_level: str,
         kwargs: dict,
         context_only: bool = None,
-        last_instance_only: bool = None,
         depends_on: list = None,
         id: int = None,
         notes: str = None,  # just a placeholder
@@ -115,7 +114,6 @@ class MetricComputer:
                 metric_kwargs=kwargs,
                 metric_level=metric_level,
                 context_only=context_only,
-                last_turn_only=last_instance_only,
                 input_object=object,
                 depends_on=depends_on,
                 id=id,
@@ -198,7 +196,6 @@ class MetricComputer:
         input_object: Union[Thread, Turn, Message, ToolCall],
         metric_level: str,
         context_only: bool,
-        last_turn_only: bool,
         depends_on: list,
         id: int,
     ):
@@ -206,11 +203,6 @@ class MetricComputer:
         # they share most of the same information though so it's convenient to have them constructed similarly
         # will return a list of dictionaries
 
-        # if this is set, exit unless the criteria are met
-        if last_turn_only and not (
-            input_object.is_completion or input_object.is_final_turn_in_input
-        ):
-            return []
         # Check if the function exists in any of the function namespaces
         metric_function, metric_source = self.find_function(function_name)
         metrics_result = self.invoke_function(
@@ -225,7 +217,6 @@ class MetricComputer:
             "kwargs": metric_kwargs,
             "source": metric_source,  # TODO - put this back?
             "context_only": context_only,
-            "last_turn_only": last_turn_only,
             "depends_on": depends_on,
             "id": id,
         }

@@ -180,7 +180,8 @@ class TestSuite02(mixins.DotenvMixin, unittest.TestCase):
                 and evaluation_name = 'flesch_reading_ease'
                 """
             ).fetchall()
-        self.assertEqual(len(metric), 1, "More than one row was returned!")
+        self.assertGreater(len(metric), 0, "No rows returned!")
+        self.assertLess(len(metric), 2, "Expected exactly one row!")
         self.assertAlmostEqual(metric[0][0], 2)
 
     def test_simple_condition_is_always_met(self):
