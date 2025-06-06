@@ -1,6 +1,7 @@
 import copy
 import inspect
 import json
+import logging
 import string
 from typing import Union, Any
 
@@ -9,6 +10,9 @@ from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 from flexeval.configuration import completion_functions
+
+
+logger = logging.getLogger(__name__)
 
 
 class MetricComputer:
@@ -35,7 +39,10 @@ class MetricComputer:
             dependencies_are_all_met = True
             # If there are no dependencies, this loop won't execute
             # and the metric will be evaluated
-            if len(metric_to_evaluate.get("depends_on")) > 0:
+            if (
+                "depends_on" in metric_to_evaluate
+                and len(metric_to_evaluate["depends_on"]) > 0
+            ):
                 # here, we have a metric with 1+ dependencies
                 # ALL of these dependencies must be satisfied
 
@@ -46,40 +53,25 @@ class MetricComputer:
                 # 4 - the metric_max_value
                 # not meeting ANY of them will short-circuit the loop and cause the eval to not evaluate
                 # check all dependencies
-                for dependency in metric_to_evaluate.get("depends_on"):
+                for dependency in metric_to_evaluate["depends_on"]:
                     # for each dependency, assume it's not met
                     # if it's in the list AND its values meet the criteria, it's met
                     dependency_is_met = False
                     # if a specific metric_name was specified, you need to match exactly:
-                    if "metric_name" in dependency:
-                        for em in evaluated_metrics:
-                            # I think the 'depends_on' should have all fields populated at this point
-
+                    for em in evaluated_metrics:
+                        # 'depends_on' will have all fields populated at this point
+                        if em["id"] == dependency["parent_id"]:
                             if (
-                                em["id"] == dependency["parent_id"]
-                                and em["metric_name"] == dependency["metric_name"]
-                                and em["metric_value"] >= dependency["metric_min_value"]
+                                em["metric_value"] >= dependency["metric_min_value"]
                                 and em["metric_value"] <= dependency["metric_max_value"]
                             ):
                                 # this specific dependency was met - can quit looking
                                 dependency_is_met = True
                                 break
-                    else:
-                        # if no specific metric_name was specified, you just need to match ANY metric_name
-                        # on the other criteria
-                        for em in evaluated_metrics:
-                            # print("em", em)
-                            # print("dependency", dependency)
-                            # I think the 'depends_on' should have all fields populated at this point
-                            if (
-                                em["id"] == dependency["parent_id"]
-                                # and em["metric_name"] == dependency["metric_name"]
-                                and em["metric_value"] >= dependency["metric_min_value"]
-                                and em["metric_value"] <= dependency["metric_max_value"]
-                            ):
-                                # this specific dependency was met - can quit looking
-                                dependency_is_met = True
-                                break
+                            else:
+                                logger.debug(
+                                    f"Metric value '{em['metric_value']}' not in range for dependency id='{dependency['parent_id']}'."
+                                )
                     if not dependency_is_met:
                         dependencies_are_all_met = False
                         # if even one dependency is not met - don't do the evaluation
@@ -89,11 +81,12 @@ class MetricComputer:
                 # ONLY call if dependencies are ALL met
                 # TODO - maybe in the future we'll want to add the computed value from
                 # the dependency through as an argument here
-                evaluated_metrics += self.compute_metric(object, **metric_to_evaluate)
+                metric_results = self.compute_metric(object, **metric_to_evaluate)
+                evaluated_metrics.extend(metric_results)
             else:
-                pass
-                # print(f"\nNot runing metric because dependency was not met:")
-                # print(metric_to_evaluate)
+                logger.debug(
+                    f"Skipping metric '{em['metric_name']}' (id='{em['id']}') due to unmet dependencies."
+                )
         return evaluated_metrics
 
     def compute_metric(
@@ -107,7 +100,7 @@ class MetricComputer:
         depends_on: list = None,
         id: int = None,
         notes: str = None,  # just a placeholder
-    ) -> list:
+    ) -> list[dict]:
         if evaluation_type == "function":
             metrics = self.compute_function_metric(
                 function_name=evaluation_name,

@@ -9,7 +9,7 @@ logs_path: tests/unit/logs/
 eval_schema_path: 'src/flexeval/eval_schema.json'
 
 database_path: tests/data/unit_functional_results.db
-
+clear_tables: True
 max_workers: 1
 
 # any additional environment variables

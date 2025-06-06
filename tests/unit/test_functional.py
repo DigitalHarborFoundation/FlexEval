@@ -315,12 +315,7 @@ class TestSuite03(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
         # in this case, we run the evals via main.py
-        cls.runner = runner.run_from_args(
-            eval_name="test_suite_03",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        cls.runner = run_eval("test_suite_03")
         cls.database_path = cls.runner.get_database_path()
 
     def test_tables_have_right_rows(self):
@@ -356,12 +351,7 @@ class TestSuite04(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests
         # in this case, we'd run the evals here using subprocess or something, or maybe main.py
-        cls.runner = runner.run_from_args(
-            eval_name="test_suite_04",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        cls.runner = run_eval("test_suite_04")
         cls.database_path = cls.runner.get_database_path()
 
     def test_rubric_metric_value(self):
@@ -412,8 +402,6 @@ class TestSuite04(mixins.DotenvMixin, unittest.TestCase):
             len(function_type), 0, "Null values found in rows where type = rubric"
         )
 
-    # %%
-
     def test_rubric_dependency(self):
         # test: For EVERY turn where the role is user, \
         # the same turn ALSO has a is_student_acting_as_actor entry
@@ -449,12 +437,7 @@ class TestSuite04(mixins.DotenvMixin, unittest.TestCase):
 
 class FunctionMetricValidation(mixins.DotenvMixin, unittest.TestCase):
     def test_default_kwargs01(self):
-        runner.run_from_args(
-            eval_name="test_default_kwargs_01",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        run_eval("test_default_kwargs_01")
 
 
 class ConfigFailures(mixins.DotenvMixin, unittest.TestCase):
@@ -522,12 +505,7 @@ class TestBasicFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
         # in this case, we run the evals via main.py
-        cls.runner = runner.run_from_args(
-            eval_name="test_basic_function_metrics_01",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        cls.runner = run_eval("test_basic_function_metrics_01")
         cls.database_path = cls.runner.get_database_path()
 
     def test_correct_metric_levels(self):
@@ -640,12 +618,7 @@ class TestListStringInputFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
         # in this case, we run the evals via main.py
-        cls.runner = runner.run_from_args(
-            eval_name="test_list_string_function_metrics",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        cls.runner = run_eval("test_list_string_function_metrics")
         cls.database_path = cls.runner.get_database_path()
 
     def test_reading_ease_levels_by_level(self):

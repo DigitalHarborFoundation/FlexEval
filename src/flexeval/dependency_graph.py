@@ -115,7 +115,7 @@ def get_parent_metrics(all_metrics: dict, child: dict) -> tuple[list, list]:
     This function takes the eval represented by "child" and finds ALL evals in "all_metrics"
     that quality as the child's immediate parent
 
-    An eval can qualify as a parent by having a matching name, type, context_only, last_turn_only
+    An eval can qualify as a parent by having a matching name, type, context_only
     At this point, we won't have enough information to decide whether the child should be run
     (since the child might have additional requirements on the output of the parent)
     but this is enough to tell us that the child should be run AFTER the parent.
@@ -148,7 +148,6 @@ def get_parent_metrics(all_metrics: dict, child: dict) -> tuple[list, list]:
                     matches = False
 
                 # if the conditionals are listed in the depends_on entry but don't match...
-                # Note: DependsOnItem uses "last_turn_only" but MetricItem uses "last_instance_only"
                 # Only check conditionals that are explicitly specified (not None) in the requirement
                 conditionals = ["context_only", "name", "kwargs"]
                 for conditional in conditionals:
@@ -158,15 +157,6 @@ def get_parent_metrics(all_metrics: dict, child: dict) -> tuple[list, list]:
                         and requirement.get(conditional) != candidate.get(conditional)
                     ):
                         matches = False
-
-                # Handle the field name mismatch: last_turn_only vs last_instance_only
-                if (
-                    "last_turn_only" in requirement
-                    and requirement.get("last_turn_only") is not None
-                    and requirement.get("last_turn_only")
-                    != candidate.get("last_instance_only")
-                ):
-                    matches = False
 
                 if matches:
                     candidate_parents.append(candidate)
