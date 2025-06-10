@@ -13,6 +13,10 @@ from pydantic import BaseModel, Field
 from flexeval.schema import schema_utils
 
 
+VALID_METRIC_LEVELS = ["Message", "Turn", "Thread", "ToolCall"]
+MetricLevel = Literal["Message", "Turn", "Thread", "ToolCall"]
+
+
 class DependsOnItem(BaseModel):
     class Config:
         extra = "forbid"
@@ -55,7 +59,7 @@ class MetricItem(BaseModel):
         default_factory=list,
         description="List of dependencies that must be satisfied for this metric to be computed.",
     )
-    metric_level: Optional[str] = Field(
+    metric_level: Optional[MetricLevel] = Field(
         "Turn",
         description="What level of granularity (ToolCall, Message, Turn, or Thread) this rubric should be applied to",
     )

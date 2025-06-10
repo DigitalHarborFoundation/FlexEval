@@ -1,7 +1,4 @@
 length_test:
-  data:
-    - tests/data/simple.jsonl
-
   metrics:
     function:
       - name: string_length

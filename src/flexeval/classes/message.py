@@ -170,10 +170,10 @@ Function output: {response_content}
         # tool_call_text - all tool calls
         return output, output_minus_completion, completion, tool_call_text
 
-    def get_content(self):
+    def get_content(self) -> str:
         return self.content
 
-    def get_context(self, include_system_prompt=False):
+    def get_context(self, include_system_prompt=False) -> list[dict[str, str]]:
         context = json.loads(self.context)
         if not include_system_prompt:
             context = [

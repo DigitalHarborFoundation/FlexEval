@@ -4,8 +4,7 @@ import random as rd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from flexeval import compute_metrics
-from flexeval import run_utils
+from flexeval import compute_metrics, function_types, run_utils
 from flexeval.classes.eval_runner import EvalRunner
 from flexeval.classes.metric import Metric
 from flexeval.classes.turn import Turn
@@ -73,7 +72,8 @@ def run(eval_run: EvalRun) -> EvalRunner:
         runner.logger.exception(
             "An error occurred creating the EvalSetRun.", exc_info=True
         )
-        raise e
+        runner.shutdown_logging()
+        raise
 
     #######################################################
     ############  Load and Parse Data  ####################
@@ -168,6 +168,9 @@ def run(eval_run: EvalRun) -> EvalRunner:
         runner.logger.exception(
             "An error occurred generating completions.", exc_info=True
         )
+        if eval_run.config.raise_on_completion_error:
+            runner.shutdown_logging()
+            raise
 
     #######################################################
     #################  Compute Metrics  ###################
@@ -214,12 +217,23 @@ def run(eval_run: EvalRun) -> EvalRunner:
             "Message": messages_to_evaluate,
             "ToolCall": toolcalls_to_evaluate,
         }
+        # log details of the identified metrics and objects at the various levels
+        for level, object_list in object_lists_by_level.items():
+            metrics_at_level = metrics_by_level.get(level, [])
+            metric_names = ", ".join(
+                [
+                    f"{metric['evaluation_name']} ({metric['id']})"
+                    for metric in metrics_at_level
+                ]
+            )
+            runner.logger.debug(
+                f"Will execute {len(metrics_at_level)} metrics for {len(object_list)} objects at the {level} level: {metric_names}"
+            )
 
         for level, object_list in object_lists_by_level.items():
             # Add the metrics to objects at this level
-            compute_metrics.add_all_metrics_to_objects(
-                object_list, metrics_by_level.get(level, [])
-            )
+            metrics_at_level = metrics_by_level.get(level, [])
+            compute_metrics.add_all_metrics_to_objects(object_list, metrics_at_level)
             # Update the count of how many rubrics might be run based on rubric evals at this level
             rubric_count += compute_metrics.count_rubric_metrics(object_list)
 
@@ -229,12 +243,10 @@ def run(eval_run: EvalRun) -> EvalRunner:
         metric_computer = runner.get_metric_computer()
         if n_workers == 1:
             metrics = []
-            # del object_lists_by_level["Thread"]
-            # del object_lists_by_level["Turn"]
-            # del object_lists_by_level["Message"]
-            # del object_lists_by_level["ToolCall"]
             for level, object_list in object_lists_by_level.items():
-                runner.logger.info(f"Computing metrics for level: {level}")
+                runner.logger.info(
+                    f"Computing metrics for level {level} on {len(object_list)} objects."
+                )
                 for object in object_list:
                     cur_metrics = metric_computer.compute_metrics(object)
                     for m in cur_metrics:
@@ -242,12 +254,19 @@ def run(eval_run: EvalRun) -> EvalRunner:
                             runner.logger.exception(
                                 f"Metric {m} does not have a value for the key `type`."
                             )
+                            if eval_run.config.raise_on_metric_error:
+                                raise ValueError(
+                                    f"Metric {m} does not have a value for the key `type`."
+                                )
                         if m.get("metric_value", None) is None:
                             runner.logger.exception(
                                 f"Metric {m} does not have a value for the key `metric_value`."
                             )
-
-                    metrics += cur_metrics
+                            if eval_run.config.raise_on_metric_error:
+                                raise ValueError(
+                                    f"Metric {m} does not have a value for the key `metric_value`."
+                                )
+                    metrics.extend(cur_metrics)
 
         else:
             with ThreadPoolExecutor(max_workers=n_workers) as executor:
@@ -308,6 +327,9 @@ def run(eval_run: EvalRun) -> EvalRunner:
 
     except Exception as e:
         runner.logger.exception("An error occurred computing metrics.", exc_info=True)
+        if eval_run.config.raise_on_metric_error:
+            runner.shutdown_logging()
+            raise
 
     runner.logger.info("Evaluation run complete.")
     runner.shutdown_logging()

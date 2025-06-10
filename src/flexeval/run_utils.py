@@ -42,7 +42,7 @@ def build_eval_set_run(runner: EvalRunner) -> EvalSetRun:
         # only save rubrics that will actually be used
         rubrics=json.dumps(
             {
-                i["evaluation_name"]: rubrics[i["evaluation_name"]]
+                i["evaluation_name"]: rubrics[i["evaluation_name"]].model_dump()
                 for i in runner.metrics_graph_ordered_list
                 if i["evaluation_type"] == "rubric"
             }

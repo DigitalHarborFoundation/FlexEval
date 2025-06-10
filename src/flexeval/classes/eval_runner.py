@@ -165,17 +165,22 @@ class EvalRunner:
         for easy use at run-time
         """
         # if the current eval has a 'config' entry, overwrite configuration options with its entries
-        if self.evalrun.eval.model_extra is not None:
+        if (
+            self.evalrun.eval.model_extra is not None
+            and len(self.evalrun.eval.model_extra) > 0
+        ):
             model_extra = self.evalrun.eval.model_extra
-            for field_name in self.evalrun.config.model_fields_set:
-                if field_name in model_extra:
-                    # this Config field is defined on the eval
-                    value = model_extra[field_name]
-                    old_value = getattr(self.evalrun.config, field_name, "unset")
+            self.logger.debug(
+                f"Extra configuration keys provided in eval: {list(model_extra.keys())}"
+            )
+            for field_name in model_extra.keys():
+                if hasattr(self.evalrun.config, field_name):
+                    old_value = getattr(self.evalrun.config, field_name)
+                    new_value = model_extra[field_name]
                     self.logger.info(
-                        f"Updating configuration setting: {field_name}={value} (old={old_value})"
+                        f"Updating configuration setting: {field_name}={new_value} (old={old_value})"
                     )
-                    setattr(self.evalrun.config, field_name, value)
+                    setattr(self.evalrun.config, field_name, new_value)
                 else:
                     self.logger.warning(
                         f"Unknown configuration field {field_name} was ignored."

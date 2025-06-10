@@ -54,7 +54,9 @@ class TestEvalRunner(mixins.DotenvMixin, unittest.TestCase):
         metric_function, _ = mc.find_function("count_emojis")
         test_object = unittest.mock.MagicMock(Message)
         test_object.get_content = unittest.mock.MagicMock(return_value="🌋")
-        self.assertEqual(mc.invoke_function(metric_function, test_object, {}, False), 1)
+        self.assertEqual(
+            mc.invoke_function(metric_function, "Message", test_object, {}, False), 1
+        )
 
         # non-existent module
         runner.evalrun.function_modules = [
@@ -87,7 +89,8 @@ class TestEvalRunner(mixins.DotenvMixin, unittest.TestCase):
         test_object = unittest.mock.MagicMock(Message)
         test_object.get_content = unittest.mock.MagicMock(return_value="🌋")
         self.assertEqual(
-            mc.invoke_function(metric_function, test_object, {}, False), "overridden"
+            mc.invoke_function(metric_function, "Message", test_object, {}, False),
+            "overridden",
         )
 
         runner.shutdown_logging()

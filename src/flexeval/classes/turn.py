@@ -163,7 +163,7 @@ class Turn(BaseModel):
         for msg in self.get_context():  # input[:-1]:
             # this outputs user: XYZ, or assistant: 123
             if len(msg["content"]) > 0 and (
-                include_tool_messages or msg["langgraph_role"] != "tool"
+                include_tool_messages or msg.get("langgraph_role") != "tool"
             ):
                 output_minus_completion += f"{msg['role']}: {msg['content']}\n"
         # Including role as prefix to account for both tool and assistant

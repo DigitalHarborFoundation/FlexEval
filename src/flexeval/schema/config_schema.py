@@ -27,3 +27,12 @@ class Config(BaseModel):
     random_seed_conversation_sampling: int = 42
     max_n_conversation_threads: int = 50
     nb_evaluations_per_thread: int = 1
+
+    raise_on_completion_error: bool = Field(
+        False,
+        description="If False (default), metrics will be run even if one or more completions fails.",
+    )
+    raise_on_metric_error: bool = Field(
+        False,
+        description="If False (default), no exception will be thrown if a metric function raises an exception.",
+    )

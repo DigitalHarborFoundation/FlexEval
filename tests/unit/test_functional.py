@@ -22,9 +22,21 @@ def setUpModule():
     log_utils.set_up_logging()
 
 
-def run_eval(eval_name: str) -> EvalRunner:
+def run_eval(
+    eval_name: str,
+    include_simple_data: bool = True,
+    include_multiturn_data: bool = False,
+    include_plot_convos_data: bool = False,
+) -> EvalRunner:
+    input_data = []
+    if include_simple_data:
+        input_data.append("tests/data/simple.jsonl")
+    if include_multiturn_data:
+        input_data.append("tests/data/multiturn.jsonl")
+    if include_plot_convos_data:
+        input_data.append("tests/data/plot-convos.jsonl")
     return runner.run_from_name_args(
-        input_data=["tests/data/simple.jsonl"],
+        input_data=input_data,
         database_path="tests/data/unit_functional_results.db",
         eval_name=eval_name,
         config_path="tests/resources/functional_config.yaml",
@@ -38,7 +50,6 @@ class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
         cls.runner = run_eval("test_suite_01")
         cls.database_path = cls.runner.get_database_path()
 
@@ -163,7 +174,6 @@ class TestSuite02(mixins.DotenvMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
         cls.runner = run_eval("test_suite_02")
         cls.database_path = cls.runner.get_database_path()
 
@@ -314,8 +324,7 @@ class TestSuite03(mixins.DotenvMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        cls.runner = run_eval("test_suite_03")
+        cls.runner = run_eval("test_suite_03", include_multiturn_data=True)
         cls.database_path = cls.runner.get_database_path()
 
     def test_tables_have_right_rows(self):
@@ -444,31 +453,31 @@ class ConfigFailures(mixins.DotenvMixin, unittest.TestCase):
 
     @unittest.expectedFailure
     def test_config_failure_01(cls):
-        run_eval("config_failure_01")
+        run_eval("config_failure_01", include_plot_convos_data=True)
 
     @unittest.expectedFailure
     def test_config_failure_02(cls):
-        run_eval("config_failure_02")
+        run_eval("config_failure_02", include_plot_convos_data=True)
 
     @unittest.expectedFailure
     def test_config_failure_03(cls):
-        run_eval("config_failure_03")
+        run_eval("config_failure_03", include_plot_convos_data=True)
 
     @unittest.expectedFailure
     def test_config_failure_04(cls):
-        run_eval("config_failure_04")
+        run_eval("config_failure_04", include_plot_convos_data=True)
 
     @unittest.expectedFailure
     def test_config_failure_05(cls):
-        run_eval("config_failure_05")
+        run_eval("config_failure_05", include_plot_convos_data=True)
 
     @unittest.expectedFailure
     def test_config_failure_06(cls):
-        run_eval("config_failure_06")
+        run_eval("config_failure_06", include_plot_convos_data=True)
 
-    @unittest.expectedFailure
     def test_config_failure_07(cls):
-        run_eval("config_failure_07")
+        # this used to fail, but is now valid
+        run_eval("config_failure_07", include_plot_convos_data=True)
 
 
 class TestBasicFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
@@ -476,7 +485,6 @@ class TestBasicFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
         cls.runner = run_eval("test_basic_function_metrics_01")
         cls.database_path = cls.runner.get_database_path()
 
@@ -589,8 +597,11 @@ class TestListStringInputFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        cls.runner = run_eval("test_list_string_function_metrics")
+        cls.runner = run_eval(
+            "test_list_string_function_metrics",
+            include_simple_data=False,
+            include_multiturn_data=True,
+        )
         cls.database_path = cls.runner.get_database_path()
 
     def test_reading_ease_levels_by_level(self):

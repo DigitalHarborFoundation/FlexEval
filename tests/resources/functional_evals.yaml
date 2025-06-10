@@ -101,10 +101,9 @@ test_suite_04:
             metric_min_value: 1
 
   grader_llm:
-    function_name: open_ai_completion
+    function_name: echo_completion
     kwargs:
-      model_name: gpt-4o-mini
-      api_key_name: OPENAI_API_KEY
+      response: Reasoning.\nYES
 
 
 test_suite_04_langgraph:
@@ -136,10 +135,9 @@ test_suite_04_langgraph:
 
   
   grader_llm:
-    function_name: open_ai_completion
+    function_name: echo_completion
     kwargs:
-      model_name: gpt-4o-mini
-      api_key_name: OPENAI_API_KEY
+      response: Reasoning.\nYES\n
 
 test_plots_01:
   data:
@@ -207,10 +205,9 @@ test_plots_02:
             metric_min_value: 1
 
   grader_llm:
-    function_name: open_ai_completion
+    function_name: echo_completion
     kwargs:
-      model_name: gpt-4o-mini
-      api_key_name: OPENAI_API_KEY
+      response: Reasoning.\nYES\n
 
 config_failure_01:
   data:
@@ -304,9 +301,9 @@ test_default_kwargs_01:
 
   metrics:
     function:
-      - name: openai_moderation_api # Allows but doesn't require keyword args, so okay
+      - name: identity # Allows but doesn't require keyword args, so okay
 
-      - name: openai_moderation_api
+      - name: identity
         kwargs:  # Allows kwargs with any names so okay
           any_kwarg_name_okay: 13
 
@@ -355,9 +352,6 @@ test_basic_function_metrics_01_langgraph:
           role: user
 
 test_list_string_function_metrics:
-  data:
-    - tests/data/multiturn.jsonl 
-
   metrics:
     function:
       - name: count_messages_per_role
@@ -372,7 +366,6 @@ test_list_string_function_metrics:
       - name: flesch_reading_ease
         metric_level: Turn
         context_only: false
-
 
       - name: flesch_reading_ease
         metric_level: Message

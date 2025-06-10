@@ -5,6 +5,8 @@ import logging
 import string
 from typing import Union, Any
 
+from flexeval import function_types
+from flexeval.schema import eval_schema
 from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
@@ -121,53 +123,23 @@ class MetricComputer:
                 id=id,
             )
         else:
-            raise Exception(
+            raise ValueError(
                 f"The argument evaluation_type provided to compute_metric is invalid. Must be one of `function` or `rubric`. You passed `{type}`."
             )
         return metrics
 
     def invoke_function(
-        self, metric_function: callable, input_object, metric_kwargs, context_only: bool
+        self,
+        metric_function: callable,
+        metric_level: eval_schema.MetricLevel,
+        input_object: function_types.AnyFunctionObjectInput,
+        metric_kwargs: dict,
+        context_only: bool,
     ):
-        # TODO: Confirm that this verification is happening in verify installation instead.
-
-        # This gets the type of the first argument of the function
-        input_type = next(
-            iter(inspect.signature(metric_function).parameters.values())
-        ).annotation
-        # Check whether the metric_function has a string or a list input as the first thing.
-        # If so, need to extract the content first.
-        if input_type is str:
-            # This should apply only for Message, Turn, or Thread types.
-            # For Turn and Thread, concatenates all together
-            input = None
-            if context_only:
-                # join together the string contents of all previous turns
-                input = join_all_contents_to_string(input_object.get_context())
-            else:
-                # current turn only
-                input = join_all_contents_to_string(input_object.get_content())
-            metrics_result = metric_function(input, **metric_kwargs)
-        elif input_type is list:
-            # This should apply for the Turn and Thread types only
-            if context_only:
-                metrics_result = metric_function(
-                    input_object.get_context(), **metric_kwargs
-                )
-            else:
-                # this is on a single turn - pass in the parsed list
-                metrics_result = metric_function(
-                    input_object.get_content(), **metric_kwargs
-                )
-        elif input_type is dict:
-            # This should apply for the ToolCall type only
-            metrics_result = metric_function(
-                input_object.get_dict_representation(), **metric_kwargs
-            )
-        else:
-            # Must be a Thread/Turn/Message/ToolCall [verified in validation of setup]
-            metrics_result = metric_function(input_object, **metric_kwargs)
-
+        function_input = function_types.get_function_input(
+            metric_function, metric_level, input_object, context_only
+        )
+        metrics_result = metric_function(function_input, **metric_kwargs)
         return metrics_result
 
     def find_function(self, function_name: str):
@@ -187,7 +159,7 @@ class MetricComputer:
         function_name: str,
         metric_kwargs: dict,
         input_object: Union[Thread, Turn, Message, ToolCall],
-        metric_level: str,
+        metric_level: eval_schema.MetricLevel,
         context_only: bool,
         depends_on: list,
         id: int,
@@ -199,7 +171,7 @@ class MetricComputer:
         # Check if the function exists in any of the function namespaces
         metric_function, metric_source = self.find_function(function_name)
         metrics_result = self.invoke_function(
-            metric_function, input_object, metric_kwargs, context_only
+            metric_function, metric_level, input_object, metric_kwargs, context_only
         )
 
         base_result = {
@@ -221,8 +193,13 @@ class MetricComputer:
             return [result]
         elif isinstance(metrics_result, dict):
             result_list = []
+            # TODO rethink this behavior
             for k, v in metrics_result.items():
                 result = copy.deepcopy(base_result)
+                if "metric_name" in result and result["metric_name"] != k:
+                    logger.warning(
+                        f"Overriding metric_name in metric result with '{k}' (was '{result['metric_name']}')."
+                    )
                 result["metric_name"] = k
                 result["metric_value"] = float(v)
                 result_list.append(result)
@@ -231,14 +208,13 @@ class MetricComputer:
             result_list = []
 
             for entry in metrics_result:
-                # print(function_name, entry)
                 result = copy.deepcopy(base_result)
                 result["metric_name"] = entry.get("name", None)
                 result["metric_value"] = float(entry.get("value", None))
                 result_list.append(result)
             return result_list
         else:
-            raise Exception(
+            raise ValueError(
                 f"The metric type returned from `{metric_function}` is not a supported type. It must be one of `list`, `int`, `float`, or `dict`. You supplied `{type(metrics_result)}`."
             )
 
@@ -255,7 +231,7 @@ class MetricComputer:
         rubrics = json.loads(object.evalsetrun.rubrics)
         assert (
             rubric_name in rubrics
-        ), f"You requested a rubric called `{rubric_name}`, but only these were found:{rubrics.keys()}."
+        ), f"You requested a rubric called `{rubric_name}`, but only these were found: {rubrics.keys()}."
 
         prompt = rubrics.get(rubric_name).get("prompt", "")
 
@@ -416,14 +392,3 @@ def count_rubric_metrics(iterable_of_objects):
             if metric_instance.get("evaluation_type") == "rubric":
                 rubric_count += 1
     return rubric_count
-
-
-def join_all_contents_to_string(content: list[dict] | Any) -> str:
-    """
-    content is a list of dictionaries whose keys include 'content'.
-    Returns a string with all the 'content' entries concatenated together,
-    separated by newline.
-    """
-    if isinstance(content, list):
-        content = "\n".join([item.get("content", "") for item in content])
-    return content

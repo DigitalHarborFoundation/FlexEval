@@ -1,9 +1,8 @@
 import datetime
 import json
+import logging
 import os
 import re
-
-## ~.~ function templates starts ~.~
 from typing import Union
 
 import openai
@@ -13,6 +12,8 @@ from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
+
+logger = logging.getLogger(__name__)
 
 # Example input types:
 # - a single message as a string
@@ -71,6 +72,10 @@ def process_conversation(
             e.g., [{"role":role1, "value":value1}, {"role":role2, "value":value2}, ...]
     """
     pass
+
+
+def identity(object: Union[Thread, Turn, Message, ToolCall], **kwargs) -> str:
+    return {"identity": str(object)}
 
 
 def is_role(object: Union[Turn, Message], role: str) -> dict:
@@ -382,7 +387,9 @@ def flesch_reading_ease(turn: str) -> float:
     Returns:
         float: The Flesch Reading Ease score of the input text.
     """
-    return textstat.flesch_reading_ease(turn)
+    reading_ease = textstat.flesch_reading_ease(turn)
+    logger.debug(f"Text '{turn}' has a Flesch Reading Ease score of {reading_ease}.")
+    return reading_ease
 
 
 def flesch_kincaid_grade(turn: str) -> float:
@@ -415,8 +422,12 @@ def openai_moderation_api(turn: str, **kwargs) -> dict:
         Dict[str, float]: A dictionary of category scores from the moderation API response.
     """
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    response = client.moderations.create(input=turn)
-    return response.results[0].model_dump(exclude_unset=True)["category_scores"]
+    response = client.moderations.create(
+        model="omni-moderation-latest", input=turn, **kwargs
+    )
+    return response.results[0].category_scores.model_dump(
+        exclude_unset=True, by_alias=True
+    )
 
 
 def count_errors(object: Union[Thread, Turn, Message, ToolCall]) -> dict:
