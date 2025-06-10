@@ -112,12 +112,3 @@ Results are stored in an SQLite database (defaulting to `data/results/results.db
 
 The project uses Pydantic models for validation:
 - `src/flexeval/schema/`: Contains all schema definitions
-
-### Current Refactoring
-
-The codebase is undergoing a Pydantic refactor (branch: `pydantic-refactor`) to:
-- Replace legacy configuration handling with Pydantic models
-- Introduce EvalRun as the primary execution abstraction
-- Move from argparse to Typer for CLI
-- Improve type safety and validation throughout
-- Fixing the unit tests to use the new configuration approach
