@@ -16,7 +16,6 @@ def is_rubric_prompt_valid(prompt: str):
 
 
 class Rubric(BaseModel):
-
     prompt: Annotated[str, AfterValidator(is_rubric_prompt_valid)] = Field(
         description="Prompt for the rubric."
     )
@@ -30,7 +29,7 @@ class Rubric(BaseModel):
     @classmethod
     def check_non_empty(cls, v):
         if not v:
-            raise ValueError(f"Must provide at least two choice scores.")
+            raise ValueError("Must provide at least two choice scores.")
         return v
 
 

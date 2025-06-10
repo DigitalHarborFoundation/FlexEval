@@ -387,6 +387,8 @@ def flesch_reading_ease(turn: str) -> float:
     Returns:
         float: The Flesch Reading Ease score of the input text.
     """
+    if turn.strip() == "":
+        pass
     reading_ease = textstat.flesch_reading_ease(turn)
     logger.debug(f"Text '{turn}' has a Flesch Reading Ease score of {reading_ease}.")
     return reading_ease

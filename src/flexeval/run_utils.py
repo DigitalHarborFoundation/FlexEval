@@ -1,5 +1,4 @@
 import json
-import yaml
 import logging
 
 from flexeval import rubric

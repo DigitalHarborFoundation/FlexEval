@@ -46,7 +46,6 @@ def run_eval(
 
 
 class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
@@ -103,7 +102,6 @@ class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
         helper_test_tables_have_right_rows(self, ((3, 3),))
 
     def test_string_length_has_function_label(self):
-
         with sqlite3.connect(self.database_path) as connection:
             result = connection.execute(
                 """select evaluation_type from metric 
@@ -170,7 +168,6 @@ def helper_test_tables_have_right_rows(
 
 
 class TestSuite02(mixins.DotenvMixin, unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
@@ -320,7 +317,6 @@ class TestSuite02(mixins.DotenvMixin, unittest.TestCase):
 
 
 class TestSuite03(mixins.DotenvMixin, unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
@@ -450,7 +446,6 @@ class FunctionMetricValidation(mixins.DotenvMixin, unittest.TestCase):
 
 
 class ConfigFailures(mixins.DotenvMixin, unittest.TestCase):
-
     @unittest.expectedFailure
     def test_config_failure_01(cls):
         run_eval("config_failure_01", include_plot_convos_data=True)
@@ -481,7 +476,6 @@ class ConfigFailures(mixins.DotenvMixin, unittest.TestCase):
 
 
 class TestBasicFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables

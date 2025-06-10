@@ -18,7 +18,6 @@ from flexeval.runner import run
 
 
 class TestSuite01(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
@@ -82,7 +81,6 @@ class TestSuite01(unittest.TestCase):
         helper_test_tables_have_right_rows(self, ((3, 3),))
 
     def test_string_length_has_function_label(self):
-
         with sqlite3.connect(self.database_path) as connection:
             result = connection.execute(
                 """select evaluation_type from metric 
@@ -149,7 +147,6 @@ def helper_test_tables_have_right_rows(
 
 
 class TestSuite02(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
@@ -304,7 +301,6 @@ class TestSuite02(unittest.TestCase):
 
 
 class TestSuite03(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
@@ -506,7 +502,6 @@ class TestSuite01_langgraph(unittest.TestCase):
         helper_test_tables_have_right_rows(self, ((4, 4),))
 
     def test_string_length_has_function_label(self):
-
         with sqlite3.connect(self.database_path) as connection:
             result = connection.execute(
                 """select evaluation_type from metric 
@@ -519,7 +514,6 @@ class TestSuite01_langgraph(unittest.TestCase):
 
 
 class TestSuite02_langgraph(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
@@ -676,7 +670,6 @@ class TestSuite02_langgraph(unittest.TestCase):
         )
 
     def test_count_function_calls(self):
-
         with sqlite3.connect(self.database_path) as connection:
             # connection.row_factory = sqlite3.Row
             function_calls = connection.execute(
@@ -803,7 +796,6 @@ class FunctionMetricValidation(unittest.TestCase):
 
 
 class ConfigFailures(unittest.TestCase):
-
     @unittest.expectedFailure
     def test_config_failure_01(cls):
         run(
@@ -862,7 +854,6 @@ class ConfigFailures(unittest.TestCase):
 
 
 class TestBasicFunctionMetrics(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
@@ -980,7 +971,6 @@ class TestBasicFunctionMetrics(unittest.TestCase):
 
 
 class TestBasicFunctionMetrics_langgraph(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables

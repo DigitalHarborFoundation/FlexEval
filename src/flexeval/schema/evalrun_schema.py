@@ -43,9 +43,9 @@ def get_default_rubrics() -> list[Path | rubric_schema.RubricsCollection]:
     return [rubric.get_default_rubric_collection()]
 
 
-def get_default_function_metrics() -> (
-    list[Path | FunctionsCollection | schema_utils.ModuleType]
-):
+def get_default_function_metrics() -> list[
+    Path | FunctionsCollection | schema_utils.ModuleType
+]:
     return [function_metrics]
 
 

@@ -1,10 +1,9 @@
-import yaml
 import logging
 import importlib.resources
 from pathlib import Path
 
 import flexeval.configuration
-from flexeval.schema import Config, Rubric, RubricsCollection
+from flexeval.schema import Rubric, RubricsCollection
 from flexeval.io.parsers import yaml_parser
 
 
@@ -30,7 +29,7 @@ def get_default_rubric_collection() -> RubricsCollection:
     global default_rubric_collection
     if default_rubric_collection is not None:
         return default_rubric_collection
-    logger.debug(f"Attempting to load from default rubric_metrics.yaml.")
+    logger.debug("Attempting to load from default rubric_metrics.yaml.")
     metrics_path = (
         importlib.resources.files(flexeval.configuration) / "rubric_metrics.yaml"
     )

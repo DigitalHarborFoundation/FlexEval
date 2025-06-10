@@ -164,11 +164,11 @@ def get_parent_metrics(all_metrics: dict, child: dict) -> tuple[list, list]:
                     depends_on_with_id_added.append(requirement)
         if len(candidate_parents) == 0:
             raise ValueError(
-                f"We were unable to locate any match for the `depends_on` entry `{json.dumps(requirement,indent=4)}` in the metric `{json.dumps(child,indent=4)}`. The full set of parent candidates is `{json.dumps(all_metrics,indent=4)}`."
+                f"We were unable to locate any match for the `depends_on` entry `{json.dumps(requirement, indent=4)}` in the metric `{json.dumps(child, indent=4)}`. The full set of parent candidates is `{json.dumps(all_metrics, indent=4)}`."
             )
         if len(candidate_parents) > 1:
             raise ValueError(
-                f"We located more than one match for the `depends_on` entry `{json.dumps(requirement,indent=4)}` in the metric `{json.dumps(child,indent=4)}`. The matches were `{json.dumps(candidate_parents,indent=4)}`. Please add another criterion to disambiguate."
+                f"We located more than one match for the `depends_on` entry `{json.dumps(requirement, indent=4)}` in the metric `{json.dumps(child, indent=4)}`. The matches were `{json.dumps(candidate_parents, indent=4)}`. Please add another criterion to disambiguate."
             )
         parents += candidate_parents
 

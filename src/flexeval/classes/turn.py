@@ -101,7 +101,7 @@ class Turn(BaseModel):
         else:
             return None
 
-    def get_context(self, include_system_prompt=False):
+    def get_context(self, include_system_prompt=False) -> list[dict[str, str]]:
         """
         Context is the context of the first message in the turn
         """

@@ -73,7 +73,7 @@ class EvalRunner:
 
     def add_file_logger(self):
         if self.evalrun.config.logs_path is None:
-            logger.info(f"No log path specified, so not doing any file logging.")
+            logger.info("No log path specified, so not doing any file logging.")
             return
         logs_path = self.evalrun.config.logs_path
         if logs_path.is_file():

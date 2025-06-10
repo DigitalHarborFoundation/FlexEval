@@ -4,7 +4,7 @@ import random as rd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from flexeval import compute_metrics, function_types, run_utils
+from flexeval import compute_metrics, run_utils
 from flexeval.classes.eval_runner import EvalRunner
 from flexeval.classes.metric import Metric
 from flexeval.classes.turn import Turn
@@ -68,7 +68,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
 
         evalsetrun = run_utils.build_eval_set_run(runner)
         runner.logger.info(f"Metric graph: {evalsetrun.metrics_graph_ordered_list}")
-    except Exception as e:
+    except Exception:
         runner.logger.exception(
             "An error occurred creating the EvalSetRun.", exc_info=True
         )
@@ -88,7 +88,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
         runner.logger.info(f"Set random seed to {rd_seed}")
 
         run_utils.build_datasets(runner, evalsetrun)
-    except Exception as e:
+    except Exception:
         runner.logger.exception(
             "An error occurred creating dataset metadata.", exc_info=True
         )
@@ -98,7 +98,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
         for dataset in evalsetrun.datasets:
             runner.logger.debug(f"Loading data from {dataset.filename}")
             dataset.load_data()
-    except Exception as e:
+    except Exception:
         runner.logger.exception("An error occurred loading data.", exc_info=True)
 
     # Do completions, if necessary
@@ -132,7 +132,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
                     for future in as_completed(futures):
                         try:
                             future.result()  # If you need to catch exceptions or ensure completion
-                        except Exception as e:
+                        except Exception:
                             runner.logger.exception(
                                 "An error occurred during processing"
                             )
@@ -164,7 +164,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
                         completion_tokens=message["completion_tokens"],
                     )
 
-    except Exception as e:
+    except Exception:
         runner.logger.exception(
             "An error occurred generating completions.", exc_info=True
         )
@@ -285,7 +285,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
                             runner.logger.info(
                                 f"Metrics futures resulted: {fid} / {len(futures)}"
                             )
-                    except Exception as e:
+                    except Exception:
                         runner.logger.exception("An error occurred during processing")
                 metrics = []
                 for future in futures:
@@ -325,7 +325,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
                 rubric_score=metric.get("rubric_score", None),
             )
 
-    except Exception as e:
+    except Exception:
         runner.logger.exception("An error occurred computing metrics.", exc_info=True)
         if eval_run.config.raise_on_metric_error:
             runner.shutdown_logging()

@@ -1,8 +1,7 @@
 import unittest
 
 from flexeval import dependency_graph
-from flexeval.schema import eval_schema, evalrun_schema, config_schema, rubric_schema
-from pydantic import ValidationError
+from flexeval.schema import eval_schema
 
 
 class TestDependencyGraph(unittest.TestCase):
