@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import sys
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Annotated
 
 from pydantic import BaseModel, Field
 
@@ -32,14 +32,17 @@ class DependsOnItem(BaseModel):
         None,
         description="The keyword arguments for the dependency. If provided, used to match which evaluation this dependency is for, so must match the keyword args given for some evaluation.",
     )
-    context_only: Optional[bool] = Field(
-        None,
-        description="The context_only value for the dependency. If provided, used to match which evaluation this dependency is for.",
-    )
     metric_name: Optional[str] = Field(
         None,
         description="Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key.",
     )
+    relative_object_position: int = Field(
+        0,
+        le=0,
+        strict=True,
+        description="The position of the object within the Thread. If 0 (default), this is the metric value for the current object. If -1, this is the metric value for the most recent object before this one.",
+    )
+    # TODO we could consider adding an absolute_object_position
     metric_min_value: Optional[float] = Field(
         -sys.float_info.max,
         description="Minimum value of the dependency to consider it as satisfied.",
@@ -62,10 +65,6 @@ class MetricItem(BaseModel):
     metric_level: Optional[MetricLevel] = Field(
         "Turn",
         description="What level of granularity (ToolCall, Message, Turn, or Thread) this rubric should be applied to",
-    )
-    context_only: bool = Field(
-        False,
-        description="If true, only the context (that is, the previous messages) will be evaluated, not the current object. Cannot be done with only thread",
     )
 
 

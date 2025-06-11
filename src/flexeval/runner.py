@@ -271,6 +271,10 @@ def run(eval_run: EvalRun) -> EvalRunner:
         else:
             with ThreadPoolExecutor(max_workers=n_workers) as executor:
                 futures = []
+                # TODO parallel execution will fail if metric dependencies cross levels
+                # or if metric dependencies depend on other objects.
+                # we could potentially bundle dependent objects together in the same thread,
+                # or otherwise provide a global graph for dependency execution and submit whole graphs
                 for level, object_list in object_lists_by_level.items():
                     for object in object_list:
                         futures.append(
@@ -285,8 +289,13 @@ def run(eval_run: EvalRun) -> EvalRunner:
                             runner.logger.info(
                                 f"Metrics futures resulted: {fid} / {len(futures)}"
                             )
-                    except Exception:
-                        runner.logger.exception("An error occurred during processing")
+                    except Exception as ex:
+                        runner.logger.exception(
+                            f"An error occurred during processing: {ex}"
+                        )
+                        if eval_run.config.raise_on_metric_error:
+                            runner.shutdown_logging()
+                            raise
                 metrics = []
                 for future in futures:
                     metrics += future.result()

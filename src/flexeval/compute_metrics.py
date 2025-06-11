@@ -229,9 +229,9 @@ class MetricComputer:
     ):
         # load metrics
         rubrics = json.loads(object.evalsetrun.rubrics)
-        assert rubric_name in rubrics, (
-            f"You requested a rubric called `{rubric_name}`, but only these were found: {rubrics.keys()}."
-        )
+        assert (
+            rubric_name in rubrics
+        ), f"You requested a rubric called `{rubric_name}`, but only these were found: {rubrics.keys()}."
 
         prompt = rubrics.get(rubric_name).get("prompt", "")
 

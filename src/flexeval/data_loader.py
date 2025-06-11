@@ -50,11 +50,6 @@ def load_jsonl(
                 max(1, nb_evaluations_per_thread)
             ):  # duplicate stored threads for averaged evaluation results
                 if thread_id in selected_thread_ids:
-                    # The code snippet you provided is not complete and does not perform any specific
-                    # action. It seems to be a partial line of code in Python that declares a variable
-                    # named `thread_object` but does not assign any value to it or perform any
-                    # operations. If you provide more context or complete the code snippet, I can help
-                    # you understand its functionality.
                     thread_object = Thread.create(
                         evalsetrun=dataset.evalsetrun,
                         dataset=dataset,
@@ -382,9 +377,9 @@ def load_langgraph_sqlite(
                     # DEBUG
                     # tool_call_id is defined
 
-                    assert tool_call_id in tool_responses_dict, (
-                        f"Found a tool call without a tool response! id: {tool_call_id}"
-                    )
+                    assert (
+                        tool_call_id in tool_responses_dict
+                    ), f"Found a tool call without a tool response! id: {tool_call_id}"
                     # get matching message - should now be accessible through thread now?
                     matching_message = [
                         m for m in thread.messages if tool_call_id in m.tool_call_ids

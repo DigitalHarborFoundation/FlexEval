@@ -102,6 +102,13 @@ def is_langgraph_type(object: Union[Message], type: str) -> dict:
     return {type: int(object.langgraph_type == type)}
 
 
+def index_in_thread(object: Union[Turn, Message]) -> int:
+    if isinstance(object, Turn):
+        return list(object.thread.turns.order_by(Turn.id)).index(object)
+    elif isinstance(object, Message):
+        return list(object.thread.messages.order_by(Message.id)).index(object)
+
+
 def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
     """
     Counts the occurrences of particular values in the text content of tool call in the conversation.
@@ -281,6 +288,22 @@ def count_tool_calls(object: Union[Thread, Turn, Message]) -> dict:
 #     for toolcall_name, toolcall_count in toolcall_counts.items():
 #         results.append({"name": toolcall_name, "value": toolcall_count})
 #     return results
+
+
+def count_messages(object: Union[Thread, Turn]) -> int:
+    """
+    Calculate the number of conversational messages in the given Thread or Turn.
+    Excludes any system messages.
+    A message is counted even if the content for that action was blank (e.g., a blank message
+    associated with a tool call).
+
+    Args:
+        Turn or Thread
+
+    Returns:
+        int: Count of messages.
+    """
+    return len(object.messages)
 
 
 def count_messages_per_role(
