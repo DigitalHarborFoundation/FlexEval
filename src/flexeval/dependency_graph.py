@@ -127,6 +127,8 @@ def get_parent_metrics(all_metrics: dict, child: dict) -> tuple[list, list]:
     parents = []
     depends_on_with_id_added = []
     for requirement in child.get("depends_on", []):
+        if "metric_level" not in requirement:
+            requirement["metric_level"] = child["metric_level"]
         candidate_parents = []
         allowed_types = ["function", "rubric"]
         # if requirement has the type narrowed down, then narrow it down here too
@@ -141,15 +143,9 @@ def get_parent_metrics(all_metrics: dict, child: dict) -> tuple[list, list]:
                 if "type" in requirement and candidate_type not in allowed_types:
                     matches = False
 
-                # if the level of this metric doesn't match the level
-                # of the child, don't match it - we only allow dependencies at the
-                # same level of analysis
-                if child.get("metric_level") != candidate.get("metric_level"):
-                    matches = False
-
                 # if the conditionals are listed in the depends_on entry but don't match...
                 # Only check conditionals that are explicitly specified (not None) in the requirement
-                conditionals = ["context_only", "name", "kwargs"]
+                conditionals = ["metric_level", "context_only", "name", "kwargs"]
                 for conditional in conditionals:
                     if (
                         conditional in requirement
@@ -157,6 +153,7 @@ def get_parent_metrics(all_metrics: dict, child: dict) -> tuple[list, list]:
                         and requirement.get(conditional) != candidate.get(conditional)
                     ):
                         matches = False
+                        break
 
                 if matches:
                     candidate_parents.append(candidate)

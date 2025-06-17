@@ -1,48 +1,19 @@
 import unittest
 
 from flexeval.configuration import function_metrics
-from flexeval import run_utils, log_utils
-from flexeval.classes.eval_runner import EvalRunner
+from flexeval import log_utils
 from flexeval.classes.message import Message
 from flexeval.classes.turn import Turn
 from flexeval.classes.thread import Thread
-from flexeval.schema import EvalRun, FileDataSource, Config, Eval
+
+from tests.unit import mixins
 
 
 def setUpModule():
     log_utils.set_up_logging()
 
 
-class EvalSetRunTestCase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        data_sources = [FileDataSource(path="tests/data/simple.jsonl")]
-        database_path = "tests/data/unit_function_metrics.db"
-        config = Config(
-            logs_path="tests/unit/logs/",
-            clear_tables=True,
-            raise_on_completion_error=True,
-            raise_on_metric_error=True,
-        )
-        eval = Eval()
-        eval_run = EvalRun(
-            data_sources=data_sources,
-            database_path=database_path,
-            eval=eval,
-            config=config,
-        )
-
-        # load datasets
-        runner = EvalRunner(eval_run)
-        evalsetrun = run_utils.build_eval_set_run(runner)
-        run_utils.build_datasets(runner, evalsetrun)
-        for dataset in evalsetrun.datasets:
-            dataset.load_data()
-        cls.evalsetrun = evalsetrun
-
-
-class TestIndexInThread(EvalSetRunTestCase):
+class TestIndexInThread(mixins.DatasetsMixin, unittest.TestCase):
     def test_index_in_thread(self):
         threads = list(Thread.select())
         for thread in threads:
@@ -56,7 +27,7 @@ class TestIndexInThread(EvalSetRunTestCase):
                 self.assertEqual(i, function_metrics.index_in_thread(message))
 
 
-class TestCountMessages(EvalSetRunTestCase):
+class TestCountMessages(mixins.DatasetsMixin, unittest.TestCase):
     def test_count_messages(self):
         for thread in Thread.select():
             self.assertEqual(

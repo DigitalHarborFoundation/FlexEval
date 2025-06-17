@@ -26,6 +26,7 @@ class Message(BaseModel):
     evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="messages")
     dataset = pw.ForeignKeyField(Dataset, backref="messages")
     thread = pw.ForeignKeyField(Thread, backref="messages")
+    index_in_thread = pw.IntegerField()
     # must be null=True because we're adding it after create()
     turn = pw.ForeignKeyField(Turn, null=True, backref="messages")
 

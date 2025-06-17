@@ -72,6 +72,7 @@ def load_jsonl(
                     context.append({"role": "system", "content": system_prompt})
 
                     # Create messages
+                    index_in_thread = 0
                     for message in json.loads(thread)["input"]:
                         role = message.get("role", None)
                         if role != "system":
@@ -83,6 +84,7 @@ def load_jsonl(
                                 evalsetrun=dataset.evalsetrun,
                                 dataset=dataset,
                                 thread=thread_object,
+                                index_in_thread=index_in_thread,
                                 role=role,
                                 content=message.get("content", None),
                                 context=json.dumps(context),
@@ -94,6 +96,7 @@ def load_jsonl(
                             context.append(
                                 {"role": role, "content": message.get("content", None)}
                             )
+                            index_in_thread += 1
 
                     add_turns(thread_object)
 
@@ -259,6 +262,7 @@ def load_langgraph_sqlite(
                                     messagelist = [value["messages"]]
                                 else:
                                     messagelist = value["messages"]
+                                index_in_thread = 0
                                 for message in messagelist:
                                     if role == "user":
                                         content = (
@@ -279,6 +283,7 @@ def load_langgraph_sqlite(
                                         evalsetrun=dataset.evalsetrun,
                                         dataset=dataset,
                                         thread=thread,
+                                        index_in_thread=index_in_thread,
                                         role=role,
                                         content=content,
                                         context=json.dumps(context),
@@ -366,6 +371,7 @@ def load_langgraph_sqlite(
                                             ] = message.get("kwargs", {}).get(
                                                 "additional_kwargs", {}
                                             )
+                                    index_in_thread += 1
 
                 # Add turns to each message
                 # Need to do this before dealing with tool calls, since we
@@ -412,15 +418,18 @@ def add_turns(thread: Thread):
     message_placeholder_ids, turn_dict = get_turns(thread=thread)
     # Step 2 - Create turns, plus a mapping between the placeholder ids and the created ids
     turns = {}
+    index_in_thread = 0
     for placeholder_turn_id, role in turn_dict.items():  # turns.items():
         t = Turn.create(
             evalsetrun=thread.evalsetrun,
             dataset=thread.dataset,
             thread=thread,
+            index_in_thread=index_in_thread,
             role=role,
         )
         # map placeholder id to turn object
         turns[placeholder_turn_id] = t
+        index_in_thread += 1
     # Step 3 - add placeholder ids to messages
     # Can use zip since entries in message_list correspond to thread.messages
     # NOTE: ANR: I don't follow how the message_list was supposed to work below.

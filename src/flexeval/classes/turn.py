@@ -25,6 +25,7 @@ class Turn(BaseModel):
     evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="turns")
     dataset = pw.ForeignKeyField(Dataset, backref="turns")
     thread = pw.ForeignKeyField(Thread, backref="turns")
+    index_in_thread = pw.IntegerField()
     role = pw.TextField()
 
     def __init__(self, **kwargs):

@@ -74,7 +74,15 @@ def process_conversation(
     pass
 
 
-def identity(object: Union[Thread, Turn, Message, ToolCall], **kwargs) -> str:
+def identity(object: Union[Thread, Turn, Message, ToolCall], **kwargs) -> dict:
+    """Returns a string of the object.
+
+    Args:
+        object (Union[Thread, Turn, Message, ToolCall]): Accepts any type of object.
+
+    Returns:
+        dict: Returns a dict.
+    """
     return {"identity": str(object)}
 
 
@@ -103,10 +111,7 @@ def is_langgraph_type(object: Union[Message], type: str) -> dict:
 
 
 def index_in_thread(object: Union[Turn, Message]) -> int:
-    if isinstance(object, Turn):
-        return list(object.thread.turns.order_by(Turn.id)).index(object)
-    elif isinstance(object, Message):
-        return list(object.thread.messages.order_by(Message.id)).index(object)
+    return object.index_in_thread
 
 
 def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
@@ -304,6 +309,19 @@ def count_messages(object: Union[Thread, Turn]) -> int:
         int: Count of messages.
     """
     return len(object.messages)
+
+
+def count_turns(object: Thread) -> int:
+    """
+    Calculate the number of conversational turns in a thread.
+
+    Args:
+        Thread
+
+    Returns:
+        int: Count of turns.
+    """
+    return len(object.turns)
 
 
 def count_messages_per_role(

@@ -4,7 +4,8 @@ import json
 import logging
 import string
 from typing import Union
-
+import networkx as nx
+from collections import defaultdict
 from flexeval import function_types
 from flexeval.schema import eval_schema
 from flexeval.classes.message import Message
@@ -13,8 +14,199 @@ from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 from flexeval.configuration import completion_functions
 
+from flexeval.classes.eval_set_run import EvalSetRun
 
 logger = logging.getLogger(__name__)
+
+
+class ObjectMetric:
+    def __init__(self, object, metric):
+        self.object = object
+        self.metric = metric
+        self.metric_result = None
+
+
+class MetricGraphBuilder:
+    def __init__(self):
+        # key: tuple(metric_level, metric_id, object_id)
+        # value: ObjectMetric
+        self.id_to_object_metric_map = {}
+
+    def build_metric_structures(self, evalsetrun: EvalSetRun):
+        metric_id_map = {}
+        metrics_by_level = {}
+        for metric_instance in json.loads(evalsetrun.metrics_graph_ordered_list):
+            metric_level = metric_instance["metric_level"]
+            if metric_level not in metrics_by_level:
+                metrics_by_level[metric_level] = []
+            metrics_by_level[metric_level].append(metric_instance)
+            metric_id_map[metric_instance["id"]] = metric_instance
+        self.metric_id_map = metric_id_map
+        self.metrics_by_level = metrics_by_level
+
+    def get_or_create_object_metric(
+        self,
+        metric_level: eval_schema.MetricLevel,
+        object: Message | Turn | ToolCall | Thread,
+        metric: dict,
+    ) -> ObjectMetric:
+        key = (metric_level, metric["id"], object.id)
+        if key not in self.id_to_object_metric_map:
+            object_metric = ObjectMetric(object, metric)
+            self.id_to_object_metric_map[key] = object_metric
+        return object_metric
+
+    def get_index(
+        self, target_id: int, objects: list[Message | Turn | ToolCall | Thread]
+    ):
+        for i, object in enumerate(objects):
+            if target_id == object.id:
+                break
+        else:
+            raise ValueError(
+                f"Failed to find object with id {target_id} in {len(objects)} objects."
+            )
+        return i
+
+    def find_object_metric_from_depends_on(
+        self,
+        current_object: Message | Turn | ToolCall | Thread,
+        current_metric_level: eval_schema.MetricLevel,
+        current_index: int,
+        depends_on: dict,
+    ) -> ObjectMetric | None:
+        """
+        If you're a Turn metric that depends on a Message metric,
+        then we create a dependency on ALL or ANY Message meeting the criteria.
+        We don't know how to handle that...
+
+        In contrast, if you're a Message metric that depends on a Turn metric,
+        then we have a dependency on only a single object: that Message's Turn.
+        """
+        metric_id = depends_on["parent_id"]
+        metric_level = depends_on["metric_level"]
+        if metric_level == current_metric_level:
+            pass  # just use current_index, no lookup needed
+        elif current_metric_level == "ToolCall":
+            if metric_level == "Message":
+                current_index = self.get_index(
+                    current_object.message_id, self.objects_by_level["Message"]
+                )
+            elif metric_level == "Turn":
+                current_index = self.get_index(
+                    current_object.turn_id, self.objects_by_level["Turn"]
+                )
+            elif metric_level == "Thread":
+                current_index = 0  # only a single thread, by definition
+        elif current_metric_level == "Message":
+            if metric_level == "Turn":
+                current_index = self.get_index(
+                    current_object.turn_id, self.objects_by_level["Turn"]
+                )
+            elif metric_level == "Thread":
+                current_index = 0  # only a single thread, by definition
+            elif metric_level == "ToolCall":
+                raise ValueError(
+                    f"Can't depend on a {metric_level} metric from a {current_metric_level} metric."
+                )
+        elif current_metric_level == "Turn":
+            if current_metric_level == "Thread":
+                current_index = 0  # only a single thread, by definition
+            else:
+                raise ValueError(
+                    f"Can't depend on a {metric_level} metric from a {current_metric_level} metric."
+                )
+        elif current_metric_level == "Thread":
+            raise ValueError(
+                f"Can't depend on a {metric_level} metric from a {current_metric_level} metric."
+            )
+        relative_object_position = depends_on["relative_object_position"]
+        target_object_index = current_index + relative_object_position
+        if target_object_index < 0:
+            logger.debug(
+                f"Object at position {current_index} object cannot in principle satisfy this dependency, so skipping it."
+            )
+            return None
+        object = self.objects_by_level[metric_level][target_object_index]
+        metric = self.metric_id_map[metric_id]
+        return self.get_or_create_object_metric(metric_level, object, metric)
+
+    def build_graphs(self, evalsetrun: EvalSetRun):
+        threads = evalsetrun.threads
+        for thread in threads:
+            self.build_thread_tasks(thread)
+
+    def build_thread_task_graph(self, thread: Thread) -> nx.DiGraph:
+        self.objects_by_level = {
+            "Thread": [thread],
+            "Message": list(thread.messages),
+            "Turn": list(thread.turns),
+            "ToolCall": list(thread.toolcalls),
+        }
+
+        g = nx.DiGraph()
+        for level, metrics_at_level in self.metrics_by_level.items():
+            if len(metrics_at_level) == 0:
+                continue
+            relative_object_position_map = defaultdict(list)
+            for metric in metrics_at_level:
+                relative_object_position_map[metric["relative_object_position"]].append(
+                    metric
+                )
+
+            objects = self.objects_by_level[level]
+            for i, object in enumerate(objects):
+                for metric in metrics_at_level:
+                    # register metric on object
+                    object_metric = self.get_or_create_object_metric(
+                        level, object, metric
+                    )
+                    g.add_node(object_metric)
+                    if "depends_on" in metric:
+                        for dependency in metric["depends_on"]:
+                            # register dependency metric on the relevant object
+                            dependency_object_metric = (
+                                self.find_object_metric_from_depends_on(
+                                    object, level, i, dependency
+                                )
+                            )
+                            if dependency_object_metric is None:
+                                logger.debug(
+                                    "This object cannot in principle satisfy this dependency, so skipping it."
+                                )
+                                # TODO verify that this is the expected behavior in chained dependencies X -> Y -> Z
+                                g.remove_node(object_metric)
+                                continue
+                            g.add_node(dependency_object_metric)
+                            g.add_edge(
+                                dependency_object_metric,
+                                object_metric,
+                                depends_on=dependency,
+                            )
+        return g
+
+    def process_thread_dependency_graph(self, g):
+        metric_computer = None
+        for object_metric in nx.topological_sort(g):
+            all_dependencies_met = True
+            for dependency in g.predecessors(object_metric):
+                if dependency.metric_result is None:
+                    raise ValueError(
+                        "FlexEval error: expected this metric_result to be present."
+                    )
+                dependency_info = g.get_edge_data(dependency, object_metric)[
+                    "depends_on"
+                ]
+                dependency_met = (
+                    dependency.metric_result >= dependency_info["metric_min_value"]
+                )  # etc...
+                if not dependency_met:
+                    all_dependencies_met = False
+                    break
+            if all_dependencies_met:
+                # TODO in the future, we could pass some metric_results as kwargs to the metric function
+                # or as a special formatting key to the rubric
+                object_metric.metric_result = metric_computer.compute_metric()
 
 
 class MetricComputer:

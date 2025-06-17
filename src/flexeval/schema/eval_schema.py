@@ -36,6 +36,10 @@ class DependsOnItem(BaseModel):
         None,
         description="Name of the metric dependency. This may be different than function_name if the metric function returns a key/value pair - in which case, this will match the key.",
     )
+    metric_level: Optional[MetricLevel] = Field(
+        None,
+        description="The level of the metric to depend on, which must be equal to or 'greater' than the dependent metric's level. e.g. a Turn can depend on a Thread metric, but not the reverse.",
+    )
     relative_object_position: int = Field(
         0,
         le=0,

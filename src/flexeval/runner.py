@@ -3,6 +3,7 @@ import logging
 import random as rd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from collections import defaultdict
 
 from flexeval import compute_metrics, run_utils
 from flexeval.classes.eval_runner import EvalRunner
@@ -233,7 +234,21 @@ def run(eval_run: EvalRun) -> EvalRunner:
         for level, object_list in object_lists_by_level.items():
             # Add the metrics to objects at this level
             metrics_at_level = metrics_by_level.get(level, [])
-            compute_metrics.add_all_metrics_to_objects(object_list, metrics_at_level)
+            self_metrics_at_level = []
+            relative_object_metric_map = defaultdict(list)
+            for metric in metrics_at_level:
+                if metric["relative_object_position"] == 0:
+                    self_metrics_at_level.append(metric)
+                else:
+                    # this metric refers to a different object
+                    relative_object_position = metric["relative_object_position"]
+                    relative_object_metric_map[relative_object_position].append(metric)
+            for object_list in object_lists_by_level[level]:
+                compute_metrics.add_all_metrics_to_objects(
+                    object_list, self_metrics_at_level
+                )
+                for object in object_list:
+                    object.thread
             # Update the count of how many rubrics might be run based on rubric evals at this level
             rubric_count += compute_metrics.count_rubric_metrics(object_list)
 
