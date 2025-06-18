@@ -3,7 +3,7 @@ import inspect
 import json
 import logging
 import string
-from typing import Union
+from typing import Union, Iterable
 import networkx as nx
 from collections import defaultdict
 from flexeval import function_types
@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 class ObjectMetric:
-    def __init__(self, object, metric):
-        self.object = object
-        self.metric = metric
-        self.metric_result = None
+    def __init__(self, object: Message | Turn | ToolCall | Thread, metric: dict):
+        self.object: Message | Turn | ToolCall | Thread = object
+        self.metric: dict = metric
+        self.metric_results: list[dict] | None = None
 
 
 class MetricGraphBuilder:
@@ -54,7 +54,7 @@ class MetricGraphBuilder:
         if key not in self.id_to_object_metric_map:
             object_metric = ObjectMetric(object, metric)
             self.id_to_object_metric_map[key] = object_metric
-        return object_metric
+        return self.id_to_object_metric_map[key]
 
     def get_index(
         self, target_id: int, objects: list[Message | Turn | ToolCall | Thread]
@@ -131,10 +131,10 @@ class MetricGraphBuilder:
         metric = self.metric_id_map[metric_id]
         return self.get_or_create_object_metric(metric_level, object, metric)
 
-    def build_graphs(self, evalsetrun: EvalSetRun):
+    def build_thread_task_graphs(self, evalsetrun: EvalSetRun) -> Iterable[nx.DiGraph]:
         threads = evalsetrun.threads
         for thread in threads:
-            self.build_thread_tasks(thread)
+            yield self.build_thread_task_graph(thread)
 
     def build_thread_task_graph(self, thread: Thread) -> nx.DiGraph:
         self.objects_by_level = {
@@ -148,12 +148,6 @@ class MetricGraphBuilder:
         for level, metrics_at_level in self.metrics_by_level.items():
             if len(metrics_at_level) == 0:
                 continue
-            relative_object_position_map = defaultdict(list)
-            for metric in metrics_at_level:
-                relative_object_position_map[metric["relative_object_position"]].append(
-                    metric
-                )
-
             objects = self.objects_by_level[level]
             for i, object in enumerate(objects):
                 for metric in metrics_at_level:
@@ -185,33 +179,88 @@ class MetricGraphBuilder:
                             )
         return g
 
-    def process_thread_dependency_graph(self, g):
-        metric_computer = None
-        for object_metric in nx.topological_sort(g):
-            all_dependencies_met = True
-            for dependency in g.predecessors(object_metric):
-                if dependency.metric_result is None:
-                    raise ValueError(
-                        "FlexEval error: expected this metric_result to be present."
-                    )
-                dependency_info = g.get_edge_data(dependency, object_metric)[
-                    "depends_on"
-                ]
-                dependency_met = (
-                    dependency.metric_result >= dependency_info["metric_min_value"]
-                )  # etc...
-                if not dependency_met:
-                    all_dependencies_met = False
-                    break
-            if all_dependencies_met:
-                # TODO in the future, we could pass some metric_results as kwargs to the metric function
-                # or as a special formatting key to the rubric
-                object_metric.metric_result = metric_computer.compute_metric()
-
 
 class MetricComputer:
     def __init__(self, function_modules: list):
         self.function_modules = function_modules
+
+    def process_thread_dependency_graphs(
+        self, graph_list: Iterable[nx.DiGraph]
+    ) -> list[dict]:
+        evaluated_metrics = []
+        for g in graph_list:
+            evaluated_metrics.extend(self.process_thread_dependency_graph(g))
+        return evaluated_metrics
+
+    def process_thread_dependency_graph(self, g: nx.DiGraph) -> list[dict]:
+        evaluated_metrics = []
+        for object_metric in nx.topological_sort(g):
+            all_dependencies_met = True
+            for dependency in g.predecessors(object_metric):
+                if dependency.metric_results is None:
+                    raise ValueError(
+                        f"FlexEval error: expected metric_result for dependency {dependency.metric['evaluation_name']} to be computed before processing metric {object_metric.metric['evaluation_name']}."
+                    )
+                dependency_info = g.get_edge_data(dependency, object_metric)[
+                    "depends_on"
+                ]
+                dependency_met = False
+                if (
+                    "metric_name" in dependency_info
+                    and dependency_info["metric_name"]
+                    != dependency.metric["evaluation_name"]
+                ):
+                    for metric_result in dependency.metric_results:
+                        # expected key must be present and in the expected range
+                        if (
+                            dependency_info["metric_name"]
+                            == metric_result["metric_name"]
+                        ):
+                            dependency_met = (
+                                metric_result["metric_value"]
+                                >= dependency_info["metric_min_value"]
+                                and metric_result["metric_value"]
+                                <= dependency_info["metric_max_value"]
+                            )
+                            break
+                        else:
+                            logger.debug(
+                                f"Key {dependency_info['metric_name']} not found in results for dependency {dependency.metric['evaluation_name']}."
+                            )
+                elif len(dependency.metric_results) == 1:
+                    metric_result = dependency.metric_results[0]
+                    dependency_met = (
+                        metric_result["metric_value"]
+                        >= dependency_info["metric_min_value"]
+                        and metric_result["metric_value"]
+                        <= dependency_info["metric_max_value"]
+                    )
+                elif len(dependency.metric_results) == 0:
+                    logger.debug(
+                        f"Skipping metric because dependency '{dependency.metric['evaluation_name']}' has no results."
+                    )
+                else:
+                    logger.warning(
+                        f"Not sure how to evaluate dependency '{dependency.metric['evaluation_name']}' for metric '{object_metric.metric['evaluation_name']}', as it has {len(dependency.metric_results)} results but no specified key."
+                    )
+                if not dependency_met:
+                    all_dependencies_met = False
+                    logger.debug(
+                        f"Value for metric '{dependency.metric['evaluation_name']}' not in range for dependency {dependency_info}."
+                    )
+                    break
+            if all_dependencies_met:
+                # TODO in the future, we could pass some metric_results as kwargs to the metric function
+                # or as a special formatting key to the rubric
+                metric_results = self.compute_metric(
+                    object_metric.object, **object_metric.metric
+                )
+                object_metric.metric_results = metric_results
+                evaluated_metrics.extend(metric_results)
+            else:
+                # no results for this metric, as dependencies were unmet
+                object_metric.metric_results = []
+        return evaluated_metrics
 
     def compute_metrics(self, object: Union[Thread, Turn, Message, ToolCall]):
         """we've defined a variable called metrics_to_evaluate

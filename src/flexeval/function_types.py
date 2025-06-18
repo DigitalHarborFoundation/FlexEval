@@ -147,6 +147,9 @@ def get_function_input(
         # the function accepts at least one declared type, but either:
         # - it's a type we don't support at all e.g. set
         # - it's a type we don't support at this metric_level
+        print(type(input_object))
+        print(input_type)
+        print(accepted_parameter_types)
         raise ValueError(
             f"For metric level '{metric_level}', can't coerce {input_type.__name__} for function {metric_function} to accepted parameter type(s) '{', '.join([type.__name__ for type in accepted_parameter_types])}'."
         )

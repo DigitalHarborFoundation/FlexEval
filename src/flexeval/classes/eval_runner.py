@@ -210,24 +210,25 @@ class EvalRunner:
             if isinstance(function_module, types.ModuleType):
                 # already a module
                 actual_modules.append(function_module)
-                continue
             elif isinstance(function_module, FunctionsCollection):
                 raise ValueError("FunctionsCollection not yet implemented!")
-            try:
-                module = importlib.import_module(function_module)
-
-            except ModuleNotFoundError as module_not_found:
+            else:  # it's a filepath
                 try:
-                    spec = importlib.util.spec_from_file_location(
-                        f"function_module_{i}", function_module
-                    )
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
-                except Exception as module_not_loaded:
-                    raise ValueError(
-                        f"Failed to load function module specified by {function_module}. (module not found: {module_not_found}, and failed to load from file location: {module_not_loaded})"
-                    )
-            actual_modules.append(module)
+                    # TODO I think this is not necessary given the pydantic schema; this should always fail for filepaths
+                    # alternately, we might call import_module() on the ModuleType modules, but I think that's unnecessary
+                    module = importlib.import_module(function_module)
+                except ModuleNotFoundError as module_not_found:
+                    try:
+                        spec = importlib.util.spec_from_file_location(
+                            f"function_module_{i}", function_module
+                        )
+                        module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+                    except Exception as module_not_loaded:
+                        raise ValueError(
+                            f"Failed to load function module specified by {function_module}. (module not found: {module_not_found}, and failed to load from file location: {module_not_loaded})"
+                        )
+                actual_modules.append(module)
         if (
             self.evalrun.add_default_functions
             and function_metrics not in actual_modules

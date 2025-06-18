@@ -83,7 +83,17 @@ def identity(object: Union[Thread, Turn, Message, ToolCall], **kwargs) -> dict:
     Returns:
         dict: Returns a dict.
     """
-    return {"identity": str(object)}
+    if isinstance(object, Thread):
+        object_type = 0
+    elif isinstance(object, Turn):
+        object_type = 1
+    elif isinstance(object, Message):
+        object_type = 2
+    elif isinstance(object, ToolCall):
+        object_type = 3
+    else:
+        raise ValueError(f"Unknown object type {type(object)}.")
+    return {"object_type": object_type}
 
 
 def is_role(object: Union[Turn, Message], role: str) -> dict:

@@ -127,8 +127,6 @@ def get_parent_metrics(all_metrics: dict, child: dict) -> tuple[list, list]:
     parents = []
     depends_on_with_id_added = []
     for requirement in child.get("depends_on", []):
-        if "metric_level" not in requirement:
-            requirement["metric_level"] = child["metric_level"]
         candidate_parents = []
         allowed_types = ["function", "rubric"]
         # if requirement has the type narrowed down, then narrow it down here too
