@@ -84,7 +84,10 @@ class MetricGraphBuilder:
         then we have a dependency on only a single object: that Message's Turn.
         """
         metric_id = depends_on["parent_id"]
-        metric_level = depends_on["metric_level"]
+        metric_level = depends_on.get("metric_level")
+        if metric_level is None:
+            # if not specified in the dependency, use the parent metric's level
+            metric_level = current_metric_level
         if metric_level == current_metric_level:
             pass  # just use current_index, no lookup needed
         elif current_metric_level == "ToolCall":

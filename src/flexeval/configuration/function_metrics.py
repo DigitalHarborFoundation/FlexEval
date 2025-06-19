@@ -96,6 +96,22 @@ def identity(object: Union[Thread, Turn, Message, ToolCall], **kwargs) -> dict:
     return {"object_type": object_type}
 
 
+def constant(object: Union[Thread, Turn, Message, ToolCall], **kwargs) -> int | float:
+    """Returns a constant value.
+
+    Args:
+        object (Union[Thread, Turn, Message, ToolCall]): Accepts (and ignores) any type of object.
+        response (Union[float | int]): If provided in the kwargs, return response. Otherwise, return 0.
+
+    Returns:
+        int | float: The specified response, or 0.
+    """
+    response = 0
+    if "response" in kwargs:
+        response = kwargs["response"]
+    return response
+
+
 def is_role(object: Union[Turn, Message], role: str) -> dict:
     """
     Return 1 is the role for this Turn or Message matches the passed in role,

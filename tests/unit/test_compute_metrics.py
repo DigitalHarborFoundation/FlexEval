@@ -53,6 +53,14 @@ def build_evalsetrun(metrics: eval_schema.Metrics):
     return evalsetrun, runner
 
 
+def get_constant_function(
+    constant: int | float, metric_level: eval_schema.MetricLevel
+) -> eval_schema.FunctionItem:
+    return eval_schema.FunctionItem(
+        name="constant", metric_level=metric_level, kwargs={"response": constant}
+    )
+
+
 def get_metrics() -> dict[str, eval_schema.Metrics]:
     metrics = eval_schema.Metrics(
         function=[
@@ -74,6 +82,20 @@ def get_metrics() -> dict[str, eval_schema.Metrics]:
         ],
         rubric=[],
     )
+    f1 = get_constant_function(0, "Thread")
+    f2 = get_constant_function(1, "Turn")
+    f2.depends_on = [
+        eval_schema.DependsOnItem(
+            name="constant", type="function", kwargs={"response": 0}
+        )
+    ]
+    f3 = get_constant_function(2, "Message")
+    f3.depends_on = [
+        eval_schema.DependsOnItem(
+            name="constant", type="function", kwargs={"response": 1}
+        )
+    ]
+    chain_metrics = eval_schema.Metrics(function=[f1, f2, f3])
     return {
         "one message function, no deps": eval_schema.Metrics(
             function=[
@@ -81,6 +103,7 @@ def get_metrics() -> dict[str, eval_schema.Metrics]:
             ],
         ),
         "simple_dep": metrics,
+        "constant chain": chain_metrics,
     }
 
 
@@ -111,4 +134,21 @@ class TestMetricGraphBuilder(unittest.TestCase):
                 )
 
                 mc = runner.get_metric_computer()
-                mc.process_thread_dependency_graphs(graphs)
+                results = mc.process_thread_dependency_graphs(graphs)
+                self.assertGreater(len(results), 0)
+
+                if metrics_descriptor == "constant chain":
+                    self.assertEqual(
+                        len(results),
+                        len(evalsetrun.threads)
+                        + len(evalsetrun.turns)
+                        + len(evalsetrun.messages),
+                        "Expected one result for each thread, turn, and message.",
+                    )
+                    for result in results:
+                        if result["metric_level"] == "Thread":
+                            self.assertEqual(result["metric_value"], 0)
+                        elif result["metric_level"] == "Turn":
+                            self.assertEqual(result["metric_value"], 1)
+                        elif result["metric_level"] == "Message":
+                            self.assertEqual(result["metric_value"], 2)
