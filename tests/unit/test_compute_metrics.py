@@ -4,12 +4,15 @@ import hashlib
 import re
 import base64
 
-from flexeval import compute_metrics, run_utils
+from flexeval import compute_metrics, run_utils, helpers
 from flexeval.schema import eval_schema, evalrun_schema, config_schema
 from flexeval.classes import eval_runner, eval_set_run
 from flexeval.classes.message import Message
+from flexeval.classes.turn import Turn
+from flexeval.classes.metric import Metric
 from flexeval.configuration import function_metrics
 from flexeval.io.parsers import yaml_parser
+from flexeval.metrics import save as save_metrics
 
 
 def build_evalsetrun(metrics: eval_schema.Metrics):
@@ -66,7 +69,7 @@ def get_constant_function(
 
 
 def get_metrics() -> dict[str, eval_schema.Metrics]:
-    metrics = eval_schema.Metrics(
+    simple_dep_metrics = eval_schema.Metrics(
         function=[
             eval_schema.FunctionItem(name="index_in_thread", metric_level="Message"),
             eval_schema.FunctionItem(
@@ -86,6 +89,22 @@ def get_metrics() -> dict[str, eval_schema.Metrics]:
         ],
         rubric=[],
     )
+    second_turn_dep_metrics = eval_schema.Metrics(
+        function=[
+            eval_schema.FunctionItem(name="index_in_thread"),
+            eval_schema.FunctionItem(
+                name="constant",
+                kwargs={"response": 57},
+                depends_on=[
+                    eval_schema.DependsOnItem(
+                        name="index_in_thread",
+                        metric_min_value=1,
+                        metric_max_value=1,
+                    )
+                ],
+            ),
+        ]
+    )
     f1 = get_constant_function(0, "Thread")
     f2 = get_constant_function(1, "Turn")
     f2.depends_on = [
@@ -100,14 +119,30 @@ def get_metrics() -> dict[str, eval_schema.Metrics]:
         )
     ]
     chain_metrics = eval_schema.Metrics(function=[f1, f2, f3])
+
+    kwarg_dep = eval_schema.Metrics(
+        function=[
+            eval_schema.FunctionItem(name="is_role", kwargs={"role": "assistant"}),
+            eval_schema.FunctionItem(
+                name="flesch_reading_ease",
+                depends_on=[
+                    eval_schema.DependsOnItem(
+                        name="is_role", kwargs={"role": "assistant"}
+                    )
+                ],
+            ),
+        ]
+    )
     return {
         "one message function, no deps": eval_schema.Metrics(
             function=[
                 eval_schema.FunctionItem(name="identity", metric_level="Message"),
             ],
         ),
-        "simple_dep": metrics,
+        "simple dep": simple_dep_metrics,
+        "second turn dep": second_turn_dep_metrics,
         "constant chain": chain_metrics,
+        "kwarg dep": kwarg_dep,
     }
 
 
@@ -201,7 +236,7 @@ class TestMetricComputer(unittest.TestCase):
             "overridden",
         )
 
-    def test_single_process(self):
+    def test_process_thread_dependency_graph(self):
         all_metrics = get_metrics()
         for metrics_descriptor, metrics in all_metrics.items():
             with self.subTest(metrics_descriptor=metrics_descriptor):
@@ -210,9 +245,21 @@ class TestMetricComputer(unittest.TestCase):
                 mgb.build_metric_structures(evalsetrun)
                 graphs = list(mgb.build_thread_task_graphs(evalsetrun))
 
+                # graph = graphs[0]
+                # helpers.visualize_graph(
+                #    graph, "/Users/zacharylevonian/Downloads/metric_graph.png"
+                # )
+                # break
+
                 # build metric computer and process dependency graphs
                 mc = compute_metrics.MetricComputer.from_evalrun(runner.evalrun)
-                results = mc.process_thread_dependency_graphs(graphs)
+                results = []
+                for graph in graphs:
+                    results.extend(
+                        mc.process_thread_dependency_graph(
+                            graph, runner.evalrun.config.raise_on_metric_error
+                        )
+                    )
                 self.assertGreater(len(results), 0)
 
                 if metrics_descriptor == "constant chain":
@@ -231,32 +278,50 @@ class TestMetricComputer(unittest.TestCase):
                         elif result["metric_level"] == "Message":
                             self.assertEqual(result["metric_value"], 2)
 
-    def test_multi_process(self):
+                if metrics_descriptor == "second turn dep":
+                    save_metrics.save_metrics(results)
+                    for turn in evalsetrun.turns:
+                        if turn.index_in_thread != 1:
+                            # non-second turns should not have a constant metric
+                            self.assertEqual(len(turn.metrics_list), 1)
+                            self.assertEqual(
+                                turn.metrics_list.first().evaluation_name,
+                                "index_in_thread",
+                            )
+                        else:
+                            self.assertEqual(len(turn.metrics_list), 2)
+                            constant_metric = list(turn.metrics_list)[-1]
+                            self.assertEqual(
+                                constant_metric.evaluation_name,
+                                "constant",
+                            )
+
+                if metrics_descriptor == "kwarg dep":
+                    save_metrics.save_metrics(results)
+                    # select all "assistant" role Turns
+                    # then validate that a reading ease score was also computed for that Turn
+                    assistant_turns = (
+                        Turn.select()
+                        .join(Metric)
+                        .where(Metric.evaluation_name == "is_role")
+                        .where(Metric.metric_name == "assistant")
+                    )
+                    self.assertGreater(len(assistant_turns), 0)
+                    for turn in assistant_turns:
+                        metrics = turn.metrics_list
+                        self.assertGreater(len(metrics), 0)
+
+    def test_compute_metrics(self):
         all_metrics = get_metrics()
         for metrics_descriptor, metrics in all_metrics.items():
             with self.subTest(metrics_descriptor=metrics_descriptor):
                 evalsetrun, runner = build_evalsetrun(metrics)
-                mgb = compute_metrics.MetricGraphBuilder()
-                mgb.build_metric_structures(evalsetrun)
-                graphs = list(mgb.build_thread_task_graphs(evalsetrun))
+                compute_metrics.compute_metrics(runner.evalrun, evalsetrun)
 
-                # build metric computer and process dependency graphs
-                mc = compute_metrics.MetricComputer.from_evalrun(runner.evalrun)
-                results = mc.process_thread_dependency_graphs(graphs)
-                self.assertGreater(len(results), 0)
-
-                if metrics_descriptor == "constant chain":
-                    self.assertEqual(
-                        len(results),
-                        len(evalsetrun.threads)
-                        + len(evalsetrun.turns)
-                        + len(evalsetrun.messages),
-                        "Expected one result for each thread, turn, and message.",
-                    )
-                    for result in results:
-                        if result["metric_level"] == "Thread":
-                            self.assertEqual(result["metric_value"], 0)
-                        elif result["metric_level"] == "Turn":
-                            self.assertEqual(result["metric_value"], 1)
-                        elif result["metric_level"] == "Message":
-                            self.assertEqual(result["metric_value"], 2)
+    def test_compute_metrics_multiprocess(self):
+        all_metrics = get_metrics()
+        for metrics_descriptor, metrics in all_metrics.items():
+            with self.subTest(metrics_descriptor=metrics_descriptor):
+                evalsetrun, runner = build_evalsetrun(metrics)
+                runner.evalrun.config.max_workers = 2
+                compute_metrics.compute_metrics(runner.evalrun, evalsetrun)

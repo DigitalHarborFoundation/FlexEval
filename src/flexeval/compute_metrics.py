@@ -27,9 +27,18 @@ logger = logging.getLogger(__name__)
 
 class ObjectMetric:
     def __init__(self, object: Message | Turn | ToolCall | Thread, metric: dict):
+        """Tracks a unique (object, metric) combination and any results computed for that metric.
+
+        Args:
+            object (Message | Turn | ToolCall | Thread): The object to track.
+            metric (dict): The metric to track.
+        """
         self.object: Message | Turn | ToolCall | Thread = object
         self.metric: dict = metric
         self.metric_results: list[dict] | None = None
+
+    def __repr__(self) -> str:
+        return f"ObjectMetric(object={self.object.__class__.__name__} {self.object.id}, metric={self.metric}, metric_results={self.metric_results})"
 
 
 class MetricGraphBuilder:
@@ -90,45 +99,53 @@ class MetricGraphBuilder:
         then we have a dependency on only a single object: that Message's Turn.
         """
         metric_id = depends_on["parent_id"]
-        metric_level = depends_on.get("metric_level")
-        if metric_level is None:
-            # if not specified in the dependency, use the parent metric's level
-            metric_level = current_metric_level
-        if metric_level == current_metric_level:
+        dependency_metric_level = depends_on.get("metric_level")
+        if dependency_metric_level is None:
+            # if not specified in the dependency already, look up the metric level
+            depends_on_metric = self.metric_id_map[metric_id]
+            dependency_metric_level = depends_on_metric["metric_level"]
+            if dependency_metric_level is None:
+                raise ValueError(
+                    f"Metric lacks a metric level: {depends_on_metric} (matched via dependency_info: {depends_on})"
+                )
+
+        if dependency_metric_level == current_metric_level:
             pass  # just use current_index, no lookup needed
         elif current_metric_level == "ToolCall":
-            if metric_level == "Message":
+            if dependency_metric_level == "Message":
                 current_index = self.get_index(
                     current_object.message_id, self.objects_by_level["Message"]
                 )
-            elif metric_level == "Turn":
+            elif dependency_metric_level == "Turn":
                 current_index = self.get_index(
                     current_object.turn_id, self.objects_by_level["Turn"]
                 )
-            elif metric_level == "Thread":
+            elif dependency_metric_level == "Thread":
                 current_index = 0  # only a single thread, by definition
         elif current_metric_level == "Message":
-            if metric_level == "Turn":
+            if dependency_metric_level == "Turn":
                 current_index = self.get_index(
                     current_object.turn_id, self.objects_by_level["Turn"]
                 )
-            elif metric_level == "Thread":
+            elif dependency_metric_level == "Thread":
                 current_index = 0  # only a single thread, by definition
-            elif metric_level == "ToolCall":
+            elif dependency_metric_level == "ToolCall":
                 raise ValueError(
-                    f"Can't depend on a {metric_level} metric from a {current_metric_level} metric."
+                    f"Can't depend on a {dependency_metric_level} metric from a {current_metric_level} metric."
                 )
         elif current_metric_level == "Turn":
-            if current_metric_level == "Thread":
+            if dependency_metric_level == "Thread":
                 current_index = 0  # only a single thread, by definition
             else:
                 raise ValueError(
-                    f"Can't depend on a {metric_level} metric from a {current_metric_level} metric."
+                    f"Can't depend on a {dependency_metric_level} metric from a {current_metric_level} metric."
                 )
         elif current_metric_level == "Thread":
             raise ValueError(
-                f"Can't depend on a {metric_level} metric from a {current_metric_level} metric."
+                f"Can't depend on a {dependency_metric_level} metric from a {current_metric_level} metric."
             )
+        else:
+            raise ValueError(f"Unsupported level: {current_metric_level=}")
         relative_object_position = depends_on["relative_object_position"]
         target_object_index = current_index + relative_object_position
         if target_object_index < 0:
@@ -136,9 +153,9 @@ class MetricGraphBuilder:
                 f"Object at position {current_index} object cannot in principle satisfy this dependency, so skipping it."
             )
             return None
-        object = self.objects_by_level[metric_level][target_object_index]
+        object = self.objects_by_level[dependency_metric_level][target_object_index]
         metric = self.metric_id_map[metric_id]
-        return self.get_or_create_object_metric(metric_level, object, metric)
+        return self.get_or_create_object_metric(dependency_metric_level, object, metric)
 
     def build_thread_task_graphs(self, evalsetrun: EvalSetRun) -> Iterable[nx.DiGraph]:
         threads = evalsetrun.threads
@@ -148,8 +165,8 @@ class MetricGraphBuilder:
     def build_thread_task_graph(self, thread: Thread) -> nx.DiGraph:
         self.objects_by_level = {
             "Thread": [thread],
-            "Message": list(thread.messages),
             "Turn": list(thread.turns),
+            "Message": list(thread.messages),
             "ToolCall": list(thread.toolcalls),
         }
 
@@ -276,6 +293,7 @@ class MetricComputer:
                     dependency_met = False
                     if (
                         "metric_name" in dependency_info
+                        and dependency_info["metric_name"] is not None
                         and dependency_info["metric_name"]
                         != dependency.metric["evaluation_name"]
                     ):
@@ -311,7 +329,7 @@ class MetricComputer:
                             f"Skipping metric because dependency '{dependency.metric['evaluation_name']}' has no results."
                         )
                     else:
-                        logger.warning(
+                        raise ValueError(
                             f"Not sure how to evaluate dependency '{dependency.metric['evaluation_name']}' for metric '{object_metric.metric['evaluation_name']}', as it has {len(dependency.metric_results)} results but no specified key."
                         )
                     if not dependency_met:

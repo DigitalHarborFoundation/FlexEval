@@ -59,7 +59,7 @@ Key words in the data block as demonstrated in the template above are used for p
 In configuration/evals.yaml, you can use two parameters to specify how the rubric metric should be conducted, namely, "metric_level" and "depends_on".
 
 - `metric_level`: This parameter determines on which level (e.g., turn, message, toolcall) should the rubric metric be conducted.
-- `depends_on`: This parameter describes a condition for the rubric metric to be conducted. In the following example, the depends_on parameter speficies that the rubric metric "is_pedagogically_appropriate_plot" is only run when the result of the function metric "is_role" is "assitant".
+- `depends_on`: This parameter describes a condition for the rubric metric to be conducted. In the following example, the depends_on parameter speficies that the rubric metric "is_pedagogically_appropriate_plot" is only run when the result of the function metric "is_role" is "assistant".
 
 ```
 - name: is_pedagogically_appropriate_plot

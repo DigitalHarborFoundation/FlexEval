@@ -3,12 +3,11 @@ import logging
 import random as rd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from collections import defaultdict
 
 from flexeval import compute_metrics, run_utils
 from flexeval.classes.eval_runner import EvalRunner
-from flexeval.classes.metric import Metric
 from flexeval.classes.turn import Turn
+import flexeval.metrics
 from flexeval.schema import EvalRun, FileDataSource
 from flexeval.io.parsers import yaml_parser
 
@@ -179,38 +178,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
     try:
         metrics = compute_metrics.compute_metrics(eval_run, evalsetrun)
         runner.logger.info(f"Saving {len(metrics)} metrics to database.")
-        for metric in metrics:
-            # TODO - speed this up somehow
-            thread = metric.get("thread")
-            if thread is None:
-                thread = metric[metric["metric_level"].lower()].thread
-            Metric.create(
-                message=metric.get("message", None),
-                turn=metric.get("turn", None),
-                toolcall=metric.get("toolcall", None),
-                evalsetrun=metric[
-                    metric["metric_level"].lower()
-                ].evalsetrun,  # metric["turn"].evalsetrun,
-                dataset=metric[
-                    metric["metric_level"].lower()
-                ].dataset,  # metric["turn"].dataset,
-                thread=thread,
-                evaluation_name=metric["evaluation_name"],
-                evaluation_type=metric["evaluation_type"],
-                metric_name=metric["metric_name"],
-                metric_value=metric["metric_value"],
-                metric_level=metric["metric_level"],
-                kwargs=metric["kwargs"],
-                depends_on=json.dumps(metric["depends_on"]),
-                context_only=metric.get("context_only", False),
-                source=metric["source"],
-                rubric_prompt=metric.get("rubric_prompt", None),
-                rubric_completion=metric.get("rubric_completion", None),
-                rubric_model=metric.get("rubric_model", None),
-                rubric_completion_tokens=metric.get("rubric_completion_tokens", None),
-                rubric_prompt_tokens=metric.get("rubric_prompt_tokens", None),
-                rubric_score=metric.get("rubric_score", None),
-            )
+        flexeval.metrics.save.save_metrics(metrics)
     except Exception:
         runner.logger.exception("An error occurred computing metrics.", exc_info=True)
         if eval_run.config.raise_on_metric_error:

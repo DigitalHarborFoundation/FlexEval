@@ -66,6 +66,7 @@ class MetricItem(BaseModel):
         default_factory=list,
         description="List of dependencies that must be satisfied for this metric to be computed.",
     )
+    # TODO why is metric_level optional? Should likely make it required
     metric_level: Optional[MetricLevel] = Field(
         "Turn",
         description="What level of granularity (ToolCall, Message, Turn, or Thread) this rubric should be applied to",

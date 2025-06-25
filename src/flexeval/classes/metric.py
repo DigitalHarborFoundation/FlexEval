@@ -14,17 +14,17 @@ class Metric(BaseModel):
 
     id = pw.IntegerField(primary_key=True)
 
-    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="turnproperties")
-    dataset = pw.ForeignKeyField(Dataset, backref="turnproperties")
-    thread = pw.ForeignKeyField(Thread, backref="turnproperties")
+    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="metrics_list")
+    dataset = pw.ForeignKeyField(Dataset, backref="metrics_list")
+    thread = pw.ForeignKeyField(Thread, backref="metrics_list")
     turn = pw.ForeignKeyField(
-        Turn, null=True, backref="turnproperties"
+        Turn, null=True, backref="metrics_list"
     )  # Only defined for Turn metrics
     message = pw.ForeignKeyField(
-        Message, null=True, backref="turnproperties"
+        Message, null=True, backref="metrics_list"
     )  # Only defined for Message metrics
     toolcall = pw.ForeignKeyField(
-        ToolCall, null=True, backref="turnproperties"
+        ToolCall, null=True, backref="metrics_list"
     )  # Only defined for ToolCall metrics
 
     evaluation_name = pw.TextField()

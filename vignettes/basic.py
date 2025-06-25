@@ -14,5 +14,5 @@ eval_run = EvalRun(
 flexeval.run(eval_run)
 for metric in access.get_all_metrics(eval_run.database_path):
     print(
-        f"{metric['evalsetrun']} {metric['dataset']} {metric['thread']} {metric['turn']} {metric['metric_name']} {metric['metric_value']}"
+        f"{metric['thread']} {metric['turn']} {metric['metric_name']} {metric['metric_value']}"
     )
