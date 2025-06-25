@@ -127,7 +127,9 @@ def get_metrics() -> dict[str, eval_schema.Metrics]:
                 name="flesch_reading_ease",
                 depends_on=[
                     eval_schema.DependsOnItem(
-                        name="is_role", kwargs={"role": "assistant"}
+                        name="is_role",
+                        kwargs={"role": "assistant"},
+                        metric_min_value=1,
                     )
                 ],
             ),
@@ -245,12 +247,6 @@ class TestMetricComputer(unittest.TestCase):
                 mgb.build_metric_structures(evalsetrun)
                 graphs = list(mgb.build_thread_task_graphs(evalsetrun))
 
-                # graph = graphs[0]
-                # helpers.visualize_graph(
-                #    graph, "/Users/zacharylevonian/Downloads/metric_graph.png"
-                # )
-                # break
-
                 # build metric computer and process dependency graphs
                 mc = compute_metrics.MetricComputer.from_evalrun(runner.evalrun)
                 results = []
@@ -298,6 +294,38 @@ class TestMetricComputer(unittest.TestCase):
 
                 if metrics_descriptor == "kwarg dep":
                     save_metrics.save_metrics(results)
+                    for turn in evalsetrun.turns:
+                        is_role_assistant = (
+                            turn.metrics_list.where(Metric.evaluation_name == "is_role")
+                            .first()
+                            .metric_value
+                        )
+                        if is_role_assistant == 1:
+                            metric = turn.metrics_list.where(
+                                Metric.evaluation_name == "flesch_reading_ease"
+                            ).first()
+                            self.assertIsNotNone(metric)
+                            self.assertGreater(
+                                metric.metric_value,
+                                0,
+                                "Expected positive flesch_reading_ease score.",
+                            )
+                        else:
+                            self.assertEqual(
+                                len(
+                                    turn.metrics_list.where(
+                                        Metric.evaluation_name == "flesch_reading_ease"
+                                    )
+                                ),
+                                0,
+                                "Should not compute flesch_reading_ease metric for non-assistant turns.",
+                            )
+                            self.assertEqual(
+                                len(turn.metrics_list),
+                                1,
+                                "Only 1 metric expected for non-assistant turns.",
+                            )
+
                     # select all "assistant" role Turns
                     # then validate that a reading ease score was also computed for that Turn
                     assistant_turns = (
@@ -305,11 +333,12 @@ class TestMetricComputer(unittest.TestCase):
                         .join(Metric)
                         .where(Metric.evaluation_name == "is_role")
                         .where(Metric.metric_name == "assistant")
+                        .where(Metric.metric_value == 1)
                     )
                     self.assertGreater(len(assistant_turns), 0)
                     for turn in assistant_turns:
                         metrics = turn.metrics_list
-                        self.assertGreater(len(metrics), 0)
+                        self.assertGreater(len(metrics), 1)
 
     def test_compute_metrics(self):
         all_metrics = get_metrics()
