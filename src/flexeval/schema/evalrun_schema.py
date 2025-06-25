@@ -43,9 +43,9 @@ def get_default_rubrics() -> list[Path | rubric_schema.RubricsCollection]:
     return [rubric.get_default_rubric_collection()]
 
 
-def get_default_function_metrics() -> list[
-    Path | FunctionsCollection | schema_utils.ModuleType
-]:
+def get_default_function_metrics() -> (
+    list[Path | FunctionsCollection | schema_utils.ModuleType]
+):
     return [function_metrics]
 
 
@@ -58,7 +58,9 @@ class EvalRun(BaseModel):
         description="Output database path.",
     )
     eval: eval_schema.Eval
-    config: config_schema.Config
+    config: config_schema.Config = Field(
+        default_factory=config_schema.Config, description="Configuration details."
+    )
     rubric_paths: list[Path | rubric_schema.RubricsCollection] = Field(
         default_factory=get_default_rubrics,
         description="Additional sources for rubrics. If a Path, should be a YAML file in the expected format.",

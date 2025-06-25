@@ -12,7 +12,7 @@ from pathlib import Path
 import dotenv
 from peewee import SqliteDatabase
 
-from flexeval import compute_metrics, dependency_graph, validate
+from flexeval import dependency_graph, validate
 from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.message import Message
@@ -201,37 +201,3 @@ class EvalRunner:
         for handler in handlers:
             handler.close()
             self.logger.removeHandler(handler)
-
-    def get_metric_computer(self) -> compute_metrics.MetricComputer:
-        function_modules = self.evalrun.function_modules
-        # convert from string module names or filepaths to Python modules
-        actual_modules = []
-        for i, function_module in enumerate(function_modules):
-            if isinstance(function_module, types.ModuleType):
-                # already a module
-                actual_modules.append(function_module)
-            elif isinstance(function_module, FunctionsCollection):
-                raise ValueError("FunctionsCollection not yet implemented!")
-            else:  # it's a filepath
-                try:
-                    # TODO I think this is not necessary given the pydantic schema; this should always fail for filepaths
-                    # alternately, we might call import_module() on the ModuleType modules, but I think that's unnecessary
-                    module = importlib.import_module(function_module)
-                except ModuleNotFoundError as module_not_found:
-                    try:
-                        spec = importlib.util.spec_from_file_location(
-                            f"function_module_{i}", function_module
-                        )
-                        module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(module)
-                    except Exception as module_not_loaded:
-                        raise ValueError(
-                            f"Failed to load function module specified by {function_module}. (module not found: {module_not_found}, and failed to load from file location: {module_not_loaded})"
-                        )
-                actual_modules.append(module)
-        if (
-            self.evalrun.add_default_functions
-            and function_metrics not in actual_modules
-        ):
-            actual_modules.append(function_metrics)
-        return compute_metrics.MetricComputer(actual_modules)

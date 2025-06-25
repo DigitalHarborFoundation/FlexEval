@@ -16,6 +16,7 @@ import pandas as pd
 from flexeval import runner, log_utils
 from tests.unit import mixins
 from flexeval.classes.eval_runner import EvalRunner
+from flexeval.configuration import function_metrics
 
 
 def setUpModule():
@@ -600,19 +601,12 @@ class TestListStringInputFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
 
     def test_reading_ease_levels_by_level(self):
         message_id_to_reading_ease = {1: 119.19, 2: 119.19, 3: 35.61, 4: 77.91}
-        message_id_to_reading_ease_context_only = {
-            1: 206.84,
-            2: 119.19,
-            3: 119.19,
-            4: 92.8,
-        }
         turn_id_to_reading_ease = {1: 119.19, 2: 83.32, 3: 77.91}
-        turn_id_to_reading_ease_context_only = {1: 206.84, 2: 119.19, 3: 92.8}
         with sqlite3.connect(self.database_path) as connection:
             reading_ease_metrics = connection.execute(
                 """
                     SELECT 
-                        turn_id, message_id, context_only, metric_level, metric_name, metric_value
+                        turn_id, message_id, metric_level, metric_name, metric_value
                     FROM 
                         metric
                     WHERE 1=1
@@ -624,7 +618,6 @@ class TestListStringInputFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
                 (
                     turn_id,
                     message_id,
-                    context_only,
                     metric_level,
                     metric_name,
                     metric_value,
@@ -633,16 +626,10 @@ class TestListStringInputFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
                 comparison_id = None
                 if metric_level == "Message":
                     comparison_id = message_id
-                    if context_only:
-                        comparison_dict = message_id_to_reading_ease_context_only
-                    else:
-                        comparison_dict = message_id_to_reading_ease
+                    comparison_dict = message_id_to_reading_ease
                 elif metric_level == "Turn":
                     comparison_id = turn_id
-                    if context_only:
-                        comparison_dict = turn_id_to_reading_ease_context_only
-                    else:
-                        comparison_dict = turn_id_to_reading_ease
+                    comparison_dict = turn_id_to_reading_ease
                 else:
                     raise Exception(
                         f"Expected only Message and Turn levels for reading ease but found {metric_level}"

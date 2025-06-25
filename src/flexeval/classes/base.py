@@ -10,9 +10,7 @@ class BaseModel(pw.Model):
         pass
 
     @classmethod
-    def initialize_database(
-        cls: "BaseModel", database_path: str, clear_table: bool = False
-    ):
+    def set_database_path(cls: "BaseModel", database_path: str) -> pw.Database:
         database = SqliteQueueDatabase(
             database_path,
             use_gevent=False,  # Use the standard library "threading" module.
@@ -20,8 +18,14 @@ class BaseModel(pw.Model):
             results_timeout=5.0,
         )
         cls._meta.database = database
-
         database.connect()
+        return database
+
+    @classmethod
+    def initialize_database(
+        cls: "BaseModel", database_path: str, clear_table: bool = False
+    ):
+        database = cls.set_database_path(database_path)
         if clear_table:
             database.drop_tables([cls])
         database.create_tables([cls], safe=False)

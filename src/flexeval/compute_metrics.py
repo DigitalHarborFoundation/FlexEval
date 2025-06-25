@@ -5,14 +5,20 @@ import logging
 import string
 from typing import Union, Iterable
 import networkx as nx
-from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
+import importlib
+import importlib.util
+import types
 from flexeval import function_types
-from flexeval.schema import eval_schema
+from flexeval.schema import eval_schema, EvalRun, FunctionsCollection
+from flexeval.classes import eval_runner
 from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 from flexeval.configuration import completion_functions
+from flexeval.configuration import function_metrics
+
 
 from flexeval.classes.eval_set_run import EvalSetRun
 
@@ -183,7 +189,64 @@ class MetricGraphBuilder:
         return g
 
 
+def compute_metrics(evalrun: EvalRun, evalsetrun: EvalSetRun) -> list[dict]:
+    n_workers = evalrun.config.max_workers
+    raise_on_error = evalrun.config.raise_on_metric_error
+    mgb = MetricGraphBuilder()
+    mgb.build_metric_structures(evalsetrun)
+    graphs = mgb.build_thread_task_graphs(evalsetrun)
+    mc = MetricComputer.from_evalrun(evalrun)
+    metrics = []
+    if n_workers == 1:
+        for graph in graphs:
+            graph_metrics = mc.process_thread_dependency_graph(graph, raise_on_error)
+            metrics.extend(graph_metrics)
+    else:
+        with ThreadPoolExecutor(max_workers=n_workers) as executor:
+            futures = []
+            for graph in graphs:
+                future = executor.submit(mc.process_thread_dependency_graph, graph)
+                futures.append(future)
+            for i, future in enumerate(futures):
+                metrics.extend(future.result())
+                if i % 100 == 0:
+                    logger.info(f"Metrics futures resulted: {i+1} / {len(futures)}")
+    return metrics
+
+
 class MetricComputer:
+    @classmethod
+    def from_evalrun(cls, evalrun: EvalRun) -> "MetricComputer":
+        function_modules = evalrun.function_modules
+        # convert from string module names or filepaths to Python modules
+        actual_modules = []
+        for i, function_module in enumerate(function_modules):
+            if isinstance(function_module, types.ModuleType):
+                # already a module
+                actual_modules.append(function_module)
+            elif isinstance(function_module, FunctionsCollection):
+                raise ValueError("FunctionsCollection not yet implemented!")
+            else:  # it's a filepath
+                try:
+                    # TODO I think this is not necessary given the pydantic schema; this should always fail for filepaths
+                    # alternately, we might call import_module() on the ModuleType modules, but I think that's unnecessary
+                    module = importlib.import_module(function_module)
+                except ModuleNotFoundError as module_not_found:
+                    try:
+                        spec = importlib.util.spec_from_file_location(
+                            f"function_module_{i}", function_module
+                        )
+                        module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+                    except Exception as module_not_loaded:
+                        raise ValueError(
+                            f"Failed to load function module specified by {function_module}. (module not found: {module_not_found}, and failed to load from file location: {module_not_loaded})"
+                        )
+                actual_modules.append(module)
+        if evalrun.add_default_functions and function_metrics not in actual_modules:
+            actual_modules.append(function_metrics)
+        return cls(actual_modules)
+
     def __init__(self, function_modules: list):
         self.function_modules = function_modules
 
@@ -195,74 +258,84 @@ class MetricComputer:
             evaluated_metrics.extend(self.process_thread_dependency_graph(g))
         return evaluated_metrics
 
-    def process_thread_dependency_graph(self, g: nx.DiGraph) -> list[dict]:
+    def process_thread_dependency_graph(
+        self, g: nx.DiGraph, raise_on_error: bool = True
+    ) -> list[dict]:
         evaluated_metrics = []
-        for object_metric in nx.topological_sort(g):
-            all_dependencies_met = True
-            for dependency in g.predecessors(object_metric):
-                if dependency.metric_results is None:
-                    raise ValueError(
-                        f"FlexEval error: expected metric_result for dependency {dependency.metric['evaluation_name']} to be computed before processing metric {object_metric.metric['evaluation_name']}."
+        try:
+            for object_metric in nx.topological_sort(g):
+                all_dependencies_met = True
+                for dependency in g.predecessors(object_metric):
+                    if dependency.metric_results is None:
+                        raise ValueError(
+                            f"FlexEval error: expected metric_result for dependency {dependency.metric['evaluation_name']} to be computed before processing metric {object_metric.metric['evaluation_name']}."
+                        )
+                    dependency_info = g.get_edge_data(dependency, object_metric)[
+                        "depends_on"
+                    ]
+                    dependency_met = False
+                    if (
+                        "metric_name" in dependency_info
+                        and dependency_info["metric_name"]
+                        != dependency.metric["evaluation_name"]
+                    ):
+                        for metric_result in dependency.metric_results:
+                            # expected key must be present and in the expected range
+                            if (
+                                dependency_info["metric_name"]
+                                == metric_result["metric_name"]
+                            ):
+                                dependency_met = (
+                                    metric_result["metric_value"]
+                                    >= dependency_info["metric_min_value"]
+                                ) and (
+                                    metric_result["metric_value"]
+                                    <= dependency_info["metric_max_value"]
+                                )
+                                break
+                            else:
+                                logger.debug(
+                                    f"Key {dependency_info['metric_name']} not found in results for dependency {dependency.metric['evaluation_name']}."
+                                )
+                    elif len(dependency.metric_results) == 1:
+                        metric_result = dependency.metric_results[0]
+                        dependency_met = (
+                            metric_result["metric_value"]
+                            >= dependency_info["metric_min_value"]
+                        ) and (
+                            metric_result["metric_value"]
+                            <= dependency_info["metric_max_value"]
+                        )
+                    elif len(dependency.metric_results) == 0:
+                        logger.debug(
+                            f"Skipping metric because dependency '{dependency.metric['evaluation_name']}' has no results."
+                        )
+                    else:
+                        logger.warning(
+                            f"Not sure how to evaluate dependency '{dependency.metric['evaluation_name']}' for metric '{object_metric.metric['evaluation_name']}', as it has {len(dependency.metric_results)} results but no specified key."
+                        )
+                    if not dependency_met:
+                        all_dependencies_met = False
+                        logger.debug(
+                            f"Value for metric '{dependency.metric['evaluation_name']}' not in range for dependency {dependency_info}."
+                        )
+                        break
+                if all_dependencies_met:
+                    # TODO in the future, we could pass some metric_results as kwargs to the metric function
+                    # or as a special formatting key to the rubric
+                    metric_results = self.compute_metric(
+                        object_metric.object, **object_metric.metric
                     )
-                dependency_info = g.get_edge_data(dependency, object_metric)[
-                    "depends_on"
-                ]
-                dependency_met = False
-                if (
-                    "metric_name" in dependency_info
-                    and dependency_info["metric_name"]
-                    != dependency.metric["evaluation_name"]
-                ):
-                    for metric_result in dependency.metric_results:
-                        # expected key must be present and in the expected range
-                        if (
-                            dependency_info["metric_name"]
-                            == metric_result["metric_name"]
-                        ):
-                            dependency_met = (
-                                metric_result["metric_value"]
-                                >= dependency_info["metric_min_value"]
-                                and metric_result["metric_value"]
-                                <= dependency_info["metric_max_value"]
-                            )
-                            break
-                        else:
-                            logger.debug(
-                                f"Key {dependency_info['metric_name']} not found in results for dependency {dependency.metric['evaluation_name']}."
-                            )
-                elif len(dependency.metric_results) == 1:
-                    metric_result = dependency.metric_results[0]
-                    dependency_met = (
-                        metric_result["metric_value"]
-                        >= dependency_info["metric_min_value"]
-                        and metric_result["metric_value"]
-                        <= dependency_info["metric_max_value"]
-                    )
-                elif len(dependency.metric_results) == 0:
-                    logger.debug(
-                        f"Skipping metric because dependency '{dependency.metric['evaluation_name']}' has no results."
-                    )
+                    object_metric.metric_results = metric_results
+                    evaluated_metrics.extend(metric_results)
                 else:
-                    logger.warning(
-                        f"Not sure how to evaluate dependency '{dependency.metric['evaluation_name']}' for metric '{object_metric.metric['evaluation_name']}', as it has {len(dependency.metric_results)} results but no specified key."
-                    )
-                if not dependency_met:
-                    all_dependencies_met = False
-                    logger.debug(
-                        f"Value for metric '{dependency.metric['evaluation_name']}' not in range for dependency {dependency_info}."
-                    )
-                    break
-            if all_dependencies_met:
-                # TODO in the future, we could pass some metric_results as kwargs to the metric function
-                # or as a special formatting key to the rubric
-                metric_results = self.compute_metric(
-                    object_metric.object, **object_metric.metric
-                )
-                object_metric.metric_results = metric_results
-                evaluated_metrics.extend(metric_results)
-            else:
-                # no results for this metric, as dependencies were unmet
-                object_metric.metric_results = []
+                    # no results for this metric, as dependencies were unmet
+                    object_metric.metric_results = []
+            self._validate_metrics(evaluated_metrics)
+        except Exception as ex:
+            logger.exception(f"An error occurred during metric processing: {ex}")
+            if raise_on_error:
+                raise
         return evaluated_metrics
 
     def compute_metrics(self, object: Union[Thread, Turn, Message, ToolCall]):
@@ -370,7 +443,19 @@ class MetricComputer:
             raise ValueError(
                 f"The argument evaluation_type provided to compute_metric is invalid. Must be one of `function` or `rubric`. You passed `{type}`."
             )
+        self._validate_metrics(metrics)
         return metrics
+
+    def _validate_metrics(self, metrics: list[dict]):
+        for m in metrics:
+            if m.get("evaluation_type", None) is None:
+                raise ValueError(
+                    f"Metric {m} does not have a value for the key `type`."
+                )
+            if m.get("metric_value", None) is None:
+                raise ValueError(
+                    f"Metric {m} does not have a value for the key `metric_value`."
+                )
 
     def invoke_function(
         self,

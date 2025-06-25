@@ -1,11 +1,15 @@
 import unittest
+import unittest.mock
 import hashlib
+import re
 import base64
 
 from flexeval import compute_metrics, run_utils
 from flexeval.schema import eval_schema, evalrun_schema, config_schema
-from tests.unit import mixins
 from flexeval.classes import eval_runner, eval_set_run
+from flexeval.classes.message import Message
+from flexeval.configuration import function_metrics
+from flexeval.io.parsers import yaml_parser
 
 
 def build_evalsetrun(metrics: eval_schema.Metrics):
@@ -112,7 +116,7 @@ class TestMetricGraphBuilder(unittest.TestCase):
         """Test build_metric_structures() returns reasonable results."""
         for metrics_descriptor, metrics in get_metrics().items():
             with self.subTest(metrics_descriptor=metrics_descriptor):
-                evalsetrun, runner = build_evalsetrun(metrics)
+                evalsetrun, _ = build_evalsetrun(metrics)
 
                 mgb = compute_metrics.MetricGraphBuilder()
                 mgb.build_metric_structures(evalsetrun)
@@ -123,7 +127,7 @@ class TestMetricGraphBuilder(unittest.TestCase):
         all_metrics = get_metrics()
         for metrics_descriptor, metrics in all_metrics.items():
             with self.subTest(metrics_descriptor=metrics_descriptor):
-                evalsetrun, runner = build_evalsetrun(metrics)
+                evalsetrun, _ = build_evalsetrun(metrics)
                 mgb = compute_metrics.MetricGraphBuilder()
                 mgb.build_metric_structures(evalsetrun)
                 graphs = list(mgb.build_thread_task_graphs(evalsetrun))
@@ -133,7 +137,111 @@ class TestMetricGraphBuilder(unittest.TestCase):
                     "Expected one graph per thread.",
                 )
 
-                mc = runner.get_metric_computer()
+
+class TestMetricComputer(unittest.TestCase):
+    def test_from_evalrun(self):
+        config_path = "tests/resources/test_config.yaml"
+        config = yaml_parser.load_config_from_yaml(config_path)
+        evals_path = "tests/resources/test_evals.yaml"
+        evals = yaml_parser.load_evals_from_yaml(evals_path)
+        eval = evals["length_test"]
+
+        data_sources = [evalrun_schema.FileDataSource(path="tests/data/simple.jsonl")]
+        database_path = ".unittest/unittest.db"
+        evalrun = evalrun_schema.EvalRun(
+            data_sources=data_sources,
+            database_path=database_path,
+            eval=eval,
+            config=config,
+        )
+
+        # default case
+        mc = compute_metrics.MetricComputer.from_evalrun(evalrun)
+        self.assertEqual(len(mc.function_modules), 1)
+        self.assertEqual(mc.function_modules[0], function_metrics)
+        metric_function, _ = mc.find_function("count_emojis")
+        test_object = unittest.mock.MagicMock(Message)
+        test_object.get_content = unittest.mock.MagicMock(return_value="🌋")
+        self.assertEqual(
+            mc.invoke_function(metric_function, "Message", test_object, {}, False), 1
+        )
+
+        # non-existent module
+        evalrun.function_modules = [
+            "nonexistent_module",
+        ]
+        with self.assertRaises(ValueError):
+            compute_metrics.MetricComputer.from_evalrun(evalrun)
+
+        # built-in module
+        evalrun.function_modules = ["re"]
+        compute_metrics.MetricComputer.from_evalrun(evalrun)
+
+        # built-in module, direct module reference
+        evalrun.function_modules = [re]
+        compute_metrics.MetricComputer.from_evalrun(evalrun)
+
+        # module-style path
+        evalrun.function_modules = ["tests.resources.function_metric"]
+        mc = compute_metrics.MetricComputer.from_evalrun(evalrun)
+        self.assertTrue(mc.function_modules[0].this_function_returns_true())
+
+        # file path
+        evalrun.function_modules = ["tests/resources/function_metric.py"]
+        mc = compute_metrics.MetricComputer.from_evalrun(evalrun)
+        self.assertTrue(mc.function_modules[0].this_function_returns_true())
+        self.assertEqual(len(mc.function_modules), 2)
+        self.assertEqual(mc.function_modules[1], function_metrics)
+
+        metric_function, _ = mc.find_function("count_emojis")
+        test_object = unittest.mock.MagicMock(Message)
+        test_object.get_content = unittest.mock.MagicMock(return_value="🌋")
+        self.assertEqual(
+            mc.invoke_function(metric_function, "Message", test_object, {}, False),
+            "overridden",
+        )
+
+    def test_single_process(self):
+        all_metrics = get_metrics()
+        for metrics_descriptor, metrics in all_metrics.items():
+            with self.subTest(metrics_descriptor=metrics_descriptor):
+                evalsetrun, runner = build_evalsetrun(metrics)
+                mgb = compute_metrics.MetricGraphBuilder()
+                mgb.build_metric_structures(evalsetrun)
+                graphs = list(mgb.build_thread_task_graphs(evalsetrun))
+
+                # build metric computer and process dependency graphs
+                mc = compute_metrics.MetricComputer.from_evalrun(runner.evalrun)
+                results = mc.process_thread_dependency_graphs(graphs)
+                self.assertGreater(len(results), 0)
+
+                if metrics_descriptor == "constant chain":
+                    self.assertEqual(
+                        len(results),
+                        len(evalsetrun.threads)
+                        + len(evalsetrun.turns)
+                        + len(evalsetrun.messages),
+                        "Expected one result for each thread, turn, and message.",
+                    )
+                    for result in results:
+                        if result["metric_level"] == "Thread":
+                            self.assertEqual(result["metric_value"], 0)
+                        elif result["metric_level"] == "Turn":
+                            self.assertEqual(result["metric_value"], 1)
+                        elif result["metric_level"] == "Message":
+                            self.assertEqual(result["metric_value"], 2)
+
+    def test_multi_process(self):
+        all_metrics = get_metrics()
+        for metrics_descriptor, metrics in all_metrics.items():
+            with self.subTest(metrics_descriptor=metrics_descriptor):
+                evalsetrun, runner = build_evalsetrun(metrics)
+                mgb = compute_metrics.MetricGraphBuilder()
+                mgb.build_metric_structures(evalsetrun)
+                graphs = list(mgb.build_thread_task_graphs(evalsetrun))
+
+                # build metric computer and process dependency graphs
+                mc = compute_metrics.MetricComputer.from_evalrun(runner.evalrun)
                 results = mc.process_thread_dependency_graphs(graphs)
                 self.assertGreater(len(results), 0)
 

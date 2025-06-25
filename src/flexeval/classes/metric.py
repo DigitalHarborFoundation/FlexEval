@@ -32,6 +32,7 @@ class Metric(BaseModel):
     metric_name = pw.TextField()
     # metric_type = pw.TextField() # TODO: Some parts of the code use "metric_tye" and others use "evaluation_type" - choose one for consistency
     metric_level = pw.TextField()
+    # TODO we may want to consider adding a secondary metric_nonnumeric_value field to support non-numeric functions and rubrics
     metric_value = pw.FloatField(
         null=True
     )  # necessary if rubric result is INVALID or e.g. latency doesn't apply to the very first message
@@ -43,8 +44,10 @@ class Metric(BaseModel):
     #      NOTE: but we have gotten rid of context_only for rubrics, where only {context} is used so technically here 'context_only' is False
     # or 'was the conversation ever flagged by the moderation api' would be a question about the previous turns that might
     #    allow to have better context for the properties of this turn
-    context_only = pw.BooleanField(default=False)
-    source = pw.TextField()  # TODO - make another table for this? But maybe not, because this also contains filled-in rubrics
+    # context_only = pw.BooleanField(default=False)
+    source = (
+        pw.TextField()
+    )  # TODO - make another table for this? But maybe not, because this also contains filled-in rubrics
     depends_on = pw.TextField()
     rubric_prompt = pw.TextField(null=True)
     rubric_completion = pw.TextField(null=True)
