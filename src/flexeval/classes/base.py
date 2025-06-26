@@ -16,6 +16,7 @@ class BaseModel(pw.Model):
             use_gevent=False,  # Use the standard library "threading" module.
             queue_max_size=64,  # Max. # of pending writes that can accumulate.
             results_timeout=5.0,
+            autoconnect=False,
         )
         cls._meta.database = database
         database.connect()
