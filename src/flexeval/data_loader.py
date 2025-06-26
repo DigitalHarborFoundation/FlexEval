@@ -39,8 +39,8 @@ def load_jsonl(
                 list(range(len(all_lines))), max_n_conversation_threads
             )
         else:
-            logger.warning(
-                f"You requested {max_n_conversation_threads} conversations but only {len(all_lines)} are present in Jsonl dataset at '{filename}'."
+            logger.debug(
+                f"You requested up to {max_n_conversation_threads} conversations but only {len(all_lines)} are present in Jsonl dataset at '{filename}'."
             )
             selected_thread_ids = list(range(len(all_lines)))
 
@@ -139,12 +139,12 @@ def load_langgraph_sqlite(
         if max_n_conversation_threads <= nb_threads:
             selected_thread_ids = rd.sample(thread_ids, max_n_conversation_threads)
         else:
-            logger.warning(
-                f"You requested {max_n_conversation_threads} conversations but only {nb_threads} are present in Sqlite dataset at '{filename}'."
+            logger.debug(
+                f"You requested up to {max_n_conversation_threads} conversations but only {nb_threads} are present in Sqlite dataset at '{filename}'."
             )
             selected_thread_ids = thread_ids
 
-        print(" DEBUG DUPLICATE SELECT THREAD IDS\n", selected_thread_ids[0])
+        logger.debug(" DEBUG DUPLICATE SELECT THREAD IDS\n", selected_thread_ids[0])
 
         for thread_eval_run_id in range(
             max(1, nb_evaluations_per_thread)

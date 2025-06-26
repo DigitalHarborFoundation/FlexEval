@@ -2,7 +2,7 @@ import inspect
 import types
 import logging
 import typing
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from flexeval.classes import turn, message, thread, tool_call
 from flexeval.schema import eval_schema
 
@@ -85,6 +85,10 @@ def get_acceptable_arg_types(input_type: type) -> set[type]:
             return {origin_type}
         else:
             # e.g. input_type=list, origin_type=list
+            if input_type is list or input_type is Iterable:
+                logger.warning(
+                    "Type hint {input_type} lacks the detail that would allow us to determine the specific objects it accepts."
+                )
             return {input_type}
 
 
@@ -147,9 +151,6 @@ def get_function_input(
         # the function accepts at least one declared type, but either:
         # - it's a type we don't support at all e.g. set
         # - it's a type we don't support at this metric_level
-        print(type(input_object))
-        print(input_type)
-        print(accepted_parameter_types)
         raise ValueError(
             f"For metric level '{metric_level}', can't coerce {input_type.__name__} for function {metric_function} to accepted parameter type(s) '{', '.join([type.__name__ for type in accepted_parameter_types])}'."
         )
