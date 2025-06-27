@@ -210,7 +210,7 @@ def compute_metrics(evalrun: EvalRun, evalsetrun: EvalSetRun) -> list[dict]:
     mgb = MetricGraphBuilder()
     mgb.build_metric_structures(evalsetrun)
     graphs = mgb.build_thread_task_graphs(evalsetrun)
-    mc = MetricComputer.from_evalrun(evalrun)
+    mc = MetricComputer.from_evalrun(evalrun, evalsetrun)
     metrics = []
     if n_workers == 1:
         for graph in graphs:
@@ -231,7 +231,9 @@ def compute_metrics(evalrun: EvalRun, evalsetrun: EvalSetRun) -> list[dict]:
 
 class MetricComputer:
     @classmethod
-    def from_evalrun(cls, evalrun: EvalRun) -> "MetricComputer":
+    def from_evalrun(
+        cls, evalrun: EvalRun, evalsetrun: EvalSetRun | None = None
+    ) -> "MetricComputer":
         function_modules = evalrun.function_modules
         # convert from string module names or filepaths to Python modules
         actual_modules = []
@@ -260,10 +262,40 @@ class MetricComputer:
                 actual_modules.append(module)
         if evalrun.add_default_functions and function_metrics not in actual_modules:
             actual_modules.append(function_metrics)
-        return cls(actual_modules)
+        mc = cls(actual_modules, evalsetrun)
+        # validation step: verify that all functions are present
+        missing_functions = set()
+        if evalrun.eval.metrics.function is not None:
+            for function_item in evalrun.eval.metrics.function:
+                try:
+                    mc.find_function(function_item.name)
+                except ValueError:
+                    missing_functions.add(function_item.name)
+        if len(missing_functions) > 0:
+            raise ValueError(
+                f"Failed to find {len(missing_functions)} functions in the provided function module. Missing function names: {', '.join(sorted(missing_functions))}"
+            )
+        # validation step: verify that all rubrics are present
+        missing_rubrics = set()
+        if mc.rubrics is not None and evalrun.eval.metrics.rubric is not None:
+            for rubric_item in evalrun.eval.metrics.rubric:
+                if rubric_item.name not in mc.rubrics:
+                    missing_rubrics.add(rubric_item.name)
+        if len(missing_rubrics) > 0:
+            raise ValueError(
+                f"Failed to find {len(missing_rubrics)} rubrics in the provided rubric set. Missing rubric names: {', '.join(sorted(missing_rubrics))}"
+            )
+        return mc
 
-    def __init__(self, function_modules: list):
-        self.function_modules = function_modules
+    def __init__(self, function_modules: list, evalsetrun: EvalSetRun | None = None):
+        self.function_modules: list = function_modules
+        self.rubrics: dict | None = (
+            self.load_rubrics(evalsetrun) if evalsetrun is not None else None
+        )
+
+    def load_rubrics(self, evalsetrun: EvalSetRun):
+        """Set the rubrics to be used by this MetricComputer from the given EvalSetRun."""
+        self.rubrics = json.loads(evalsetrun.rubrics)
 
     def process_thread_dependency_graphs(
         self, graph_list: Iterable[nx.DiGraph]
@@ -572,11 +604,14 @@ class MetricComputer:
         depends_on: list,
         id: int,
     ):
-        # load metrics
-        rubrics = json.loads(object.evalsetrun.rubrics)
-        assert (
-            rubric_name in rubrics
-        ), f"You requested a rubric called `{rubric_name}`, but only these were found: {rubrics.keys()}."
+        if self.rubrics is not None:
+            rubrics = self.rubrics
+        else:
+            rubrics = json.loads(object.evalsetrun.rubrics)
+        if rubric_name not in rubrics:
+            raise ValueError(
+                f"You requested a rubric called `{rubric_name}`, but only these were found: {rubrics.keys()}."
+            )
 
         prompt = rubrics.get(rubric_name).get("prompt", "")
 

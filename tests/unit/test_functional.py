@@ -15,6 +15,7 @@ import pandas as pd
 
 from flexeval import log_utils, runner
 from flexeval.classes.eval_runner import EvalRunner
+from flexeval.configuration import function_metrics
 from tests.unit import mixins
 
 
@@ -599,9 +600,20 @@ class TestListStringInputFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
         cls.database_path = cls.runner.get_database_path()
 
     def test_reading_ease_levels_by_level(self):
-        return  # TODO implement me
-        message_id_to_reading_ease = {1: 119.19, 2: 119.19, 3: 35.61, 4: 77.91}
-        turn_id_to_reading_ease = {1: 119.19, 2: 83.32, 3: 77.91}
+
+        message_id_to_reading_ease = {
+            1: function_metrics.flesch_reading_ease("I need help."),
+            2: function_metrics.flesch_reading_ease("Help with what?"),
+            3: function_metrics.flesch_reading_ease("Explain yourself."),
+            4: function_metrics.flesch_reading_ease("My homework."),
+        }
+        turn_id_to_reading_ease = {
+            1: function_metrics.flesch_reading_ease("I need help."),
+            2: function_metrics.flesch_reading_ease(
+                "Help with what? Explain yourself."
+            ),
+            3: function_metrics.flesch_reading_ease("My homework."),
+        }
         with sqlite3.connect(self.database_path) as connection:
             reading_ease_metrics = connection.execute(
                 """

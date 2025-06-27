@@ -247,10 +247,9 @@ uv run python -m flexeval --help
 
 ### Formatting code files
 
-We format code files using `ruff`.
+We format code files using [`ruff`](https://github.com/astral-sh/ruff).
 
 ```bash
-uvx isort .  # sort imports
 uvx ruff check --fix
 uvx ruff format
 ```

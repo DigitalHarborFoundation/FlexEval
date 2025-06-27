@@ -106,23 +106,7 @@ class EvalRunner:
 
     def validate_settings(self):
         self.logger.debug("Attempting to verify configuration.")
-        if False:  # TODO what validation, if any, should we do here?
-            os.environ["FLEXEVAL_VALIDATE_CONFIG_JSON"] = (
-                self.evalrun.config.model_dump_json()
-            )
-            os.environ["FLEXEVAL_VALIDATE_EVAL_JSON"] = self.evalrun.model_dump_json()
-            # Locate the tests
-            suite = unittest.defaultTestLoader.loadTestsFromModule(validate)
-            # Run the tests and capture the results
-            validation_stream = io.StringIO()
-            result = unittest.TextTestRunner(stream=validation_stream).run(suite)
-            # Check if validation succeeded
-            if not result.wasSuccessful():
-                validation_output = validation_stream.getvalue()
-                error_message = f"Something is wrong with your configuration. {len(result.failures)} validation failures and {len(result.errors)} runtime errors checking {result.testsRun} tests. See report below:\n{validation_output}"
-                logger.error(error_message)
-                self.logger.error(error_message)
-                raise ValueError(f"Bad configuration for eval '{self.eval.name}'.")
+        # TODO any validation to do here?
         self.logger.debug("Verified configuration successfully.")
 
     def get_database_path(self) -> Path:
