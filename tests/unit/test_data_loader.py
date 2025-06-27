@@ -8,11 +8,10 @@ from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
 from flexeval import run_utils
-from flexeval.io.parsers import yaml_parser
 from flexeval.classes.eval_runner import EvalRunner
-from tests.unit import mixins
-
+from flexeval.io.parsers import yaml_parser
 from flexeval.schema import evalrun_schema
+from tests.unit import mixins
 
 
 class TestDataLoader(mixins.DotenvMixin, unittest.TestCase):

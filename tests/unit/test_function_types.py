@@ -1,9 +1,8 @@
-import unittest
 import json
-
-from flexeval import function_types
+import unittest
 from typing import Annotated, List, Union
 
+from flexeval import function_types
 from flexeval.classes import message, turn
 
 

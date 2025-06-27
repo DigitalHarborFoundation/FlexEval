@@ -1,14 +1,23 @@
 import logging
-from typing import Literal, Annotated
-import typer
+from enum import Enum
 from pathlib import Path
+from typing import Annotated
 
-from flexeval import runner, log_utils
+import typer
+
+from flexeval import log_utils, runner
 
 logger = logging.getLogger(__name__)
 
 
 app = typer.Typer()
+
+
+class LogLevel(str, Enum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
 
 
 def run_eval(
@@ -27,10 +36,8 @@ def run_eval_by_name(
     evals_path: Path,
     config_path: Path,
     clear_tables: bool = False,
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO",
+    log_level: LogLevel = LogLevel.INFO,
 ):
-    log_level = getattr(logging, log_level)
-
     log_utils.set_up_logging(log_level=log_level)
     runner.run_from_name_args(
         input_data,

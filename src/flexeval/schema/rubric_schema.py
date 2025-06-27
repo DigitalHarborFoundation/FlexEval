@@ -1,5 +1,6 @@
 from typing import Annotated
-from pydantic import AfterValidator, Field, BaseModel, field_validator
+
+from pydantic import AfterValidator, BaseModel, Field, field_validator
 
 
 def is_rubric_prompt_valid(prompt: str):

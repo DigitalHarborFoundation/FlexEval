@@ -13,10 +13,9 @@ import unittest
 
 import pandas as pd
 
-from flexeval import runner, log_utils
-from tests.unit import mixins
+from flexeval import log_utils, runner
 from flexeval.classes.eval_runner import EvalRunner
-from flexeval.configuration import function_metrics
+from tests.unit import mixins
 
 
 def setUpModule():

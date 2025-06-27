@@ -28,8 +28,8 @@ import os
 from typing import Any, Dict, List
 
 import requests
-from openai import OpenAI
 import tiktoken
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 

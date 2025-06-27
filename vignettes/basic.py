@@ -1,6 +1,6 @@
 import flexeval
-from flexeval.schema import Eval, EvalRun, FileDataSource, Metrics, FunctionItem, Config
 from flexeval.metrics import access
+from flexeval.schema import Config, Eval, EvalRun, FileDataSource, FunctionItem, Metrics
 
 data_sources = [FileDataSource(path="vignettes/conversations.jsonl")]
 eval = Eval(metrics=Metrics(function=[FunctionItem(name="index_in_thread")]))
@@ -12,7 +12,7 @@ eval_run = EvalRun(
     config=config,
 )
 flexeval.run(eval_run)
-for metric in access.get_all_metrics(eval_run.database_path):
+for metric in access.get_all_metrics():
     print(
         f"{metric['thread']} {metric['turn']} {metric['metric_name']} {metric['metric_value']}"
     )

@@ -4,12 +4,12 @@ import random as rd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+import flexeval.metrics
 from flexeval import compute_metrics, run_utils
 from flexeval.classes.eval_runner import EvalRunner
 from flexeval.classes.turn import Turn
-import flexeval.metrics
-from flexeval.schema import EvalRun, FileDataSource
 from flexeval.io.parsers import yaml_parser
+from flexeval.schema import EvalRun, FileDataSource
 
 logger = logging.getLogger(__name__)
 

@@ -1,10 +1,6 @@
-import importlib
-import importlib.util
 import io
 import logging
 import os
-import sqlite3
-import types
 import unittest
 from datetime import datetime
 from pathlib import Path
@@ -12,16 +8,8 @@ from pathlib import Path
 import dotenv
 from peewee import SqliteDatabase
 
-from flexeval import dependency_graph, validate
-from flexeval.classes.dataset import Dataset
-from flexeval.classes.eval_set_run import EvalSetRun
-from flexeval.classes.message import Message
-from flexeval.classes.metric import Metric
-from flexeval.classes.thread import Thread
-from flexeval.classes.tool_call import ToolCall
-from flexeval.classes.turn import Turn
-from flexeval.configuration import function_metrics
-from flexeval.schema import EvalRun, FunctionsCollection
+from flexeval import db_utils, dependency_graph, validate
+from flexeval.schema import EvalRun
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +31,7 @@ class EvalRunner:
         self.add_file_logger()
         self.load_env()
         self.validate_settings()
-        self.initialize_database_connection()
-        self.initialize_database_tables()
+        self.initialize_database()
         self.load_evaluation_settings()
 
     def initialize_logger(self, add_stream_handler: bool = False):
@@ -141,24 +128,11 @@ class EvalRunner:
     def get_database_path(self) -> Path:
         return self.evalrun.database_path
 
-    def initialize_database_connection(self):
-        """In peewee, each object has its own database connection
-        This is fine - so we'll just make the path available here
-        """
-        # set up SQLite so it's less likely to error when there are multiple writes
-        with sqlite3.connect(
-            str(self.get_database_path()), check_same_thread=False
-        ) as conn:
-            # Enable Write-Ahead Logging
-            conn.execute("PRAGMA journal_mode=WAL;")
-
-    def initialize_database_tables(self):
-        """Initializes database tables. If config.clear_tables, then current contents of tables are dropped."""
-        database_path = self.get_database_path()
-        for cls in [EvalSetRun, Dataset, Thread, Turn, Message, ToolCall, Metric]:
-            cls.initialize_database(
-                database_path, clear_table=self.evalrun.config.clear_tables
-            )
+    def initialize_database(self):
+        """Initializes database and tables. If config.clear_tables, then current contents of tables are dropped."""
+        db_utils.initialize_database(
+            self.evalrun.database_path, clear_tables=self.evalrun.config.clear_tables
+        )
 
     def load_evaluation_settings(self):
         """This function parses our eval suite and puts it in the data structure we'll need

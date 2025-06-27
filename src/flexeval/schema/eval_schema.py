@@ -5,13 +5,11 @@
 from __future__ import annotations
 
 import sys
-
-from typing import Any, Dict, List, Literal, Optional, Annotated
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
 from flexeval.schema import schema_utils
-
 
 VALID_METRIC_LEVELS = ["Message", "Turn", "Thread", "ToolCall"]
 MetricLevel = Literal["Message", "Turn", "Thread", "ToolCall"]
@@ -135,7 +133,7 @@ class Eval(BaseModel):
 
     do_completion: bool = Field(
         False,
-        description="Flag to determine if completions should be done for each conversation. Set to 'true' if you are testing a new API and want to evaluate the API responses. Set to 'false' (default) if you are evaluating past conversations and do not need to generate new completions.",
+        description="DEPRECATED. Flag to determine if completions should be done for each conversation. Set to 'true' if you are testing a new API and want to evaluate the API responses. Set to 'false' (default) if you are evaluating past conversations and do not need to generate new completions.",
     )
     name: Optional[str] = Field(
         None,

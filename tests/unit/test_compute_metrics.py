@@ -1,18 +1,18 @@
-import unittest
-import unittest.mock
+import base64
 import hashlib
 import re
-import base64
+import unittest
+import unittest.mock
 
-from flexeval import compute_metrics, run_utils, helpers
-from flexeval.schema import eval_schema, evalrun_schema, config_schema
+from flexeval import compute_metrics, run_utils
 from flexeval.classes import eval_runner, eval_set_run
 from flexeval.classes.message import Message
-from flexeval.classes.turn import Turn
 from flexeval.classes.metric import Metric
+from flexeval.classes.turn import Turn
 from flexeval.configuration import function_metrics
 from flexeval.io.parsers import yaml_parser
 from flexeval.metrics import save as save_metrics
+from flexeval.schema import config_schema, eval_schema, evalrun_schema
 
 
 def build_evalsetrun(metrics: eval_schema.Metrics):

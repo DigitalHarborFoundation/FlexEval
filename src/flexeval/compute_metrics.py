@@ -1,26 +1,24 @@
 import copy
+import importlib
+import importlib.util
 import inspect
 import json
 import logging
 import string
-from typing import Union, Iterable
-import networkx as nx
-from concurrent.futures import ThreadPoolExecutor
-import importlib
-import importlib.util
 import types
+from concurrent.futures import ThreadPoolExecutor
+from typing import Iterable, Union
+
+import networkx as nx
+
 from flexeval import function_types
-from flexeval.schema import eval_schema, EvalRun, FunctionsCollection
-from flexeval.classes import eval_runner
+from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
-from flexeval.configuration import completion_functions
-from flexeval.configuration import function_metrics
-
-
-from flexeval.classes.eval_set_run import EvalSetRun
+from flexeval.configuration import completion_functions, function_metrics
+from flexeval.schema import EvalRun, FunctionsCollection, eval_schema
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +225,7 @@ def compute_metrics(evalrun: EvalRun, evalsetrun: EvalSetRun) -> list[dict]:
             for i, future in enumerate(futures):
                 metrics.extend(future.result())
                 if i % 100 == 0:
-                    logger.info(f"Metrics futures resulted: {i+1} / {len(futures)}")
+                    logger.info(f"Metrics futures resulted: {i + 1} / {len(futures)}")
     return metrics
 
 

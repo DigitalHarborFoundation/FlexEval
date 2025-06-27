@@ -1,13 +1,9 @@
-import re
 import unittest
-import unittest.mock
 
 from flexeval.classes.eval_runner import EvalRunner
-from flexeval.classes.message import Message
-from flexeval.configuration import function_metrics
 from flexeval.io.parsers import yaml_parser
-from tests.unit import mixins
 from flexeval.schema import evalrun_schema
+from tests.unit import mixins
 
 
 class TestEvalRunner(mixins.DotenvMixin, unittest.TestCase):

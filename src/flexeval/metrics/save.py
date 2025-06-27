@@ -1,5 +1,6 @@
 import json
 from typing import Iterable
+
 from flexeval.classes.metric import Metric
 
 

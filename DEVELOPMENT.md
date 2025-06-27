@@ -10,7 +10,7 @@ See the primary README for all development notes, at the moment.
     - Approach 2: An Eval knows how FlexEval should execute it, because it contains a Configuration.
     - Approach 3: An Eval is a specific metric computation/transformation.
     - An EvalSet is a collection of Evals
-    - A Configuration provides an interfaces with the hardware environment.
+    - A Configuration provides an interface with the hardware environment.
 
     Pydantic models:
     flexeval.schema.Config

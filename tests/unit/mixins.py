@@ -5,8 +5,8 @@ import unittest.mock
 import dotenv
 
 from flexeval import run_utils, runner
-from flexeval.schema import Eval, FileDataSource, Config, EvalRun, GraderLlm, Metrics
 from flexeval.classes.eval_runner import EvalRunner
+from flexeval.schema import Config, Eval, EvalRun, FileDataSource, GraderLlm, Metrics
 
 
 class TempPathMixin:

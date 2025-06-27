@@ -1,11 +1,10 @@
 import unittest
 
-from flexeval.configuration import function_metrics
 from flexeval import log_utils
 from flexeval.classes.message import Message
-from flexeval.classes.turn import Turn
 from flexeval.classes.thread import Thread
-
+from flexeval.classes.turn import Turn
+from flexeval.configuration import function_metrics
 from tests.unit import mixins
 
 

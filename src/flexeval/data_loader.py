@@ -1,8 +1,8 @@
 import json
+import logging
 import pathlib
 import random as rd
 import sqlite3
-import logging
 
 from langchain.load.dump import dumps
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
@@ -12,7 +12,6 @@ from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
-
 
 logger = logging.getLogger(__name__)
 

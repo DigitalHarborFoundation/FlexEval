@@ -22,7 +22,10 @@ class Config(BaseModel):
     env: schema_utils.OptionalDict = Field(
         default_factory=dict, description="Any additional environment variables."
     )
-    clear_tables: bool = Field(False, description="Clear any existing tables")
+    clear_tables: bool = Field(
+        False,
+        description="Clear any existing tables, if the output SQLite database already exists.",
+    )
     max_workers: int = Field(1, description="Max worker count. Multiprocessing if > 1")
     random_seed_conversation_sampling: int = 42
     max_n_conversation_threads: int = 50

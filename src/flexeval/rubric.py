@@ -1,11 +1,10 @@
-import logging
 import importlib.resources
+import logging
 from pathlib import Path
 
 import flexeval.configuration
-from flexeval.schema import Rubric, RubricsCollection
 from flexeval.io.parsers import yaml_parser
-
+from flexeval.schema import Rubric, RubricsCollection
 
 logger = logging.getLogger(__name__)
 

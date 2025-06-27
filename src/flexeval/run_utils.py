@@ -2,10 +2,9 @@ import json
 import logging
 
 from flexeval import rubric
+from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_runner import EvalRunner
 from flexeval.classes.eval_set_run import EvalSetRun
-from flexeval.classes.dataset import Dataset
-
 
 logger = logging.getLogger(__name__)
 

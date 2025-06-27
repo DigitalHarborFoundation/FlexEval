@@ -3,8 +3,8 @@ from typing import Any
 
 import networkx as nx
 
-from flexeval.schema import eval_schema
 from flexeval.helpers import generate_hash
+from flexeval.schema import eval_schema
 
 
 def create_metrics_graph(metrics: eval_schema.Metrics) -> list[Any]:

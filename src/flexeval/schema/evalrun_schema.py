@@ -5,7 +5,8 @@ from annotated_types import Len
 from pydantic import BaseModel, Field, FilePath
 
 from flexeval.configuration import function_metrics
-from flexeval.schema import config_schema, eval_schema, schema_utils, rubric_schema
+from flexeval.schema import (config_schema, eval_schema, rubric_schema,
+                             schema_utils)
 
 
 class DataSource(BaseModel):
@@ -43,9 +44,9 @@ def get_default_rubrics() -> list[Path | rubric_schema.RubricsCollection]:
     return [rubric.get_default_rubric_collection()]
 
 
-def get_default_function_metrics() -> (
-    list[Path | FunctionsCollection | schema_utils.ModuleType]
-):
+def get_default_function_metrics() -> list[
+    Path | FunctionsCollection | schema_utils.ModuleType
+]:
     return [function_metrics]
 
 

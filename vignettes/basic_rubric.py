@@ -1,18 +1,18 @@
 import flexeval
+from flexeval.metrics import access
 from flexeval.schema import (
+    Config,
+    DependsOnItem,
     Eval,
     EvalRun,
     FileDataSource,
-    Metrics,
     FunctionItem,
-    RubricItem,
-    DependsOnItem,
-    Config,
     GraderLlm,
+    Metrics,
     Rubric,
+    RubricItem,
     RubricsCollection,
 )
-from flexeval.metrics import access
 
 data_sources = [FileDataSource(path="vignettes/conversations.jsonl")]
 rubric = Rubric(
@@ -47,7 +47,7 @@ eval_run = EvalRun(
     rubric_paths=[RubricsCollection(rubrics={"is_helpful": rubric})],
 )
 flexeval.run(eval_run)
-for metric in access.get_all_metrics(eval_run.database_path):
+for metric in access.get_all_metrics():
     print(
         f"{metric['thread']} {metric['turn']} {metric['evaluation_name']} {metric['metric_value']:.1f}"
     )

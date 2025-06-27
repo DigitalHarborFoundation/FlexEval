@@ -1,9 +1,10 @@
 import inspect
-import types
 import logging
+import types
 import typing
 from collections.abc import Callable, Iterable
-from flexeval.classes import turn, message, thread, tool_call
+
+from flexeval.classes import message, thread, tool_call, turn
 from flexeval.schema import eval_schema
 
 AnyFunctionObjectInput = typing.Union[
