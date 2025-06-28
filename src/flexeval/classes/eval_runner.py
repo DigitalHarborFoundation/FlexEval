@@ -30,7 +30,6 @@ class EvalRunner:
         self.initialize_logger()
         self.add_file_logger()
         self.load_env()
-        self.validate_settings()
         self.initialize_database()
         self.load_evaluation_settings()
 
@@ -103,11 +102,6 @@ class EvalRunner:
             self.logger.debug(
                 f"Skipping .env file loading as config env_filepath is '{env_filepath}'."
             )
-
-    def validate_settings(self):
-        self.logger.debug("Attempting to verify configuration.")
-        # TODO any validation to do here?
-        self.logger.debug("Verified configuration successfully.")
 
     def get_database_path(self) -> Path:
         return self.evalrun.database_path
