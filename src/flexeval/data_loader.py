@@ -1,8 +1,8 @@
 import json
+import logging
 import pathlib
 import random as rd
 import sqlite3
-import warnings
 
 from langchain.load.dump import dumps
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
@@ -13,12 +13,14 @@ from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 
+logger = logging.getLogger(__name__)
+
 
 def load_jsonl(
     dataset: Dataset,
     filename: str | pathlib.Path,
     max_n_conversation_threads: int | None = None,
-    nb_evaluations_per_thread: int | None = 1
+    nb_evaluations_per_thread: int | None = 1,
 ):
     with open(filename, "r") as infile:
         contents = infile.read()  # will be a big string
@@ -36,30 +38,27 @@ def load_jsonl(
                 list(range(len(all_lines))), max_n_conversation_threads
             )
         else:
-            warnings.warn(
-                f"You requested {max_n_conversation_threads} conversations but only {len(all_lines)} are present in Jsonl dataset."
+            logger.debug(
+                f"You requested up to {max_n_conversation_threads} conversations but only {len(all_lines)} are present in Jsonl dataset at '{filename}'."
             )
             selected_thread_ids = list(range(len(all_lines)))
-            
+
         ### should duplicate the select threads nb_evaluations_per_thread times
         if nb_evaluations_per_thread is None:
             nb_evaluations_per_thread = 1
 
         for thread_id, thread in enumerate(all_lines):
-            
-            for thread_eval_run_id in range(max(1, nb_evaluations_per_thread)): # duplicate stored threads for averaged evaluation results
-                
+            for thread_eval_run_id in range(
+                max(1, nb_evaluations_per_thread)
+            ):  # duplicate stored threads for averaged evaluation results
                 if thread_id in selected_thread_ids:
-                    # The code snippet you provided is not complete and does not perform any specific
-                    # action. It seems to be a partial line of code in Python that declares a variable
-                    # named `thread_object` but does not assign any value to it or perform any
-                    # operations. If you provide more context or complete the code snippet, I can help
-                    # you understand its functionality.
                     thread_object = Thread.create(
                         evalsetrun=dataset.evalsetrun,
                         dataset=dataset,
                         jsonl_thread_id=thread_id,
-                        eval_run_thread_id=str(thread_id)+'_'+str(thread_eval_run_id)
+                        eval_run_thread_id=str(thread_id)
+                        + "_"
+                        + str(thread_eval_run_id),
                     )
 
                     # Context
@@ -75,6 +74,7 @@ def load_jsonl(
                     context.append({"role": "system", "content": system_prompt})
 
                     # Create messages
+                    index_in_thread = 0
                     for message in json.loads(thread)["input"]:
                         role = message.get("role", None)
                         if role != "system":
@@ -86,6 +86,7 @@ def load_jsonl(
                                 evalsetrun=dataset.evalsetrun,
                                 dataset=dataset,
                                 thread=thread_object,
+                                index_in_thread=index_in_thread,
                                 role=role,
                                 content=message.get("content", None),
                                 context=json.dumps(context),
@@ -97,6 +98,7 @@ def load_jsonl(
                             context.append(
                                 {"role": role, "content": message.get("content", None)}
                             )
+                            index_in_thread += 1
 
                     add_turns(thread_object)
 
@@ -104,7 +106,10 @@ def load_jsonl(
 
 
 def load_langgraph_sqlite(
-    dataset: Dataset, filename: str, max_n_conversation_threads: int | None = None, nb_evaluations_per_thread: int | None = 1
+    dataset: Dataset,
+    filename: str,
+    max_n_conversation_threads: int | None = None,
+    nb_evaluations_per_thread: int | None = 1,
 ):
     serializer = JsonPlusSerializer()
 
@@ -133,21 +138,24 @@ def load_langgraph_sqlite(
         if max_n_conversation_threads <= nb_threads:
             selected_thread_ids = rd.sample(thread_ids, max_n_conversation_threads)
         else:
-            warnings.warn(
-                f"You requested {max_n_conversation_threads} conversations but only {nb_threads} are present in Sqlite dataset."
+            logger.debug(
+                f"You requested up to {max_n_conversation_threads} conversations but only {nb_threads} are present in Sqlite dataset at '{filename}'."
             )
             selected_thread_ids = thread_ids
-        
-        print(" DEBUG DUPLICATE SELECT THREAD IDS\n", selected_thread_ids[0])
-        
-        for thread_eval_run_id in range(max(1, nb_evaluations_per_thread)): # duplicate stored threads for averaged evaluation results
-        
+
+        logger.debug(" DEBUG DUPLICATE SELECT THREAD IDS\n", selected_thread_ids[0])
+
+        for thread_eval_run_id in range(
+            max(1, nb_evaluations_per_thread)
+        ):  # duplicate stored threads for averaged evaluation results
             for thread_id in selected_thread_ids:
                 thread = Thread.create(
                     evalsetrun=dataset.evalsetrun,
                     dataset=dataset,
                     langgraph_thread_id=thread_id[0],
-                    eval_run_thread_id=str(thread_id[0])+'_'+str(thread_eval_run_id)
+                    eval_run_thread_id=str(thread_id[0])
+                    + "_"
+                    + str(thread_eval_run_id),
                 )
 
                 # Create messages
@@ -256,6 +264,7 @@ def load_langgraph_sqlite(
                                     messagelist = [value["messages"]]
                                 else:
                                     messagelist = value["messages"]
+                                index_in_thread = 0
                                 for message in messagelist:
                                     if role == "user":
                                         content = (
@@ -276,6 +285,7 @@ def load_langgraph_sqlite(
                                         evalsetrun=dataset.evalsetrun,
                                         dataset=dataset,
                                         thread=thread,
+                                        index_in_thread=index_in_thread,
                                         role=role,
                                         content=content,
                                         context=json.dumps(context),
@@ -283,7 +293,9 @@ def load_langgraph_sqlite(
                                         system_prompt=system_prompt,
                                         # language model stats
                                         tool_calls=json.dumps(
-                                            message.get("kwargs", {}).get("tool_calls", [])
+                                            message.get("kwargs", {}).get(
+                                                "tool_calls", []
+                                            )
                                         ),
                                         tool_call_ids=[
                                             tc["id"]
@@ -292,7 +304,9 @@ def load_langgraph_sqlite(
                                             )
                                         ],
                                         n_tool_calls=len(
-                                            message.get("kwargs", {}).get("tool_calls", [])
+                                            message.get("kwargs", {}).get(
+                                                "tool_calls", []
+                                            )
                                         ),
                                         prompt_tokens=message.get("kwargs", {})
                                         .get("response_metadata", {})
@@ -343,7 +357,9 @@ def load_langgraph_sqlite(
                                     if message.get("kwargs", {}).get("type") == "tool":
                                         # this should have a mapping between tool_call_id and the RESPONSE to to the tool call
                                         tool_responses_dict[
-                                            message.get("kwargs", {}).get("tool_call_id")
+                                            message.get("kwargs", {}).get(
+                                                "tool_call_id"
+                                            )
                                         ] = message.get("kwargs", {}).get("content", "")
                                     else:
                                         for tool_call in message.get("kwargs", {}).get(
@@ -352,11 +368,12 @@ def load_langgraph_sqlite(
                                             # this should have all the info about the tool calls, including additional_kwargs
                                             # but NOT their responses
                                             tool_calls_dict[tool_call["id"]] = tool_call
-                                            tool_addional_kwargs_dict[tool_call["id"]] = (
-                                                message.get("kwargs", {}).get(
-                                                    "additional_kwargs", {}
-                                                )
+                                            tool_addional_kwargs_dict[
+                                                tool_call["id"]
+                                            ] = message.get("kwargs", {}).get(
+                                                "additional_kwargs", {}
                                             )
+                                    index_in_thread += 1
 
                 # Add turns to each message
                 # Need to do this before dealing with tool calls, since we
@@ -403,15 +420,18 @@ def add_turns(thread: Thread):
     message_placeholder_ids, turn_dict = get_turns(thread=thread)
     # Step 2 - Create turns, plus a mapping between the placeholder ids and the created ids
     turns = {}
+    index_in_thread = 0
     for placeholder_turn_id, role in turn_dict.items():  # turns.items():
         t = Turn.create(
             evalsetrun=thread.evalsetrun,
             dataset=thread.dataset,
             thread=thread,
+            index_in_thread=index_in_thread,
             role=role,
         )
         # map placeholder id to turn object
         turns[placeholder_turn_id] = t
+        index_in_thread += 1
     # Step 3 - add placeholder ids to messages
     # Can use zip since entries in message_list correspond to thread.messages
     # NOTE: ANR: I don't follow how the message_list was supposed to work below.
@@ -432,7 +452,7 @@ def verify_checkpoints_table_exists(cursor):
     )
     result = cursor.fetchone()
     # Assert that the result is not None, meaning the table exists
-    assert result is not None, f"Table 'checkpoints' does not exist in the database."
+    assert result is not None, "Table 'checkpoints' does not exist in the database."
 
 
 def get_turns(thread: Thread):

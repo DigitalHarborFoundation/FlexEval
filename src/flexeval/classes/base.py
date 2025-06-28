@@ -1,29 +1,32 @@
-import os
-
 import peewee as pw
+from playhouse.shortcuts import ThreadSafeDatabaseMetadata
 from playhouse.sqliteq import SqliteQueueDatabase
 
 
+def create_sqlite_database(
+    database_path: str | None = None, use_queue_db: bool = False
+) -> pw.SqliteDatabase:
+    if use_queue_db:
+        return SqliteQueueDatabase(
+            database_path,
+            use_gevent=False,
+            autostart=False,
+            results_timeout=5.0,
+            queue_max_size=64,  # Max. # of pending writes that can accumulate
+            pragmas={"journal_mode": "wal"},  # use Write-ahead Logging
+        )
+    return pw.SqliteDatabase(
+        database_path,
+        pragmas={"journal_mode": "wal"},  # use Write-ahead Logging
+    )
+
+
+database = create_sqlite_database()
+
+
 class BaseModel(pw.Model):
-    """Class for handling databaset setup, etc."""
+    """Peewee base class for all FlexEval database models."""
 
     class Meta:
-        # will hold database connection
-        pass
-
-    @classmethod
-    def initialize_database(
-        cls: "BaseModel", database_path: str, clear_table: bool = False
-    ):
-        database = SqliteQueueDatabase(
-            database_path,
-            use_gevent=False,  # Use the standard library "threading" module.
-            queue_max_size=64,  # Max. # of pending writes that can accumulate.
-            results_timeout=5.0,
-        )
-        cls._meta.database = database
-
-        database.connect()
-        if clear_table:
-            database.drop_tables([cls])
-        database.create_tables([cls], safe=False)
+        model_metadata_class = ThreadSafeDatabaseMetadata
+        database = database

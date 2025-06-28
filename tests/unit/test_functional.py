@@ -8,34 +8,49 @@ Then run
 
 """
 
-import logging
-import os
 import sqlite3
 import unittest
 
 import pandas as pd
 
-from flexeval.runner import run
+from flexeval import log_utils, runner
+from flexeval.classes.eval_runner import EvalRunner
+from flexeval.configuration import function_metrics
 from tests.unit import mixins
 
 
 def setUpModule():
-    logger = logging.getLogger()
-    logger.addHandler(logging.NullHandler())
+    log_utils.set_up_logging()
+
+
+def run_eval(
+    eval_name: str,
+    include_simple_data: bool = True,
+    include_multiturn_data: bool = False,
+    include_plot_convos_data: bool = False,
+) -> EvalRunner:
+    input_data = []
+    if include_simple_data:
+        input_data.append("tests/data/simple.jsonl")
+    if include_multiturn_data:
+        input_data.append("tests/data/multiturn.jsonl")
+    if include_plot_convos_data:
+        input_data.append("tests/data/plot-convos.jsonl")
+    return runner.run_from_name_args(
+        input_data=input_data,
+        database_path="tests/data/unit_functional_results.db",
+        eval_name=eval_name,
+        config_path="tests/resources/functional_config.yaml",
+        evals_path="tests/resources/functional_evals.yaml",
+        clear_tables=True,
+    )
 
 
 class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        cls.runner = run(
-            eval_name="test_suite_01",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        cls.runner = run_eval("test_suite_01")
         cls.database_path = cls.runner.get_database_path()
 
     @classmethod
@@ -88,7 +103,6 @@ class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
         helper_test_tables_have_right_rows(self, ((3, 3),))
 
     def test_string_length_has_function_label(self):
-
         with sqlite3.connect(self.database_path) as connection:
             result = connection.execute(
                 """select evaluation_type from metric 
@@ -155,17 +169,10 @@ def helper_test_tables_have_right_rows(
 
 
 class TestSuite02(mixins.DotenvMixin, unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        cls.runner = run(
-            eval_name="test_suite_02",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        cls.runner = run_eval("test_suite_02")
         cls.database_path = cls.runner.get_database_path()
 
     def test_simple_condition_is_met_once(self):
@@ -181,7 +188,8 @@ class TestSuite02(mixins.DotenvMixin, unittest.TestCase):
                 and evaluation_name = 'flesch_reading_ease'
                 """
             ).fetchall()
-        self.assertEqual(len(metric), 1, "More than one row was returned!")
+        self.assertGreater(len(metric), 0, "No rows returned!")
+        self.assertLess(len(metric), 2, "Expected exactly one row!")
         self.assertAlmostEqual(metric[0][0], 2)
 
     def test_simple_condition_is_always_met(self):
@@ -310,17 +318,10 @@ class TestSuite02(mixins.DotenvMixin, unittest.TestCase):
 
 
 class TestSuite03(mixins.DotenvMixin, unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        cls.runner = run(
-            eval_name="test_suite_03",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        cls.runner = run_eval("test_suite_03", include_multiturn_data=True)
         cls.database_path = cls.runner.get_database_path()
 
     def test_tables_have_right_rows(self):
@@ -356,12 +357,7 @@ class TestSuite04(mixins.DotenvMixin, unittest.TestCase):
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests
         # in this case, we'd run the evals here using subprocess or something, or maybe main.py
-        cls.runner = run(
-            eval_name="test_suite_04",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        cls.runner = run_eval("test_suite_04")
         cls.database_path = cls.runner.get_database_path()
 
     def test_rubric_metric_value(self):
@@ -412,8 +408,6 @@ class TestSuite04(mixins.DotenvMixin, unittest.TestCase):
             len(function_type), 0, "Null values found in rows where type = rubric"
         )
 
-    # %%
-
     def test_rubric_dependency(self):
         # test: For EVERY turn where the role is user, \
         # the same turn ALSO has a is_student_acting_as_actor entry
@@ -449,85 +443,44 @@ class TestSuite04(mixins.DotenvMixin, unittest.TestCase):
 
 class FunctionMetricValidation(mixins.DotenvMixin, unittest.TestCase):
     def test_default_kwargs01(self):
-        run(
-            eval_name="test_default_kwargs_01",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        run_eval("test_default_kwargs_01")
 
 
 class ConfigFailures(mixins.DotenvMixin, unittest.TestCase):
-
     @unittest.expectedFailure
     def test_config_failure_01(cls):
-        run(
-            eval_name="config_failure_01",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_01", include_plot_convos_data=True)
 
     @unittest.expectedFailure
     def test_config_failure_02(cls):
-        run(
-            eval_name="config_failure_02",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_02", include_plot_convos_data=True)
 
     @unittest.expectedFailure
     def test_config_failure_03(cls):
-        run(
-            eval_name="config_failure_03",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_03", include_plot_convos_data=True)
 
     @unittest.expectedFailure
     def test_config_failure_04(cls):
-        run(
-            eval_name="config_failure_04",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_04", include_plot_convos_data=True)
 
     @unittest.expectedFailure
     def test_config_failure_05(cls):
-        run(
-            eval_name="config_failure_05",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_05", include_plot_convos_data=True)
 
     @unittest.expectedFailure
     def test_config_failure_06(cls):
-        run(
-            eval_name="config_failure_06",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        run_eval("config_failure_06", include_plot_convos_data=True)
 
-    @unittest.expectedFailure
     def test_config_failure_07(cls):
-        run(
-            eval_name="config_failure_07",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-        )
+        # this used to fail, but is now valid
+        run_eval("config_failure_07", include_plot_convos_data=True)
 
 
 class TestBasicFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        cls.runner = run(
-            eval_name="test_basic_function_metrics_01",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
-        )
+        cls.runner = run_eval("test_basic_function_metrics_01")
         cls.database_path = cls.runner.get_database_path()
 
     def test_correct_metric_levels(self):
@@ -639,30 +592,33 @@ class TestListStringInputFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        cls.runner = run(
-            eval_name="test_list_string_function_metrics",
-            config_path="tests/resources/functional_config.yaml",
-            evals_path="tests/resources/functional_evals.yaml",
-            clear_tables=True,
+        cls.runner = run_eval(
+            "test_list_string_function_metrics",
+            include_simple_data=False,
+            include_multiturn_data=True,
         )
         cls.database_path = cls.runner.get_database_path()
 
     def test_reading_ease_levels_by_level(self):
-        message_id_to_reading_ease = {1: 119.19, 2: 119.19, 3: 35.61, 4: 77.91}
-        message_id_to_reading_ease_context_only = {
-            1: 206.84,
-            2: 119.19,
-            3: 119.19,
-            4: 92.8,
+
+        message_id_to_reading_ease = {
+            1: function_metrics.flesch_reading_ease("I need help."),
+            2: function_metrics.flesch_reading_ease("Help with what?"),
+            3: function_metrics.flesch_reading_ease("Explain yourself."),
+            4: function_metrics.flesch_reading_ease("My homework."),
         }
-        turn_id_to_reading_ease = {1: 119.19, 2: 83.32, 3: 77.91}
-        turn_id_to_reading_ease_context_only = {1: 206.84, 2: 119.19, 3: 92.8}
+        turn_id_to_reading_ease = {
+            1: function_metrics.flesch_reading_ease("I need help."),
+            2: function_metrics.flesch_reading_ease(
+                "Help with what? Explain yourself."
+            ),
+            3: function_metrics.flesch_reading_ease("My homework."),
+        }
         with sqlite3.connect(self.database_path) as connection:
             reading_ease_metrics = connection.execute(
                 """
                     SELECT 
-                        turn_id, message_id, context_only, metric_level, metric_name, metric_value
+                        turn_id, message_id, metric_level, metric_name, metric_value
                     FROM 
                         metric
                     WHERE 1=1
@@ -674,7 +630,6 @@ class TestListStringInputFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
                 (
                     turn_id,
                     message_id,
-                    context_only,
                     metric_level,
                     metric_name,
                     metric_value,
@@ -683,16 +638,10 @@ class TestListStringInputFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
                 comparison_id = None
                 if metric_level == "Message":
                     comparison_id = message_id
-                    if context_only:
-                        comparison_dict = message_id_to_reading_ease_context_only
-                    else:
-                        comparison_dict = message_id_to_reading_ease
+                    comparison_dict = message_id_to_reading_ease
                 elif metric_level == "Turn":
                     comparison_id = turn_id
-                    if context_only:
-                        comparison_dict = turn_id_to_reading_ease_context_only
-                    else:
-                        comparison_dict = turn_id_to_reading_ease
+                    comparison_dict = turn_id_to_reading_ease
                 else:
                     raise Exception(
                         f"Expected only Message and Turn levels for reading ease but found {metric_level}"

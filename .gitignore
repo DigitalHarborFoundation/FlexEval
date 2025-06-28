@@ -178,3 +178,6 @@ src/llm-evals/evals_sync/
 
 # sqlite data
 *.sqlite
+
+# Claude Code
+.claude/

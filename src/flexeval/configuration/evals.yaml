@@ -477,7 +477,6 @@ example:
             metric_min_value: 1
 
       - name: is_student_acting_as_tutor
-        last_instance_only: true
 
       - name: is_pedagogically_appropriate_plot
         depends_on:

@@ -5,9 +5,55 @@
 
 FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
 
-We describe this in more detail in our paper, located [in this repository](/EDM_2024_FlexEval.pdf).
+Additional details about FlexEval can be found [in our paper](/EDM_2024_FlexEval.pdf) at the _Educational Data Mining_ 2024 conference.
 
-## Why?
+## Usage
+
+Basic usage: 
+
+```python
+import flexeval
+from flexeval.schema import Eval, EvalRun, FileDataSource, Metrics, FunctionItem, Config
+
+data_sources = [FileDataSource(path="vignettes/conversations.jsonl")]
+eval = Eval(metrics=Metrics(function=[FunctionItem(name="flesch_reading_ease")]))
+config = Config(clear_tables=True)
+eval_run = EvalRun(
+    data_sources=data_sources,
+    database_path="eval_results.db",
+    eval=eval,
+    config=config,
+)
+flexeval.run(eval_run)
+```
+
+This example computes [Flesch reading ease](https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests#Flesch_reading_ease) for every turn in a list of conversations provided in JSONL format. The metric values are stored in an SQLite database called `eval_results.db`.
+
+See additional usage examples in the [vignettes](/vignettes).
+
+## Installation
+
+You can install FlexEval from the GitHub repository. FlexEval is not yet available on PyPI.
+
+Using `pip`:
+
+```bash
+pip install git+https://github.com/DigitalHarborFoundation/FlexEval.git
+```
+
+Using `uv`:
+
+```bash
+uv add git+https://github.com/DigitalHarborFoundation/FlexEval.git
+```
+
+Using `poetry`:
+
+```bash
+poetry add git+https://github.com/DigitalHarborFoundation/FlexEval.git
+```
+
+## Why create FlexEval?
 
 _To make evaluations easier for LLM-powered systems._
 
@@ -20,18 +66,19 @@ Thoroughly evaluating LLMs is difficult and best-practices are rapidly developin
 - appropriateness of function calling
 - other things we haven't thought of
 
-The most common method of evaluating LLMs is to prompt them and compare their responses to "ideal" responses. This is necessary for many applications, but is not sufficient to cover the cases above. Moreover, we're confident that as users continue to develop LLM-powered applications, they will desire to collect metrics of their own devising to quantify and track the behavior of these applications during development and in production.
+The most common method of evaluating LLMs is to prompt them and compare their responses to "ideal" responses. This is necessary for many applications, but is not sufficient to cover the cases above. Moreover, we're confident that as users continue to develop LLM-powered applications, they will want to compute metrics of their own devising to quantify and track the behavior of these applications during development and in production.
 
-With this in mind, we've created a tool that makes it easier to write custom metrics on conversations and completions.
+With this in mind, we've created a tool that makes it easier to write and apply custom metrics to conversations.
 
-## What?
+## What is FlexEval?
 
-_FlexEval is a tool for writing metrics that produce quantitative metrics on conversational data._
+_FlexEval is a tool for applying functions that produce quantitative metrics to conversational data._
 
 Inputs:
 
 - historical conversations
 - Python functions that convert conversations and conversational turns into numbers
+- rubrics that an LLM can use to convert conversations and conversational turns into numbers
 - configurations for LLMs you would like to test
 
 Process:
@@ -41,104 +88,64 @@ Process:
 
 Outputs:
 
-- json files
-- entries in a SQLite database that can be queried
+- metric values in an SQLite database
 
-## How
+## How does FlexEval work?
 
-_FlexEval evaluates Python functions and machine-graded rubrics on each turn_
+_FlexEval evaluates Python functions and machine-graded rubrics for each provided conversation._
 
-FlexEval began as an extension to OpenAI Evals, making it easier to use. It is now independent of OpenAI Evals and offers several usability improvements:
+FlexEval began as an extension to [OpenAI Evals](https://github.com/openai/evals), making it easier to use. It is now independent of OpenAI Evals and offers several usability improvements:
 
 1. Whereas OpenAI Evals requires users to write a new class with inheritance to define new completion functions (a generic term to a function that accepts a conversation or prompt and produces a response), FlexEval allows users to define this using a function in `configuration/completion_functions.py`.
 2. Whereas OpenAI Evals requires users to create a new class with inheritance to define a new metric type, FlexEval allows users to do this by writing a function in `configuration/function_metrics.py`.
 3. FlexEval makes it easy to use any LLM as a rubric-based grader.
-4. FlexEval makes it easy to write test suites, that is, sets of multiple metrics to be evaluated against the same dataset of conversations.
+4. FlexEval makes it easy to write eval suites, that is, sets of multiple metrics to be evaluated against the same dataset of conversations.
 5. FlexEval allows metrics to be computed over entire conversations (i.e. how many turns are in this conversation), conversations faceted by role (how many turns per role are in this conversation), or individual turns faceted by role (what is the length of each string), and then aggregated (what is the average length of text output produced by the user vs the assistant).
-
-$${\color{red}\textsf{WARNING: FlexEval is under early and active development. The following README will change frequently.}}$$
-
-$${\color{red}\textsf{Expect breaking changes. We will establish a versioning system soon.}}$$
 
 ## Running
 
-Prior to running, the tool needs to be configured to meet your needs. This includes telling it how to connect to the LLM you want to test, and telling it which tests you want to run.
+Prior to running an evaluation, you'll need to tell FlexEval which metrics you want to compute and what conversations you want to use.
 
-### Configuration
-
-Step 0: Clone this repo
-
-Step 1: Environment file
-
-- Copy `.env-example` to make a new file called `.env`.
-
-Step 2: Install the virtual envirionment. Run:
-
-    python -m venv venv
-    source venv/bin/activate
-
-Step 3: Data
-
-- Write your data to the `data/test-cases` directory - or elsewhere - as a file in `jsonl` format. Each exchange between assistant and user should be one line of the file. The format of each line is JSON, with an `input` key, and a corresponding value that consists of a list of turns like the following:
+- Write your data as a file in `jsonl` format. 
+(In the future, we will support other formats and streaming inputs.) 
+Each separate _thread_ – one conversation between a user and an assistant – should be one line of the file. 
+The format of each line is JSON, with an `input` key, and a corresponding value that consists of a list of turns like the following:
 
   `{"input": [{"role": "user", "content": "Hi, Nice to meet you!"}, {"role": "assistant", "content": "Nice to meet you, too! How can I help you today?"}]}`
 
-Step 4a (optional):
+- Add any Python modules containing function metrics to your configuration. Existing function metrics can be viewed in [`flexeval.configuration.function_metrics`](/src/flexeval/configuration/function_metrics.py).
 
-- Edit `configuration/function_metrics.py` to include any additional function metrics. These functions can process either a single conversational turn or an entire conversation. To better understand the input and output options for these functions, see function templates in `configuration/completion_functions.py`.
+- If desired, create any rubric metrics in a `rubric_metrics.yaml` file. Rubrics in this file will be used to evaluate conversations and completions using "chain-of-thoughts then classify" (COT classify) and will report a numeric score (e.g., 0 or 1) mapped to a choice string (e.g.,"Yes", "No") from the classification results. For more information on how to write and use rubrics in FlexEval, check `doc/rubric_metric_guidelines.md` in this repo. (We will also add a vignette demonstrating a custom rubric.)
 
-Step 4b (optional):
+- Run the evaluation in Python code or via the CLI.
 
-- Edit `configuration/rubric_metrics.yaml` as desired. Rubrics in this file will be used to evaluate conversations and completions using "chain-of-thoughts then classify" (COT classify) and will report a numeric score (e.g., 0 or 1) mapped to a choice string (e.g.,"Yes", "No") from the classification results. For more information on how to write and use rubrics in FlexEval, check `doc/rubric_metric_guidelines.md` in this repo.
+### Running an evaluation within Python
 
-Step 4c (optional):
+See the vignettes.
 
-- Edit `configuration/completion_functions.py` as desired. These functions accept a `conversation_history` and `model_name` (at minimum) and return a `completion`, that is, the next turn in the conversation.
+### Running an evaluation via CLI
 
-Step 5:
+We will create a vignette about the CLI soon. For now, access the documentation directly.
 
-- Define a test suite in `evals.yaml`. A test suite includes:
-- an input dataset in `data/test-cases` or another location -- the path should be present in the `data` entry of `evals.yaml`.
-- a list of function metrics to use for scoring (can be blank). These functions must all be defined in `configuration/function_metrics.py`. These have an additional key called `score`, which can have values `completion` or `all_by_role`. The value `completion` will elicit a completion from the LLM specified in the `completions` section of the suite and calculate a metric for that only. The `all_by_role` will calculate a metric value for every existing turn in the conversation, and then the aggregation will be done by role.
-- a list of rubric metrics to use for scoring (can be blank). These must all be defined in `configuration/rubric_metrics.yaml`.
-- an LLM to use for rubric-based grading. Currently only OpenAI models are supported.
-- an LLM to use for `completions`, and associated required parameters. This is the connetion with the LLM system you would like to test. The configuration options specified here will be passed as arguments to the associated function in `configuration/completion_functions.py`.
-
-### Running tests
-
-FlexEval is a Python program. We will support use via Docker in the future.
-
-To run, clone this repo and run:
-
-    source venv/bin/activate
-    cd src/llm-evals
-    python main.py YOUR_EVAL_NAME
-
-where `YOUR_EVAL_NAME` is the name of the evaluation suite in `evals.yaml` that you want to run.
-
-This will run the set of evaluations against the dataset you provided. Results will be stored in two places. Data will be saved in table form in the `data/results/results.db` sqlite file.
-
-You can re-run evaluations as needed.
+```bash
+python -m flexeval --help
+```
 
 ### Interpreting results
 
-A "run" consists of a single metric calculated on a single dataset. Metrics are calculated for each conversation in that dataset.
-
-You can query the database in `data/results/results.db` to analyze the evaluation results.
+Results are saved in an SQLite database. We will create a vignette demonstrating accessing and interpreting result metrics in July 2025.
 
 ### Pre-installed functionality
 
-This tool is intended to be somewhat "batteries included". It supports the following out-of-the-box:
+This tool is intended to be "batteries included" for many basic use cases. It supports the following out-of-the-box:
 
 - scoring historical conversations - useful for monitoring live systems.
 - scoring LLMs:
-- locally hosted and served via an endpoint using something like [LM Studio](https://lmstudio.ai)
-- LLMs accessible by a REST endpoint and accessible via a network call
-- any OpenAI LLM
-- a set of included rubrics
-- a set of included metrics calculated as Python files
-
-This list will grow as we add functionality to meet LEVI team needs.
+  - locally hosted and served via an endpoint using something like [LM Studio](https://lmstudio.ai)
+  - LLMs accessible by a REST endpoint and accessible via a network call
+  - any OpenAI LLM
+- a set of useful rubrics
+- a set of useful Python functions
 
 ## Cite this work
 
@@ -146,9 +153,48 @@ If this work is useful to you, please cite [our EDM 2024 paper](https://educatio
 
 >S. Thomas Christie, Baptiste Moreau-Pernet, Yu Tian, & John Whitmer. (2024). FlexEval: a customizable tool for chatbot performance evaluation and dialogue analysis. _Proceedings of the 17th International Conference on Educational Data Mining_, 903-908. Atlanta, Georgia, USA, July 2024. <https://doi.org/10.5281/zenodo.12729993>
 
+## Code abstractions
+
+FlexEval is a tool for executing _evaluations_.
+
+An evaluation is represented by `flexeval.schema.eval_schema.Eval`, and contains a set of `flexeval.schema.eval_schema.MetricItem`s to apply to the test data.
+
+ - Functions: `flexeval.schema.eval_schema.FunctionItem`s apply a Python function to the test data, returning a numeric value.
+ - Rubrics: `flexeval.schema.eval_schema.RubricItem`s use a configured `GraderLlm` function and the provided rubric template to generate a numeric score from an LLM's output.
+
+You execute an `Eval` by creating an `EvalRun`. `flexeval.schema.evalrun_schema.EvalRun` contains:
+- Data sources (conversations as inputs, an SQLite filepath as output)
+- An `Eval` specification, containing the metrics to compute
+- Sources for the metrics defined in the `Eval` e.g. Python modules containing the functions referenced in `FunctionItem`s or YAML files containing the rubric templates.
+- A `Config` specification, describing how evaluation should be executed.
+
+The `Config` includes details about multi-threaded metric computation, about logging, etc.
+
+### Data Hierarchy
+Metrics can operates at any of four levels of granularity:
+- **Thread**: Full conversation
+- **Turn**: Adjacent set of messages from the same user or assistant
+- **Message**: Individual message from user or assistant
+- **ToolCall**: Function/tool invocation within a message
+
+### Logging
+
+FlexEval uses Python's [`logging`](https://docs.python.org/3/library/logging.html).
+
+If you don't want to see FlexEval's logs:
+
+```python
+# turn of all INFO and DEBUG log messages, but leave WARNING and ERROR messages
+logging.getLogger('flexeval').setLevel(logging.WARNING)
+# turn off all logging, including warnings and errors
+logging.getLogger('flexeval').setLevel(logging.CRITICAL + 1)
+```
+
 ## Development
 
-You should [install `uv`](https://docs.astral.sh/uv/getting-started/installation/):
+Pull requests to expand the set of provided rubrics or functions are welcome.
+
+To develop FlexEval, you should [install `uv`](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -160,8 +206,6 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv build
 ```
 
-FlexEval is not yet available on PyPI.
-
 ### Running tests
 
 Run the unit tests:
@@ -170,7 +214,7 @@ Run the unit tests:
 uv run python -m unittest discover -s tests.unit
 ```
 
-To run a specific file's worth of tests:
+To run a specific file's tests:
 
 ```bash
 uv run python -m unittest tests.unit.{module_name}
@@ -197,6 +241,19 @@ Verify CLI:
 ```bash
 uv run python -m flexeval --help
 ```
+
+### Formatting code files
+
+We format code files using [`ruff`](https://github.com/astral-sh/ruff).
+
+```bash
+uvx ruff check --fix
+uvx ruff format
+```
+
+## Command-line Interface (CLI)
+
+FlexEval exposes a CLI.
 
 ### Running an eval set with env variables
 

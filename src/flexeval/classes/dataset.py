@@ -13,10 +13,9 @@ class Dataset(BaseModel):
     datatype = pw.TextField(null=True)
     contents = pw.TextField(null=True)  # raw contents
 
-
     max_n_conversation_threads = pw.IntegerField(null=True)
     nb_evaluations_per_thread = pw.IntegerField(null=True, default=1)
-    
+
     # In line with LangGraph expectations, we assume n=1 for all outputs of LLMs
     # However, each node can append list with length 2+ to the message queue
 
@@ -46,24 +45,27 @@ class Dataset(BaseModel):
     #   turn_id
 
     def load_data(self):
-        from flexeval import (
-            data_loader,
-        )  # Local import as this needs to happen after the module is fully loaded
+        from flexeval import \
+            data_loader  # Local import as this needs to happen after the module is fully loaded
 
         if self.filename.endswith(".jsonl"):
             self.datatype = "json"
-            data_loader.load_jsonl(dataset=self,
-                                   filename=self.filename,
-                                   max_n_conversation_threads=self.max_n_conversation_threads,
-                                   nb_evaluations_per_thread=self.nb_evaluations_per_thread)
-        
+            data_loader.load_jsonl(
+                dataset=self,
+                filename=self.filename,
+                max_n_conversation_threads=self.max_n_conversation_threads,
+                nb_evaluations_per_thread=self.nb_evaluations_per_thread,
+            )
+
         elif is_sqlite_file(self.filename):
             self.datatype = "sqlite"
-            data_loader.load_langgraph_sqlite(dataset=self,
-                                              filename=self.filename,
-                                              max_n_conversation_threads=self.max_n_conversation_threads,
-                                              nb_evaluations_per_thread=self.nb_evaluations_per_thread)
-        
+            data_loader.load_langgraph_sqlite(
+                dataset=self,
+                filename=self.filename,
+                max_n_conversation_threads=self.max_n_conversation_threads,
+                nb_evaluations_per_thread=self.nb_evaluations_per_thread,
+            )
+
         else:
             raise Exception(
                 f"Each Data File must be either a jsonl or sqlite file. You provided the file: {self.filename}"

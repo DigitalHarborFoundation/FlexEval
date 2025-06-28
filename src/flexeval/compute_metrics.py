@@ -1,21 +1,390 @@
 import copy
+import importlib
+import importlib.util
 import inspect
 import json
+import logging
 import string
-from typing import Union, Any
+import types
+from concurrent.futures import ThreadPoolExecutor
+from typing import Iterable, Union
 
+import networkx as nx
+
+from flexeval import function_types
+from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 from flexeval.configuration import completion_functions, function_metrics
+from flexeval.schema import EvalRun, FunctionsCollection, eval_schema
+
+logger = logging.getLogger(__name__)
+
+
+class ObjectMetric:
+    def __init__(self, object: Message | Turn | ToolCall | Thread, metric: dict):
+        """Tracks a unique (object, metric) combination and any results computed for that metric.
+
+        Args:
+            object (Message | Turn | ToolCall | Thread): The object to track.
+            metric (dict): The metric to track.
+        """
+        self.object: Message | Turn | ToolCall | Thread = object
+        self.metric: dict = metric
+        self.metric_results: list[dict] | None = None
+
+    def __repr__(self) -> str:
+        return f"ObjectMetric(object={self.object.__class__.__name__} {self.object.id}, metric={self.metric}, metric_results={self.metric_results})"
+
+
+class MetricGraphBuilder:
+    def __init__(self):
+        # key: tuple(metric_level, metric_id, object_id)
+        # value: ObjectMetric
+        self.id_to_object_metric_map = {}
+
+    def build_metric_structures(self, evalsetrun: EvalSetRun):
+        metric_id_map = {}
+        metrics_by_level = {}
+        for metric_instance in json.loads(evalsetrun.metrics_graph_ordered_list):
+            metric_level = metric_instance["metric_level"]
+            if metric_level not in metrics_by_level:
+                metrics_by_level[metric_level] = []
+            metrics_by_level[metric_level].append(metric_instance)
+            metric_id_map[metric_instance["id"]] = metric_instance
+        self.metric_id_map = metric_id_map
+        self.metrics_by_level = metrics_by_level
+
+    def get_or_create_object_metric(
+        self,
+        metric_level: eval_schema.MetricLevel,
+        object: Message | Turn | ToolCall | Thread,
+        metric: dict,
+    ) -> ObjectMetric:
+        key = (metric_level, metric["id"], object.id)
+        if key not in self.id_to_object_metric_map:
+            object_metric = ObjectMetric(object, metric)
+            self.id_to_object_metric_map[key] = object_metric
+        return self.id_to_object_metric_map[key]
+
+    def get_index(
+        self, target_id: int, objects: list[Message | Turn | ToolCall | Thread]
+    ):
+        for i, object in enumerate(objects):
+            if target_id == object.id:
+                break
+        else:
+            raise ValueError(
+                f"Failed to find object with id {target_id} in {len(objects)} objects."
+            )
+        return i
+
+    def find_object_metric_from_depends_on(
+        self,
+        current_object: Message | Turn | ToolCall | Thread,
+        current_metric_level: eval_schema.MetricLevel,
+        current_index: int,
+        depends_on: dict,
+    ) -> ObjectMetric | None:
+        """
+        If you're a Turn metric that depends on a Message metric,
+        then we create a dependency on ALL or ANY Message meeting the criteria.
+        We don't know how to handle that...
+
+        In contrast, if you're a Message metric that depends on a Turn metric,
+        then we have a dependency on only a single object: that Message's Turn.
+        """
+        metric_id = depends_on["parent_id"]
+        dependency_metric_level = depends_on.get("metric_level")
+        if dependency_metric_level is None:
+            # if not specified in the dependency already, look up the metric level
+            depends_on_metric = self.metric_id_map[metric_id]
+            dependency_metric_level = depends_on_metric["metric_level"]
+            if dependency_metric_level is None:
+                raise ValueError(
+                    f"Metric lacks a metric level: {depends_on_metric} (matched via dependency_info: {depends_on})"
+                )
+
+        if dependency_metric_level == current_metric_level:
+            pass  # just use current_index, no lookup needed
+        elif current_metric_level == "ToolCall":
+            if dependency_metric_level == "Message":
+                current_index = self.get_index(
+                    current_object.message_id, self.objects_by_level["Message"]
+                )
+            elif dependency_metric_level == "Turn":
+                current_index = self.get_index(
+                    current_object.turn_id, self.objects_by_level["Turn"]
+                )
+            elif dependency_metric_level == "Thread":
+                current_index = 0  # only a single thread, by definition
+        elif current_metric_level == "Message":
+            if dependency_metric_level == "Turn":
+                current_index = self.get_index(
+                    current_object.turn_id, self.objects_by_level["Turn"]
+                )
+            elif dependency_metric_level == "Thread":
+                current_index = 0  # only a single thread, by definition
+            elif dependency_metric_level == "ToolCall":
+                raise ValueError(
+                    f"Can't depend on a {dependency_metric_level} metric from a {current_metric_level} metric."
+                )
+        elif current_metric_level == "Turn":
+            if dependency_metric_level == "Thread":
+                current_index = 0  # only a single thread, by definition
+            else:
+                raise ValueError(
+                    f"Can't depend on a {dependency_metric_level} metric from a {current_metric_level} metric."
+                )
+        elif current_metric_level == "Thread":
+            raise ValueError(
+                f"Can't depend on a {dependency_metric_level} metric from a {current_metric_level} metric."
+            )
+        else:
+            raise ValueError(f"Unsupported level: {current_metric_level=}")
+        relative_object_position = depends_on["relative_object_position"]
+        target_object_index = current_index + relative_object_position
+        if target_object_index < 0:
+            logger.debug(
+                f"Object at position {current_index} object cannot in principle satisfy this dependency, so skipping it."
+            )
+            return None
+        object = self.objects_by_level[dependency_metric_level][target_object_index]
+        metric = self.metric_id_map[metric_id]
+        return self.get_or_create_object_metric(dependency_metric_level, object, metric)
+
+    def build_thread_task_graphs(self, evalsetrun: EvalSetRun) -> Iterable[nx.DiGraph]:
+        threads = evalsetrun.threads
+        for thread in threads:
+            yield self.build_thread_task_graph(thread)
+
+    def build_thread_task_graph(self, thread: Thread) -> nx.DiGraph:
+        self.objects_by_level = {
+            "Thread": [thread],
+            "Turn": list(thread.turns),
+            "Message": list(thread.messages),
+            "ToolCall": list(thread.toolcalls),
+        }
+
+        g = nx.DiGraph()
+        for level, metrics_at_level in self.metrics_by_level.items():
+            if len(metrics_at_level) == 0:
+                continue
+            objects = self.objects_by_level[level]
+            for i, object in enumerate(objects):
+                for metric in metrics_at_level:
+                    # register metric on object
+                    object_metric = self.get_or_create_object_metric(
+                        level, object, metric
+                    )
+                    g.add_node(object_metric)
+                    if "depends_on" in metric:
+                        for dependency in metric["depends_on"]:
+                            # register dependency metric on the relevant object
+                            dependency_object_metric = (
+                                self.find_object_metric_from_depends_on(
+                                    object, level, i, dependency
+                                )
+                            )
+                            if dependency_object_metric is None:
+                                logger.debug(
+                                    "This object cannot in principle satisfy this dependency, so skipping it."
+                                )
+                                # TODO verify that this is the expected behavior in chained dependencies X -> Y -> Z
+                                g.remove_node(object_metric)
+                                continue
+                            g.add_node(dependency_object_metric)
+                            g.add_edge(
+                                dependency_object_metric,
+                                object_metric,
+                                depends_on=dependency,
+                            )
+        return g
+
+
+def compute_metrics(evalrun: EvalRun, evalsetrun: EvalSetRun) -> list[dict]:
+    n_workers = evalrun.config.max_workers
+    raise_on_error = evalrun.config.raise_on_metric_error
+    mgb = MetricGraphBuilder()
+    mgb.build_metric_structures(evalsetrun)
+    graphs = mgb.build_thread_task_graphs(evalsetrun)
+    mc = MetricComputer.from_evalrun(evalrun, evalsetrun)
+    metrics = []
+    if n_workers == 1:
+        for graph in graphs:
+            graph_metrics = mc.process_thread_dependency_graph(graph, raise_on_error)
+            metrics.extend(graph_metrics)
+    else:
+        with ThreadPoolExecutor(max_workers=n_workers) as executor:
+            futures = []
+            for graph in graphs:
+                future = executor.submit(mc.process_thread_dependency_graph, graph)
+                futures.append(future)
+            for i, future in enumerate(futures):
+                metrics.extend(future.result())
+                if i % 100 == 0:
+                    logger.info(f"Metrics futures resulted: {i + 1} / {len(futures)}")
+    return metrics
 
 
 class MetricComputer:
-    def __init__(self, function_modules: list, include_default_functions: bool = True):
-        self.function_modules = function_modules
-        if include_default_functions:
-            self.function_modules.append(function_metrics)
+    @classmethod
+    def from_evalrun(
+        cls, evalrun: EvalRun, evalsetrun: EvalSetRun | None = None
+    ) -> "MetricComputer":
+        function_modules = evalrun.function_modules
+        # convert from string module names or filepaths to Python modules
+        actual_modules = []
+        for i, function_module in enumerate(function_modules):
+            if isinstance(function_module, types.ModuleType):
+                # already a module
+                actual_modules.append(function_module)
+            elif isinstance(function_module, FunctionsCollection):
+                raise ValueError("FunctionsCollection not yet implemented!")
+            else:  # it's a filepath
+                try:
+                    # TODO I think this is not necessary given the pydantic schema; this should always fail for filepaths
+                    # alternately, we might call import_module() on the ModuleType modules, but I think that's unnecessary
+                    module = importlib.import_module(function_module)
+                except ModuleNotFoundError as module_not_found:
+                    try:
+                        spec = importlib.util.spec_from_file_location(
+                            f"function_module_{i}", function_module
+                        )
+                        module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+                    except Exception as module_not_loaded:
+                        raise ValueError(
+                            f"Failed to load function module specified by {function_module}. (module not found: {module_not_found}, and failed to load from file location: {module_not_loaded})"
+                        )
+                actual_modules.append(module)
+        if evalrun.add_default_functions and function_metrics not in actual_modules:
+            actual_modules.append(function_metrics)
+        mc = cls(actual_modules, evalsetrun)
+        # validation step: verify that all functions are present
+        missing_functions = set()
+        if evalrun.eval.metrics.function is not None:
+            for function_item in evalrun.eval.metrics.function:
+                try:
+                    mc.find_function(function_item.name)
+                except ValueError:
+                    missing_functions.add(function_item.name)
+        if len(missing_functions) > 0:
+            raise ValueError(
+                f"Failed to find {len(missing_functions)} functions in the provided function module. Missing function names: {', '.join(sorted(missing_functions))}"
+            )
+        # validation step: verify that all rubrics are present
+        missing_rubrics = set()
+        if mc.rubrics is not None and evalrun.eval.metrics.rubric is not None:
+            for rubric_item in evalrun.eval.metrics.rubric:
+                if rubric_item.name not in mc.rubrics:
+                    missing_rubrics.add(rubric_item.name)
+        if len(missing_rubrics) > 0:
+            raise ValueError(
+                f"Failed to find {len(missing_rubrics)} rubrics in the provided rubric set. Missing rubric names: {', '.join(sorted(missing_rubrics))}"
+            )
+        return mc
+
+    def __init__(self, function_modules: list, evalsetrun: EvalSetRun | None = None):
+        self.function_modules: list = function_modules
+        self.rubrics: dict | None = (
+            self.load_rubrics(evalsetrun) if evalsetrun is not None else None
+        )
+
+    def load_rubrics(self, evalsetrun: EvalSetRun):
+        """Set the rubrics to be used by this MetricComputer from the given EvalSetRun."""
+        self.rubrics = json.loads(evalsetrun.rubrics)
+
+    def process_thread_dependency_graphs(
+        self, graph_list: Iterable[nx.DiGraph]
+    ) -> list[dict]:
+        evaluated_metrics = []
+        for g in graph_list:
+            evaluated_metrics.extend(self.process_thread_dependency_graph(g))
+        return evaluated_metrics
+
+    def process_thread_dependency_graph(
+        self, g: nx.DiGraph, raise_on_error: bool = True
+    ) -> list[dict]:
+        evaluated_metrics = []
+        try:
+            for object_metric in nx.topological_sort(g):
+                all_dependencies_met = True
+                for dependency in g.predecessors(object_metric):
+                    if dependency.metric_results is None:
+                        raise ValueError(
+                            f"FlexEval error: expected metric_result for dependency {dependency.metric['evaluation_name']} to be computed before processing metric {object_metric.metric['evaluation_name']}."
+                        )
+                    dependency_info = g.get_edge_data(dependency, object_metric)[
+                        "depends_on"
+                    ]
+                    dependency_met = False
+                    if (
+                        "metric_name" in dependency_info
+                        and dependency_info["metric_name"] is not None
+                        and dependency_info["metric_name"]
+                        != dependency.metric["evaluation_name"]
+                    ):
+                        for metric_result in dependency.metric_results:
+                            # expected key must be present and in the expected range
+                            if (
+                                dependency_info["metric_name"]
+                                == metric_result["metric_name"]
+                            ):
+                                dependency_met = (
+                                    metric_result["metric_value"]
+                                    >= dependency_info["metric_min_value"]
+                                ) and (
+                                    metric_result["metric_value"]
+                                    <= dependency_info["metric_max_value"]
+                                )
+                                break
+                            else:
+                                logger.debug(
+                                    f"Key {dependency_info['metric_name']} not found in results for dependency {dependency.metric['evaluation_name']}."
+                                )
+                    elif len(dependency.metric_results) == 1:
+                        metric_result = dependency.metric_results[0]
+                        dependency_met = (
+                            metric_result["metric_value"]
+                            >= dependency_info["metric_min_value"]
+                        ) and (
+                            metric_result["metric_value"]
+                            <= dependency_info["metric_max_value"]
+                        )
+                    elif len(dependency.metric_results) == 0:
+                        logger.debug(
+                            f"Skipping metric because dependency '{dependency.metric['evaluation_name']}' has no results."
+                        )
+                    else:
+                        raise ValueError(
+                            f"Not sure how to evaluate dependency '{dependency.metric['evaluation_name']}' for metric '{object_metric.metric['evaluation_name']}', as it has {len(dependency.metric_results)} results but no specified key."
+                        )
+                    if not dependency_met:
+                        all_dependencies_met = False
+                        logger.debug(
+                            f"Value for metric '{dependency.metric['evaluation_name']}' not in range for dependency {dependency_info}."
+                        )
+                        break
+                if all_dependencies_met:
+                    # TODO in the future, we could pass some metric_results as kwargs to the metric function
+                    # or as a special formatting key to the rubric
+                    metric_results = self.compute_metric(
+                        object_metric.object, **object_metric.metric
+                    )
+                    object_metric.metric_results = metric_results
+                    evaluated_metrics.extend(metric_results)
+                else:
+                    # no results for this metric, as dependencies were unmet
+                    object_metric.metric_results = []
+            self._validate_metrics(evaluated_metrics)
+        except Exception as ex:
+            logger.exception(f"An error occurred during metric processing: {ex}")
+            if raise_on_error:
+                raise
+        return evaluated_metrics
 
     def compute_metrics(self, object: Union[Thread, Turn, Message, ToolCall]):
         """we've defined a variable called metrics_to_evaluate
@@ -37,7 +406,10 @@ class MetricComputer:
             dependencies_are_all_met = True
             # If there are no dependencies, this loop won't execute
             # and the metric will be evaluated
-            if len(metric_to_evaluate.get("depends_on")) > 0:
+            if (
+                "depends_on" in metric_to_evaluate
+                and len(metric_to_evaluate["depends_on"]) > 0
+            ):
                 # here, we have a metric with 1+ dependencies
                 # ALL of these dependencies must be satisfied
 
@@ -48,40 +420,25 @@ class MetricComputer:
                 # 4 - the metric_max_value
                 # not meeting ANY of them will short-circuit the loop and cause the eval to not evaluate
                 # check all dependencies
-                for dependency in metric_to_evaluate.get("depends_on"):
+                for dependency in metric_to_evaluate["depends_on"]:
                     # for each dependency, assume it's not met
                     # if it's in the list AND its values meet the criteria, it's met
                     dependency_is_met = False
                     # if a specific metric_name was specified, you need to match exactly:
-                    if "metric_name" in dependency:
-                        for em in evaluated_metrics:
-                            # I think the 'depends_on' should have all fields populated at this point
-
+                    for em in evaluated_metrics:
+                        # 'depends_on' will have all fields populated at this point
+                        if em["id"] == dependency["parent_id"]:
                             if (
-                                em["id"] == dependency["parent_id"]
-                                and em["metric_name"] == dependency["metric_name"]
-                                and em["metric_value"] >= dependency["metric_min_value"]
+                                em["metric_value"] >= dependency["metric_min_value"]
                                 and em["metric_value"] <= dependency["metric_max_value"]
                             ):
                                 # this specific dependency was met - can quit looking
                                 dependency_is_met = True
                                 break
-                    else:
-                        # if no specific metric_name was specified, you just need to match ANY metric_name
-                        # on the other criteria
-                        for em in evaluated_metrics:
-                            # print("em", em)
-                            # print("dependency", dependency)
-                            # I think the 'depends_on' should have all fields populated at this point
-                            if (
-                                em["id"] == dependency["parent_id"]
-                                # and em["metric_name"] == dependency["metric_name"]
-                                and em["metric_value"] >= dependency["metric_min_value"]
-                                and em["metric_value"] <= dependency["metric_max_value"]
-                            ):
-                                # this specific dependency was met - can quit looking
-                                dependency_is_met = True
-                                break
+                            else:
+                                logger.debug(
+                                    f"Metric value '{em['metric_value']}' not in range for dependency id='{dependency['parent_id']}'."
+                                )
                     if not dependency_is_met:
                         dependencies_are_all_met = False
                         # if even one dependency is not met - don't do the evaluation
@@ -91,11 +448,12 @@ class MetricComputer:
                 # ONLY call if dependencies are ALL met
                 # TODO - maybe in the future we'll want to add the computed value from
                 # the dependency through as an argument here
-                evaluated_metrics += self.compute_metric(object, **metric_to_evaluate)
+                metric_results = self.compute_metric(object, **metric_to_evaluate)
+                evaluated_metrics.extend(metric_results)
             else:
-                pass
-                # print(f"\nNot runing metric because dependency was not met:")
-                # print(metric_to_evaluate)
+                logger.debug(
+                    f"Skipping metric '{em['metric_name']}' (id='{em['id']}') due to unmet dependencies."
+                )
         return evaluated_metrics
 
     def compute_metric(
@@ -106,18 +464,16 @@ class MetricComputer:
         metric_level: str,
         kwargs: dict,
         context_only: bool = None,
-        last_instance_only: bool = None,
         depends_on: list = None,
         id: int = None,
         notes: str = None,  # just a placeholder
-    ) -> list:
+    ) -> list[dict]:
         if evaluation_type == "function":
             metrics = self.compute_function_metric(
                 function_name=evaluation_name,
                 metric_kwargs=kwargs,
                 metric_level=metric_level,
                 context_only=context_only,
-                last_turn_only=last_instance_only,
                 input_object=object,
                 depends_on=depends_on,
                 id=id,
@@ -132,53 +488,35 @@ class MetricComputer:
                 id=id,
             )
         else:
-            raise Exception(
+            raise ValueError(
                 f"The argument evaluation_type provided to compute_metric is invalid. Must be one of `function` or `rubric`. You passed `{type}`."
             )
+        self._validate_metrics(metrics)
         return metrics
 
+    def _validate_metrics(self, metrics: list[dict]):
+        for m in metrics:
+            if m.get("evaluation_type", None) is None:
+                raise ValueError(
+                    f"Metric {m} does not have a value for the key `type`."
+                )
+            if m.get("metric_value", None) is None:
+                raise ValueError(
+                    f"Metric {m} does not have a value for the key `metric_value`."
+                )
+
     def invoke_function(
-        self, metric_function: callable, input_object, metric_kwargs, context_only: bool
+        self,
+        metric_function: callable,
+        metric_level: eval_schema.MetricLevel,
+        input_object: function_types.AnyFunctionObjectInput,
+        metric_kwargs: dict,
+        context_only: bool,
     ):
-        # TODO: Confirm that this verification is happening in verify installation instead.
-
-        # This gets the type of the first argument of the function
-        input_type = next(
-            iter(inspect.signature(metric_function).parameters.values())
-        ).annotation
-        # Check whether the metric_function has a string or a list input as the first thing.
-        # If so, need to extract the content first.
-        if input_type is str:
-            # This should apply only for Message, Turn, or Thread types.
-            # For Turn and Thread, concatenates all together
-            input = None
-            if context_only:
-                # join together the string contents of all previous turns
-                input = join_all_contents_to_string(input_object.get_context())
-            else:
-                # current turn only
-                input = join_all_contents_to_string(input_object.get_content())
-            metrics_result = metric_function(input, **metric_kwargs)
-        elif input_type is list:
-            # This should apply for the Turn and Thread types only
-            if context_only:
-                metrics_result = metric_function(
-                    input_object.get_context(), **metric_kwargs
-                )
-            else:
-                # this is on a single turn - pass in the parsed list
-                metrics_result = metric_function(
-                    input_object.get_content(), **metric_kwargs
-                )
-        elif input_type is dict:
-            # This should apply for the ToolCall type only
-            metrics_result = metric_function(
-                input_object.get_dict_representation(), **metric_kwargs
-            )
-        else:
-            # Must be a Thread/Turn/Message/ToolCall [verified in validation of setup]
-            metrics_result = metric_function(input_object, **metric_kwargs)
-
+        function_input = function_types.get_function_input(
+            metric_function, metric_level, input_object, context_only
+        )
+        metrics_result = metric_function(function_input, **metric_kwargs)
         return metrics_result
 
     def find_function(self, function_name: str):
@@ -198,9 +536,8 @@ class MetricComputer:
         function_name: str,
         metric_kwargs: dict,
         input_object: Union[Thread, Turn, Message, ToolCall],
-        metric_level: str,
+        metric_level: eval_schema.MetricLevel,
         context_only: bool,
-        last_turn_only: bool,
         depends_on: list,
         id: int,
     ):
@@ -208,15 +545,10 @@ class MetricComputer:
         # they share most of the same information though so it's convenient to have them constructed similarly
         # will return a list of dictionaries
 
-        # if this is set, exit unless the criteria are met
-        if last_turn_only and not (
-            input_object.is_completion or input_object.is_final_turn_in_input
-        ):
-            return []
         # Check if the function exists in any of the function namespaces
         metric_function, metric_source = self.find_function(function_name)
         metrics_result = self.invoke_function(
-            metric_function, input_object, metric_kwargs, context_only
+            metric_function, metric_level, input_object, metric_kwargs, context_only
         )
 
         base_result = {
@@ -227,7 +559,6 @@ class MetricComputer:
             "kwargs": metric_kwargs,
             "source": metric_source,  # TODO - put this back?
             "context_only": context_only,
-            "last_turn_only": last_turn_only,
             "depends_on": depends_on,
             "id": id,
         }
@@ -239,8 +570,13 @@ class MetricComputer:
             return [result]
         elif isinstance(metrics_result, dict):
             result_list = []
+            # TODO rethink this behavior
             for k, v in metrics_result.items():
                 result = copy.deepcopy(base_result)
+                if "metric_name" in result and result["metric_name"] != k:
+                    logger.warning(
+                        f"Overriding metric_name in metric result with '{k}' (was '{result['metric_name']}')."
+                    )
                 result["metric_name"] = k
                 result["metric_value"] = float(v)
                 result_list.append(result)
@@ -249,14 +585,13 @@ class MetricComputer:
             result_list = []
 
             for entry in metrics_result:
-                # print(function_name, entry)
                 result = copy.deepcopy(base_result)
                 result["metric_name"] = entry.get("name", None)
                 result["metric_value"] = float(entry.get("value", None))
                 result_list.append(result)
             return result_list
         else:
-            raise Exception(
+            raise ValueError(
                 f"The metric type returned from `{metric_function}` is not a supported type. It must be one of `list`, `int`, `float`, or `dict`. You supplied `{type(metrics_result)}`."
             )
 
@@ -269,11 +604,14 @@ class MetricComputer:
         depends_on: list,
         id: int,
     ):
-        # load metrics
-        rubrics = json.loads(object.evalsetrun.rubrics)
-        assert (
-            rubric_name in rubrics
-        ), f"You requested a rubric called `{rubric_name}`, but only these were found:{rubrics.keys()}."
+        if self.rubrics is not None:
+            rubrics = self.rubrics
+        else:
+            rubrics = json.loads(object.evalsetrun.rubrics)
+        if rubric_name not in rubrics:
+            raise ValueError(
+                f"You requested a rubric called `{rubric_name}`, but only these were found: {rubrics.keys()}."
+            )
 
         prompt = rubrics.get(rubric_name).get("prompt", "")
 
@@ -434,14 +772,3 @@ def count_rubric_metrics(iterable_of_objects):
             if metric_instance.get("evaluation_type") == "rubric":
                 rubric_count += 1
     return rubric_count
-
-
-def join_all_contents_to_string(content: list[dict] | Any) -> str:
-    """
-    content is a list of dictionaries whose keys include 'content'.
-    Returns a string with all the 'content' entries concatenated together,
-    separated by newline.
-    """
-    if isinstance(content, list):
-        content = "\n".join([item.get("content", "") for item in content])
-    return content

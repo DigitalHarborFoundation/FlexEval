@@ -1,9 +1,8 @@
 import datetime
 import json
+import logging
 import os
 import re
-
-## ~.~ function templates starts ~.~
 from typing import Union
 
 import openai
@@ -13,6 +12,8 @@ from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
+
+logger = logging.getLogger(__name__)
 
 # Example input types:
 # - a single message as a string
@@ -73,6 +74,44 @@ def process_conversation(
     pass
 
 
+def identity(object: Union[Thread, Turn, Message, ToolCall], **kwargs) -> dict:
+    """Returns a string of the object.
+
+    Args:
+        object (Union[Thread, Turn, Message, ToolCall]): Accepts any type of object.
+
+    Returns:
+        dict: Returns a dict.
+    """
+    if isinstance(object, Thread):
+        object_type = 0
+    elif isinstance(object, Turn):
+        object_type = 1
+    elif isinstance(object, Message):
+        object_type = 2
+    elif isinstance(object, ToolCall):
+        object_type = 3
+    else:
+        raise ValueError(f"Unknown object type {type(object)}.")
+    return {"object_type": object_type}
+
+
+def constant(object: Union[Thread, Turn, Message, ToolCall], **kwargs) -> int | float:
+    """Returns a constant value.
+
+    Args:
+        object (Union[Thread, Turn, Message, ToolCall]): Accepts (and ignores) any type of object.
+        response (Union[float | int]): If provided in the kwargs, return response. Otherwise, return 0.
+
+    Returns:
+        int | float: The specified response, or 0.
+    """
+    response = 0
+    if "response" in kwargs:
+        response = kwargs["response"]
+    return response
+
+
 def is_role(object: Union[Turn, Message], role: str) -> dict:
     """
     Return 1 is the role for this Turn or Message matches the passed in role,
@@ -95,6 +134,10 @@ def is_langgraph_type(object: Union[Message], type: str) -> dict:
     type: a string with the desired type to check against
     """
     return {type: int(object.langgraph_type == type)}
+
+
+def index_in_thread(object: Union[Turn, Message]) -> int:
+    return object.index_in_thread
 
 
 def value_counts_by_tool_name(turn: list, json_key: str) -> dict:
@@ -278,6 +321,35 @@ def count_tool_calls(object: Union[Thread, Turn, Message]) -> dict:
 #     return results
 
 
+def count_messages(object: Union[Thread, Turn]) -> int:
+    """
+    Calculate the number of conversational messages in the given Thread or Turn.
+    Excludes any system messages.
+    A message is counted even if the content for that action was blank (e.g., a blank message
+    associated with a tool call).
+
+    Args:
+        Turn or Thread
+
+    Returns:
+        int: Count of messages.
+    """
+    return len(object.messages)
+
+
+def count_turns(object: Thread) -> int:
+    """
+    Calculate the number of conversational turns in a thread.
+
+    Args:
+        Thread
+
+    Returns:
+        int: Count of turns.
+    """
+    return len(object.turns)
+
+
 def count_messages_per_role(
     object: Union[Thread, Turn], use_langgraph_roles=False
 ) -> list:
@@ -382,7 +454,11 @@ def flesch_reading_ease(turn: str) -> float:
     Returns:
         float: The Flesch Reading Ease score of the input text.
     """
-    return textstat.flesch_reading_ease(turn)
+    if turn.strip() == "":
+        pass
+    reading_ease = textstat.flesch_reading_ease(turn)
+    logger.debug(f"Text '{turn}' has a Flesch Reading Ease score of {reading_ease}.")
+    return reading_ease
 
 
 def flesch_kincaid_grade(turn: str) -> float:
@@ -415,8 +491,12 @@ def openai_moderation_api(turn: str, **kwargs) -> dict:
         Dict[str, float]: A dictionary of category scores from the moderation API response.
     """
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    response = client.moderations.create(input=turn)
-    return response.results[0].model_dump(exclude_unset=True)["category_scores"]
+    response = client.moderations.create(
+        model="omni-moderation-latest", input=turn, **kwargs
+    )
+    return response.results[0].category_scores.model_dump(
+        exclude_unset=True, by_alias=True
+    )
 
 
 def count_errors(object: Union[Thread, Turn, Message, ToolCall]) -> dict:

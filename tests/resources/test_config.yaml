@@ -6,5 +6,6 @@ logs_path: .unittest/logs/
 eval_schema_path: src/flexeval/eval_schema.json
 database_path: .unittest/unittest.db
 max_workers: 1
+clear_tables: True
 
 env:

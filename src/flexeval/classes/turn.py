@@ -25,6 +25,7 @@ class Turn(BaseModel):
     evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="turns")
     dataset = pw.ForeignKeyField(Dataset, backref="turns")
     thread = pw.ForeignKeyField(Thread, backref="turns")
+    index_in_thread = pw.IntegerField()
     role = pw.TextField()
 
     def __init__(self, **kwargs):
@@ -101,7 +102,7 @@ class Turn(BaseModel):
         else:
             return None
 
-    def get_context(self, include_system_prompt=False):
+    def get_context(self, include_system_prompt=False) -> list[dict[str, str]]:
         """
         Context is the context of the first message in the turn
         """
@@ -163,7 +164,7 @@ class Turn(BaseModel):
         for msg in self.get_context():  # input[:-1]:
             # this outputs user: XYZ, or assistant: 123
             if len(msg["content"]) > 0 and (
-                include_tool_messages or msg["langgraph_role"] != "tool"
+                include_tool_messages or msg.get("langgraph_role") != "tool"
             ):
                 output_minus_completion += f"{msg['role']}: {msg['content']}\n"
         # Including role as prefix to account for both tool and assistant

@@ -28,9 +28,41 @@ import os
 from typing import Any, Dict, List
 
 import requests
+import tiktoken
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
+
+
+def echo_completion(
+    conversation_history: List[Dict[str, Any]],
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    prev_message = (
+        conversation_history[0]["content"]
+        if len(conversation_history) > 0
+        else "No messages yet."
+    )
+    response = prev_message
+    if "response" in kwargs:
+        response = kwargs["response"]
+    # estimate token usage using a default tokenizer
+    tokenizer = tiktoken.get_encoding("cl100k_base")
+    completion_tokens = len(tokenizer.encode(response))
+    prompt_tokens = len(
+        tokenizer.encode(
+            "".join([message["content"] for message in conversation_history])
+        )
+    )
+    completion = {
+        "choices": [{"message": {"content": response, "role": "assistant"}}],
+        "model": "echo",
+        "usage": {
+            "completion_tokens": completion_tokens,
+            "prompt_tokens": prompt_tokens,
+        },
+    }
+    return completion
 
 
 def open_ai_completion(

@@ -6,7 +6,6 @@ from tests.unit import mixins
 
 
 class TestValidate(mixins.DotenvMixin, unittest.TestCase):
-
     def test_load(self):
         suite = unittest.defaultTestLoader.loadTestsFromModule(validate)
         self.assertTrue(suite.countTestCases() > 0)

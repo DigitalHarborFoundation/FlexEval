@@ -1,53 +1,56 @@
-import argparse
 import logging
+from enum import Enum
+from pathlib import Path
+from typing import Annotated
 
-from flexeval import runner
+import typer
+
+from flexeval import log_utils, runner
 
 logger = logging.getLogger(__name__)
 
 
+app = typer.Typer()
+
+
+class LogLevel(str, Enum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+
+
+def run_eval(
+    eval_run: Annotated[
+        Path, typer.Argument(help="YAML file specifying the execution.")
+    ],
+):
+    pass
+
+
+@app.command(no_args_is_help=True)
+def run_eval_by_name(
+    input_data: Annotated[list[Path], typer.Option(help="Input data filepaths.")],
+    database_path: Annotated[Path, typer.Option(help="Output database path.")],
+    eval_name: str,
+    evals_path: Path,
+    config_path: Path,
+    clear_tables: bool = False,
+    log_level: LogLevel = LogLevel.INFO,
+):
+    log_utils.set_up_logging(log_level=log_level)
+    runner.run_from_name_args(
+        input_data,
+        database_path,
+        eval_name,
+        config_path,
+        evals_path,
+        clear_tables=clear_tables,
+    )
+
+
 def main():
-    ################################################################################
-    ## Parse inputs and load config files
-    ################################################################################
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--eval_name",
-        type=str,
-        help="Which eval set in evals.yaml you want to run",
-    )
-    parser.add_argument(
-        "--evals_path",
-        type=str,
-        help="Path to the evaluation file evals.yaml you want to run. Default is src/flexeval/configuration/evals.yaml",
-    )
-    parser.add_argument(
-        "--clear_tables",
-        action="store_true",
-        help="Set this flag to drop existing tables in the results database before running. Useful during development.",
-    )
-    parser.add_argument(
-        "--config_path",
-        type=str,
-        help="Which config file to use",
-        default="src/flexeval/config.yaml",
-    )
-
-    # Parse passed arguments
-    args = parser.parse_args()
-
-    # set up logging
-    # TODO add option to silence logging or otherwise set level of verbosity
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d (%(funcName)s) - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    logger.debug("Command-line args: %s", str(args))
-
-    # Evoke run()
-    runner.run(**vars(args))
+    app()
 
 
 if __name__ == "__main__":
