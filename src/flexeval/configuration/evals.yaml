@@ -1,0 +1,864 @@
+multimodels-langgraph-rubric-dependencies:
+  data:
+    - data/test-cases/ckpts_livehint/checkpoint.db
+
+  name: plot evaluations, models comparison
+  notes: |-
+    Comparing models on langgraph rubric evaluation performance,
+    compare same-model consistency in performance with duplicate evaluations,
+    evaluate when requested for a plot, if plot provided, if provided and correct,
+    if provided and appropriate. if plot provided but not requested.
+    if plot provided and bounds reasonable, if create_a_plot is true in response_to_student
+    matches the DesmosPlot counts, if plot matches description before or after.
+
+  config:
+    max_n_conversation_threads: 10
+    nb_evaluations_per_thread: 2
+    max_workers: 5
+
+  metrics:
+    function:
+    # compute most metrics only on assistant turns
+      - name: is_role
+        kwargs:
+          role: assistant
+
+    # count tool calls by name to locate the responses from DesmosPlot in assistant turns
+    #NOTE: can have a DesmosPlot rendered but no request for a plot, no dependency here
+      - name: count_tool_calls_by_name
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+    # count when assistant wants to create a plot at any time in a turn - should always lead to a DesmosPlot rendered
+      - name: count_of_parts_matching_regex
+        kwargs:
+          expression: 'create_a_plot": true'
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+    rubric:
+    # check if student requested a plot in their last message
+      - name: is_request_for_plot
+        # context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+    # We don't assume that to be pedagogically correct, a plot has to be requested. So here only check if the plot has been rendered, was it pedagogically correct.
+    # Can cross information with is_plot_requested to know if a requested plot that has been rendered is pedagogically correct
+      - name: is_pedagogically_appropriate_plot
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls_by_name
+            type: function
+            metric_name: DesmosPlot
+            metric_min_value: 1
+
+    # if a plot is generated, validates that it matches the assistant's description following the plot
+      - name: plot_matches_followup_description
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls_by_name
+            type: function
+            metric_name: DesmosPlot
+            metric_min_value: 1
+      
+    # if plot generated, check if bounds are reasonable
+      - name: plot_bounds_are_reasonable
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls_by_name
+            type: function
+            metric_name: DesmosPlot
+            metric_min_value: 1
+
+    # if generated, is the plot mathematically correct compared to its intended use case
+      - name: is_correct_plot
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls_by_name
+            type: function
+            metric_name: DesmosPlot
+            metric_min_value: 1
+
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: o3-mini
+      api_key_name: OPENAI_API_KEY
+
+
+
+test-multimodels-langgraph-rubric-dependencies:
+  data:
+    - ../../data/test-cases/ckpts_livehint/checkpoint.db
+
+  name: LLM models comparison
+  notes: Testing multi models langgraph rubric evaluation comparison
+
+  config:
+    max_n_conversation_threads: 10
+    max_workers: 6
+
+  metrics:
+    function:
+    # compute most metrics only on assistant turns
+      - name: is_role
+        kwargs:
+          role: assistant
+
+    # count tool calls by name to locate the responses from DesmosPlot in assistant turns
+      - name: count_tool_calls_by_name
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+    rubric:
+      - name: is_request_for_plot
+        # context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: is_pedagogically_appropriate_plot
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls_by_name
+            type: function
+            metric_name: DesmosPlot
+            metric_min_value: 1
+          - name: is_request_for_plot
+            type: rubric
+            metric_min_value: 1
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: o3-mini
+      api_key_name: OPENAI_API_KEY
+
+
+
+test-multimodels-langgraph:
+  data:
+    - ../../data/test-cases/ckpts_livehint/checkpoint.db
+
+  name: LLM models comparison
+  notes: Testing multi models langgraph rubric evaluation comparison
+
+  config:
+    max_n_conversation_threads: 2
+    max_workers: 6
+
+  metrics:
+    function:
+      - name: is_role
+        kwargs:
+          role: assistant
+
+    rubric:
+      - name: no_plot_after_student_requested
+        context_only: false
+        depends_on:
+          - name: is_role
+            type: function
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: o3-mini
+      api_key_name: OPENAI_API_KEY
+
+
+
+
+issues-fixing-rubrics:
+  data:
+    - ../../data/test-cases/ckpts_livehint/checkpoint_gpt-4o-mini-2024-07-18_1540.sqlite
+
+  name: Issues fixing 03-05-25
+  notes: Fixing issues like plot bounds unreasonable, plot generated by request but unhelpful,  plot generated but incorrect, technical error, student reasonably asked for a plot but no plot given
+
+  config:
+    max_n_conversation_threads: 3
+    max_workers: 6
+
+  metrics:
+    function:
+      # - name: string_length
+
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: count_of_parts_matching_regex
+        kwargs:
+          expression: "An error occurred while processing your request"
+        metric_level: Turn
+    
+    rubric:
+      - name: is_plot_generated_upon_request_pedagogically_appropriate
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+          - name: count_tool_calls
+            metric_min_value: 1
+
+      - name: is_plot_generated_upon_request_correct
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+          - name: count_tool_calls
+            metric_min_value: 1
+
+      - name: are_bounds_reasonable_with_plot_generated_correctly
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+          - name: count_tool_calls
+            metric_min_value: 1
+        
+      - name: no_plot_after_student_requested
+        context_only: false
+        depends_on:
+          - name: is_role
+            type: function
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: desmos_code_rendered_on_toolcall
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls
+            metric_min_value: 1
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: o3-mini
+      api_key_name: OPENAI_API_KEY
+
+
+test-multiple-rubrics-files:
+  data:
+    - ../../data/test-cases/ckpts_livehint/checkpoint_gpt-4o-mini-2024-07-18_1540.sqlite
+
+  name: Test running rubrics from multiple files.
+  notes: If different rubric files have similar rubric names, we only consider the rubric instance in the first file found in config.yaml
+  config:
+    max_n_conversation_threads: 3
+    max_workers: 6
+
+  metrics:
+    function:
+
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: count_of_parts_matching_regex
+        kwargs:
+          expression: "An error occurred while processing your request"
+        metric_level: Turn
+    
+    rubric:
+      - name: plot_matches_description
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls
+            metric_min_value: 1
+          - name: count_of_parts_matching_regex
+            kwargs:
+              expression: "An error occurred while processing your request"
+            metric_name: "An error occurred while processing your request"
+            metric_max_value: 0
+
+      - name: is_plot_generated_upon_request_correct
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+          - name: count_tool_calls
+            metric_min_value: 1
+
+      - name: plot_matches_description_example_project
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls
+            metric_min_value: 1
+          - name: count_of_parts_matching_regex
+            kwargs:
+              expression: "An error occurred while processing your request"
+            metric_name: "An error occurred while processing your request"
+            metric_max_value: 0
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: o3-mini
+      api_key_name: OPENAI_API_KEY
+
+test-new:
+  data:
+    - ../../data/test-cases/example.jsonl
+  
+  name: test string length
+  notes: test notes
+
+  config:
+    max_workers: 6
+
+  metrics:
+    function:
+      - name: string_length
+
+      - name: openai_moderation_api #run for every turn by default
+        context_only: false #this is the default
+
+      - name: openai_moderation_api
+        context_only: true
+    
+    rubric:
+      - name: yeasayer_completion
+        depends_on:
+          - name: openai_moderation_api
+            context_only: true
+            metric_min_value: 0.1
+
+  completion_llm:
+    function_name: open_ai_completion
+    include_system_prompt: False
+    kwargs:
+      model_name: o3-mini
+      api_key_name: OPENAI_API_KEY
+      n: 2
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: o3-mini
+      api_key_name: OPENAI_API_KEY
+
+example:
+  data:
+    - ../../data/test-cases/dependency_example_test.jsonl
+
+  do_completion: False
+
+  name: dependency example
+  notes: my notes
+
+  #anything in here will overwrite entries in src/llm-evals/config.yaml
+  config:
+    max_workers: 8
+
+  metrics:
+    function:
+      - name: string_length
+
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: value_counts_by_tool_name
+        kwargs:
+          json_key: latex
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: count_messages_per_role
+      
+      - name: openai_moderation_api #run for every turn by default
+        context_only: false #this is the default
+
+      - name: openai_moderation_api
+        context_only: true
+
+      - name: flesch_kincaid_grade
+
+    rubric:
+      - name: yeasayer_completion
+        depends_on:
+          - name: openai_moderation_api
+            context_only: true
+            metric_min_value: 0.1
+
+      - name: is_request_for_plot
+        context_only: true
+        depends_on:
+          - name: is_role
+            type: function
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: is_student_acting_as_tutor
+
+      - name: is_pedagogically_appropriate_plot
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+          - name: count_tool_calls
+            metric_min_value: 1 #TODO - sum of the 'value' for all rows where function_name is 'count_tool_calls' should be >= 1
+
+  completion_llm:
+    function_name: open_ai_completion
+    include_system_prompt: False
+    kwargs:
+      model_name: gpt-3.5-turbo
+      api_key_name: OPENAI_API_KEY
+      n: 2
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: gpt-4o
+      api_key_name: OPENAI_API_KEY
+
+example-langgraph-no-rubrics:
+  data:
+    - ../../data/plotting-feb-2025/checkpoint-06022024-AIED-small.sqlite
+    #- /Users/arafferty/git/pedagogical-plots/src/langgraph/checkpoint.db
+  do_completion: False
+
+  name: dependency example
+  notes: my notes
+
+  #anything in here will overwrite entries in src/llm-evals/config.yaml
+  config:
+    max_workers: 1
+
+  metrics:
+    function:
+      # - name: string_length
+
+      - name: is_role
+        # metric_level: Turn
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: user
+      
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: assistant
+
+      - name: string_length
+        metric_level: Thread
+
+      - name: string_length
+        metric_level: Turn
+
+      - name: string_length
+        metric_level: Message
+
+      - name: count_tool_calls_by_name
+        metric_level: ToolCall
+
+      - name: count_tool_calls
+        metric_level: Turn
+
+
+      - name: count_tool_calls_by_name
+        metric_level: Thread
+      
+      - name: count_tool_calls_by_name
+        metric_level: Message
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: count_tool_calls_by_name
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: count_numeric_tool_call_params_by_name
+        metric_level: ToolCall
+      
+      - name: count_llm_models
+        metric_level: Thread
+
+      - name: message_matches_regex
+        kwargs:
+          expression: "Please use the appropriate available tools to generate the requested plot or diagram."
+        metric_level: Message
+      
+      - name: count_of_parts_matching_regex
+        kwargs:
+          expression: "Please use the appropriate available tools to generate the requested plot or diagram."
+        metric_level: Turn
+      
+      # - name: count_messages_per_role
+      #   metric_level: Thread
+      
+      # - name: count_messages_per_role
+      #   metric_level: Turn
+
+cl-no-rubrics:
+  data:
+    - ../../data/plotting-feb-2025/checkpoint-06022024-AIED-small.sqlite
+  do_completion: False
+
+  name: my-test
+  notes: analysis on function metrics only, on bot-driven conversations
+
+  #anything in here will overwrite entries in src/llm-evals/config.yaml
+  config:
+    max_workers: 8
+
+  metrics:
+    function:
+      - name: string_length
+        metric_level: Thread
+
+
+      - name: count_emojis
+
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: value_counts_by_tool_name
+        kwargs:
+          json_key: latex
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: count_messages_per_role
+              
+      - name: error_count
+
+      - name: rendering_error_count
+
+      - name: flesch_kincaid_grade
+
+plotting_some_rubrics:
+  data:
+    - ../../data/plotting-feb-2025/checkpoint-06022024-AIED.sqlite
+  do_completion: False
+
+  name: Plotting evaluation evals
+  notes: my notes
+
+  #anything in here will overwrite entries in src/llm-evals/config.yaml
+  config:
+    max_workers: 6
+
+  metrics:
+    function:
+      - name: string_length
+        metric_level: Thread
+
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: user
+      
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: assistant
+      
+      - name: is_langgraph_type
+        metric_level: Message
+        kwargs:
+          type: ai
+
+      - name: string_length
+        metric_level: Turn
+
+      - name: string_length
+        metric_level: Message
+
+      - name: count_tool_calls_by_name
+        metric_level: ToolCall
+      
+      - name: count_tool_calls
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+
+      - name: count_tool_calls_by_name
+        metric_level: Thread
+      
+      - name: count_tool_calls_by_name
+        metric_level: Message
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: count_tool_calls_by_name
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: count_numeric_tool_call_params_by_name
+        metric_level: ToolCall
+      
+      - name: count_llm_models
+        metric_level: Thread
+
+      - name: message_matches_regex
+        kwargs:
+          expression: "Please use the appropriate available tools to generate the requested plot or diagram."
+        metric_level: Message
+        # metric_name: "ToolMessage_text_indicator"
+
+      - name: message_matches_regex
+        kwargs:
+          expression: "desmos"
+        metric_level: Message
+
+      - name: message_matches_regex
+        kwargs:
+          expression: "functions\\..*\\{"
+        metric_level: Message
+        # metric_name: "function_call_in_content"
+        depends_on:
+          - name: is_langgraph_type
+            kwargs:
+              type: ai
+            metric_name: ai
+            metric_min_value: 1
+      
+      - name: message_matches_regex
+        kwargs:
+          expression: "exception"
+        metric_level: Message
+        # metric_name: "exception_in_content"
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+      
+      - name: count_of_parts_matching_regex
+        kwargs:
+          expression: "Please use the appropriate available tools to generate the requested plot or diagram"
+        metric_level: Turn
+        # metric_name: "contains_plot_description"
+
+      - name: count_messages_per_role
+        kwargs:
+          use_langgraph_roles: true
+        metric_level: Thread
+
+      - name: count_tokens
+        metric_level: Turn
+
+      - name: count_errors
+        metric_level: Thread
+
+      - name: message_matches_regex
+        kwargs: 
+          expression: "An error occurred while processing your request"
+        metric_level: Message
+        # metric_name: "error_in_content"
+      
+      - name: count_of_parts_matching_regex
+        kwargs:
+          expression: "An error occurred while processing your request"
+        metric_level: Turn
+
+    rubric:
+      - name: is_request_for_plot
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: is_student_acting_as_tutor
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: user
+            metric_name: user
+            metric_min_value: 1
+
+      - name: is_pedagogically_appropriate_plot
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls
+            metric_min_value: 1
+      
+      - name: plot_matches_description
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls
+            metric_min_value: 1
+          - name: count_of_parts_matching_regex
+            kwargs:
+              expression: "An error occurred while processing your request"
+            metric_name: "An error occurred while processing your request"
+            metric_max_value: 0
+
+      - name: plot_bounds_are_sufficiently_large
+        context_only: false
+        metric_level: Turn
+        depends_on:
+          - name: count_tool_calls
+            metric_min_value: 1
+          - name: count_of_parts_matching_regex
+            kwargs:
+              expression: "An error occurred while processing your request"
+            metric_name: "An error occurred while processing your request"
+            metric_max_value: 0
+
+  # completion_llm:
+  #   function_name: open_ai_completion
+  #   include_system_prompt: False
+  #   kwargs:
+  #     model_name: gpt-3.5-turbo
+  #     api_key_name: OPENAI_API_KEY
+  #     n: 2
+
+  grader_llm:
+    function_name: open_ai_completion
+    kwargs:
+      model_name: o3-mini
+      api_key_name: OPENAI_API_KEY
+      

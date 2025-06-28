@@ -1,0 +1,100 @@
+length_test:
+  metrics:
+    function:
+      - name: string_length
+
+dep_test_01:
+  # This test applies a rubric only to assistant messages after 8 turns
+  # This version depends only on Turn-level metrics
+  metrics:
+    function:
+      - name: index_in_thread
+        metric_level: Turn
+
+      - name: is_role
+        metric_level: Turn
+        kwargs:
+          role: assistant
+
+    rubric:
+      - name: is_assistant_attempting_to_end_conversation
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+          - name: index_in_thread
+            metric_min_value: 7
+
+dep_test_02:
+  # This test applies a rubric only to assistant messages after 8 turns
+  # That means this Turn-level rubric depends on a Thread-level metric
+  # Zach thinks we don't need to support this type of cross-level metric dependency
+  metrics:
+    function:
+      - name: count_turns_per_role
+        metric_level: Thread
+
+      - name: is_role
+        metric_level: Turn
+        kwargs:
+          role: assistant
+
+    rubric:
+      - name: is_assistant_attempting_to_end_conversation
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+          - name: count_turns
+            metric_min_value: 8
+
+  grader_llm:
+    function_name: echo_completion
+    kwargs:
+      response: Reasoning.\nYES
+
+
+dep_test_03:
+  # This test determines if the LLM responds to frustration appropriately
+  metrics:
+    function:
+      - name: is_role
+        metric_level: Turn
+        kwargs:
+          role: user
+      - name: is_role
+        metric_level: Turn
+        kwargs:
+          role: assistant
+
+    rubric:
+      - name: is_user_frustrated
+        metric_level: Turn
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: user
+            metric_name: user
+            metric_min_value: 1
+      - name: is_llm_response_empathetic
+        metric_level: Turn
+        depends_on:
+          - name: is_user_frustrated
+            metric_min_value: 1
+            relative_object_position: -1
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+  grader_llm:
+    function_name: echo_completion
+    kwargs:
+      response: Reasoning.\nYES

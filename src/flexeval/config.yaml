@@ -1,0 +1,23 @@
+
+
+# paths are relative to the root of the repo
+rubric_metrics_path:
+  - src/flexeval/configuration/rubric_metrics.yaml
+  - example_project/example_specific_rubrics.yaml
+evals_path: src/flexeval/configuration/evals.yaml
+env_file: .env #in same location as main.py
+logs_path: logs/
+eval_schema_path: src/flexeval/eval_schema.json
+
+database_path: data/results/results.db
+
+max_workers: 1
+
+random_seed_conversation_sampling: 42
+max_n_conversation_threads: 50
+nb_evaluations_per_thread: 1
+
+
+
+# any additional environment variables
+env:

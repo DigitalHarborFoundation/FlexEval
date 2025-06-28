@@ -1,0 +1,15 @@
+
+
+# paths are relative to the root of the repo
+rubric_metrics_path:
+  - 'src/flexeval/configuration/rubric_metrics.yaml'
+evals_path: tests/resources/functional_evals.yaml
+env_file: tests/resources/unittest.env
+logs_path: tests/unit/logs/
+eval_schema_path: 'src/flexeval/eval_schema.json'
+
+database_path: tests/data/unit_functional_results.db
+clear_tables: True
+max_workers: 1
+raise_on_completion_error: True
+raise_on_metric_error: True

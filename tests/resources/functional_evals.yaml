@@ -1,0 +1,405 @@
+#these are our eval suites for tests
+
+test_suite_01:
+  data:
+    - tests/data/simple.jsonl
+
+  metrics:
+    function:
+      - name: string_length
+
+test_suite_01_langgraph:
+  data:
+    - tests/resources/langgraph-test-data.db
+
+  metrics:
+    function:
+      - name: string_length
+
+test_suite_02:
+  data:
+    - tests/data/simple.jsonl
+
+  metrics:
+    function:
+      - name: string_length
+
+      - name: flesch_reading_ease
+        depends_on:
+          - name: string_length
+            metric_min_value: 15
+
+
+
+test_suite_02_langgraph:
+  data:
+    - tests/resources/langgraph-test-data.db
+
+  metrics:
+    function:
+      - name: string_length
+
+      - name: flesch_reading_ease
+        depends_on:
+          - name: string_length
+            metric_min_value: 50
+      
+      - name: count_numeric_tool_call_params_by_name 
+        metric_level: ToolCall
+
+      - name: count_tokens
+        metric_level: Message
+
+      - name: count_tokens
+        metric_level: Turn
+
+      - name: count_tokens
+        metric_level: Thread
+      
+      - name: latency
+        metric_level: Message
+
+      - name: latency
+        metric_level: Turn
+
+      - name: latency
+        metric_level: Thread
+
+
+test_suite_03:
+  data:
+    - tests/data/simple.jsonl
+    - tests/data/multiturn.jsonl
+
+  metrics:
+    function:
+      - name: string_length
+
+test_suite_04:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  do_completion: False
+
+  metrics:
+    function:
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
+    rubric:
+      - name: is_student_acting_as_tutor
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: user
+            metric_name: user
+            metric_min_value: 1
+
+  grader_llm:
+    function_name: echo_completion
+    kwargs:
+      response: Reasoning.\nYES
+
+
+test_suite_04_langgraph:
+  data:
+    - tests/resources/langgraph-test-data.db
+
+  do_completion: False
+
+  metrics:
+    function:
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
+    rubric:
+      - name: is_student_acting_as_tutor
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: user
+            metric_name: user
+            metric_min_value: 1
+
+
+
+  
+  grader_llm:
+    function_name: echo_completion
+    kwargs:
+      response: Reasoning.\nYES\n
+
+test_plots_01:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls_by_name
+        depends_on:
+          - name: is_role
+            type: function
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+test_plots_02:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls_by_name
+        depends_on:
+          - name: is_role
+            type: function
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+    rubric:
+      - name: is_request_for_plot
+        context_only: true
+        depends_on:
+          - name: is_role
+            #this is needed to disambiguate
+            kwargs:
+              role: assistant
+            metric_name: assistant
+            metric_min_value: 1
+
+      - name: is_student_acting_as_tutor
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: user
+            metric_name: user
+            metric_min_value: 1
+
+  grader_llm:
+    function_name: echo_completion
+    kwargs:
+      response: Reasoning.\nYES\n
+
+config_failure_01:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: is_role
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls_by_name
+        depends_on:
+          #This can't disimbiguate between the is_role types
+          #because metric_name isn't created till the end
+          #so you need to use kwargs here also
+          - name: is_role
+            metric_name: assistant
+            metric_min_value: 1
+
+config_failure_02:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: is_role
+        kwargs:
+          role: user
+
+      - name: count_tool_calls_by_name
+        depends_on:
+          #here you have a depends_on name that doesn't match anything
+          - name: is_role2
+
+config_failure_03:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: is_role # is_role function requires a keyword arg which isn't specified
+
+config_failure_04:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: is_role # is_role function has keyword arg only for role
+        kwargs:
+          some_other_arg: user
+          role: assistant
+  
+config_failure_05:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    rubric:
+      - name: no_such_rubric # rubric name does not exist
+
+
+config_failure_06:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: count_numeric_tool_call_params_by_name 
+        metric_level: Thread # function metric doesn't have a valid input type for this level
+
+config_failure_07:
+  data:
+    - tests/data/plot-convos.jsonl
+
+  metrics:
+    function:
+      - name: count_tool_calls_by_name 
+        metric_level: Thread 
+        context_only: true # function metric does not take a string or list, so context_only must be false
+
+
+test_default_kwargs_01:
+  data:
+    - tests/data/simple.jsonl 
+
+  metrics:
+    function:
+      - name: identity # Allows but doesn't require keyword args, so okay
+
+      - name: identity
+        kwargs:  # Allows kwargs with any names so okay
+          any_kwarg_name_okay: 13
+
+test_basic_function_metrics_01:
+  data:
+    - tests/data/simple.jsonl 
+
+  metrics:
+    function:
+      - name: is_role
+        metric_level: Turn
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: assistant
+        
+
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: user
+
+test_basic_function_metrics_01_langgraph:
+  data:
+    - tests/resources/langgraph-test-data.db
+
+  metrics:
+    function:
+      - name: is_role
+        metric_level: Turn
+        kwargs:
+          role: assistant
+
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: assistant
+        
+
+      - name: is_role
+        metric_level: Message
+        kwargs:
+          role: user
+
+test_list_string_function_metrics:
+  metrics:
+    function:
+      - name: count_messages_per_role
+        metric_level: Turn
+      
+      - name: count_messages_per_role
+        metric_level: Thread
+      
+      - name: flesch_reading_ease
+        metric_level: Message
+      
+      - name: flesch_reading_ease
+        metric_level: Turn
+        context_only: false
+
+      - name: flesch_reading_ease
+        metric_level: Message
+        context_only: true
+      
+      - name: flesch_reading_ease
+        metric_level: Turn
+        context_only: true
+
+
+test_list_string_function_metrics_langgraph:
+  data:
+    - tests/resources/langgraph-test-data.db
+
+  metrics:
+    function:
+      - name: count_messages_per_role
+        metric_level: Turn
+      
+      - name: count_messages_per_role
+        metric_level: Thread
+      
+      - name: flesch_reading_ease
+        metric_level: Message
+      
+      - name: flesch_reading_ease
+        metric_level: Turn
+        context_only: false
+
+      - name: flesch_reading_ease
+        metric_level: Message
+        context_only: true
+      
+      - name: flesch_reading_ease
+        metric_level: Turn
+        context_only: true
+

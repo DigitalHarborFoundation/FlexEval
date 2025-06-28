@@ -1,0 +1,11 @@
+rubric_metrics_path: 
+ - src/flexeval/configuration/rubric_metrics.yaml
+evals_path: tests/resources/test_evals.yaml
+env_file: tests/resources/unittest.env
+logs_path: .unittest/logs/
+eval_schema_path: src/flexeval/eval_schema.json
+database_path: .unittest/unittest.db
+max_workers: 1
+clear_tables: True
+
+env:
