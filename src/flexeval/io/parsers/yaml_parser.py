@@ -5,7 +5,7 @@ from typing import Type, TypeVar
 import pydantic
 import yaml
 
-from flexeval.schema import Config, Eval
+from flexeval.schema import Config, Eval, EvalRun
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T", bound=pydantic.BaseModel)
@@ -21,6 +21,12 @@ def load_evals_from_yaml(
     filename: Path | str,
 ) -> dict[str, Eval]:
     return load_models_from_yaml_filepath(filename, Eval)
+
+
+def load_eval_run_from_yaml(
+    filename: Path | str,
+) -> EvalRun:
+    return load_model_from_yaml(filename, EvalRun)
 
 
 def load_models_from_yaml_filepath(
