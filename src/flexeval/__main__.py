@@ -30,6 +30,7 @@ def run(
         Path, typer.Argument(help="YAML file specifying the Eval Run.")
     ],
 ):
+    """Run FlexEval using the given YAML Eval Run configuration."""
     eval_run = yaml_parser.load_eval_run_from_yaml(eval_run_yaml_path)
     runner.run(eval_run)
 
@@ -49,6 +50,7 @@ def summarize_metrics(
         typer.Option(help="Database path.", exists=True, dir_okay=False),
     ] = None,
 ):
+    """Print a summary of computed metrics."""
     if eval_run_yaml_path is not None:
         if database_path is not None:
             logger.warning(
@@ -81,6 +83,7 @@ def run_eval_by_name(
     config_path: Path,
     clear_tables: bool = False,
 ):
+    """Run an eval by name."""
     runner.run_from_name_args(
         input_data,
         database_path,
