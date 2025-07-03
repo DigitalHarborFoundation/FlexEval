@@ -115,7 +115,7 @@ The format of each line is JSON, with an `input` key, and a corresponding value 
 
 - Add any Python modules containing function metrics to your configuration. Existing function metrics can be viewed in [`flexeval.configuration.function_metrics`](/src/flexeval/configuration/function_metrics.py).
 
-- If desired, create any rubric metrics in a `rubric_metrics.yaml` file. Rubrics in this file will be used to evaluate conversations and completions using "chain-of-thoughts then classify" (COT classify) and will report a numeric score (e.g., 0 or 1) mapped to a choice string (e.g.,"Yes", "No") from the classification results. For more information on how to write and use rubrics in FlexEval, check `doc/rubric_metric_guidelines.md` in this repo. (We will also add a vignette demonstrating a custom rubric.)
+- If desired, create any rubric metrics in a `rubric_metrics.yaml` file. Rubrics in this file will be used to evaluate conversations and completions using "chain-of-thoughts then classify" (COT classify) and will report a numeric score (e.g., 0 or 1) mapped to a choice string (e.g.,"Yes", "No") from the classification results. For more information on how to write and use rubrics in FlexEval, see the [Custom Rubric](/vignettes/custom_rubric.md) vignette.
 
 - Run the evaluation in Python code or via the CLI.
 
@@ -125,7 +125,9 @@ See the vignettes.
 
 ### Running an evaluation via CLI
 
-We will create a vignette about the CLI soon. For now, access the documentation directly.
+See the [command-line interface](/vignettes/basic_cli.md) vignette.
+
+Or, access the CLI documentation by invoking the module:
 
 ```bash
 python -m flexeval --help
@@ -133,7 +135,7 @@ python -m flexeval --help
 
 ### Interpreting results
 
-Results are saved in an SQLite database. We will create a vignette demonstrating accessing and interpreting result metrics in July 2025.
+Results are saved in an SQLite database. See the [Metric Analysis](/vignettes/metric_analysis.ipynb) vignette for a sample analysis demonstrating the structure and utility of the data saved by FlexEval.
 
 ### Pre-installed functionality
 
