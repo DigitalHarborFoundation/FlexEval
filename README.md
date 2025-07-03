@@ -3,7 +3,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12729993.svg)](https://doi.org/10.5281/zenodo.12729993)
 [![License](https://img.shields.io/github/license/DigitalHarborFoundation/FlexEval)](https://github.com/DigitalHarborFoundation/FlexEval/blob/main/LICENSE)
 
-![FlexEval logotype](docs/_static/flexeval_logo.png)
+![FlexEval logotype](docs/_static/flexeval_banner.svg)
 
 FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
 
