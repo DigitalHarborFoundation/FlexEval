@@ -2,6 +2,16 @@
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
+import sys
+import os
+import inspect
+from pathlib import Path
+from packaging.version import parse as parse_version
+
+import flexeval
+
+sys.path.append(os.path.abspath("."))
+sys.path.append(".")
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -13,7 +23,25 @@ author = "S. Thomas Christie, Baptiste Moreau-Pernet, Zachary Levonian, Anna Raf
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = []
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.inheritance_diagram",
+    "sphinx.ext.intersphinx",
+    # "IPython.sphinxext.ipython_console_highlighting",
+    # "IPython.sphinxext.ipython_directive",
+    "numpydoc",  # Needs to be loaded *after* autodoc.
+    "sphinx.ext.napoleon",
+    "matplotlib.sphinxext.plot_directive",
+    "matplotlib.sphinxext.roles",
+    "matplotlib.sphinxext.figmpl_directive",
+    "sphinxext.github",
+    "sphinx_copybutton",
+    "sphinx_design",
+    "sphinx_tags",
+    "sphinx.ext.linkcode",
+    "myst_parser",
+]
 
 templates_path = ["_templates"]
 exclude_patterns = []
@@ -33,3 +61,96 @@ html_theme_options = {
     }
 }
 html_favicon = "_static/flexeval_favicon.svg"
+
+intersphinx_mapping = {
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
+    "python": ("https://docs.python.org/3/", None),
+    "peewee": ("https://docs.peewee-orm.com/en/latest/", None),
+}
+
+
+def linkcode_resolve(domain, info):
+    """
+    Determine the URL corresponding to Python object
+    """
+    if domain != "py":
+        return None
+
+    modname = info["module"]
+    fullname = info["fullname"]
+
+    submod = sys.modules.get(modname)
+    if submod is None:
+        return None
+
+    obj = submod
+    for part in fullname.split("."):
+        try:
+            obj = getattr(obj, part)
+        except AttributeError:
+            return None
+
+    if inspect.isfunction(obj):
+        obj = inspect.unwrap(obj)
+    try:
+        fn = inspect.getsourcefile(obj)
+    except TypeError:
+        fn = None
+    if not fn or fn.endswith("__init__.py"):
+        try:
+            fn = inspect.getsourcefile(sys.modules[obj.__module__])
+        except (TypeError, AttributeError, KeyError):
+            fn = None
+    if not fn:
+        return None
+
+    try:
+        source, lineno = inspect.getsourcelines(obj)
+    except (OSError, TypeError):
+        lineno = None
+
+    linespec = f"#L{lineno:d}-L{lineno + len(source) - 1:d}" if lineno else ""
+
+    startdir = Path(flexeval.__file__).parent.parent
+    try:
+        fn = os.path.relpath(fn, start=startdir).replace(os.path.sep, "/")
+    except ValueError:
+        return None
+
+    if not fn.startswith(("matplotlib/", "mpl_toolkits/")):
+        return None
+
+    version = parse_version(flexeval.__version__)
+    tag = "main" if version.is_devrelease else f"v{version.public}"
+    return "https://github.com/matplotlib/matplotlib/blob" f"/{tag}/lib/{fn}{linespec}"
+
+
+# myst-parser
+# https://myst-parser.readthedocs.io/en/latest/configuration.html
+myst_gfm_only = True
+
+autosummary_generate = True
+autodoc_typehints = "signature"
+autodoc_default_options = {
+    "members": True,
+    "undoc-members": True,
+    "show-inheritance": True,
+    "inherited-members": False,
+    "exclude-members": "model_parametrized_name",
+}
+
+
+def skip_inherited_members(app, what, name, obj, skip, options):
+    # Skip members if they are inherited (not defined on the class itself)
+    if what == "class":
+        # The object is the class being documented
+        cls = obj
+        if hasattr(cls, "__dict__"):
+            # If the member name is NOT in the class dict, it's inherited
+            if name not in cls.__dict__:
+                return True  # skip inherited member
+    return skip  # otherwise use default behavior
+
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip_inherited_members)
