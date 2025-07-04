@@ -3,6 +3,8 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12729993.svg)](https://doi.org/10.5281/zenodo.12729993)
 [![License](https://img.shields.io/github/license/DigitalHarborFoundation/FlexEval)](https://github.com/DigitalHarborFoundation/FlexEval/blob/main/LICENSE)
 
+![FlexEval banner](/docs/_static/flexeval_banner.svg)
+
 FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
 
 Additional details about FlexEval can be found [in our paper](/EDM_2024_FlexEval.pdf) at the _Educational Data Mining_ 2024 conference.
@@ -115,7 +117,7 @@ The format of each line is JSON, with an `input` key, and a corresponding value 
 
 - Add any Python modules containing function metrics to your configuration. Existing function metrics can be viewed in [`flexeval.configuration.function_metrics`](/src/flexeval/configuration/function_metrics.py).
 
-- If desired, create any rubric metrics in a `rubric_metrics.yaml` file. Rubrics in this file will be used to evaluate conversations and completions using "chain-of-thoughts then classify" (COT classify) and will report a numeric score (e.g., 0 or 1) mapped to a choice string (e.g.,"Yes", "No") from the classification results. For more information on how to write and use rubrics in FlexEval, check `doc/rubric_metric_guidelines.md` in this repo. (We will also add a vignette demonstrating a custom rubric.)
+- If desired, create any rubric metrics in a `rubric_metrics.yaml` file. Rubrics in this file will be used to evaluate conversations and completions using "chain-of-thoughts then classify" (COT classify) and will report a numeric score (e.g., 0 or 1) mapped to a choice string (e.g.,"Yes", "No") from the classification results. For more information on how to write and use rubrics in FlexEval, see the [Custom Rubric](/vignettes/custom_rubric.md) vignette.
 
 - Run the evaluation in Python code or via the CLI.
 
@@ -125,7 +127,9 @@ See the vignettes.
 
 ### Running an evaluation via CLI
 
-We will create a vignette about the CLI soon. For now, access the documentation directly.
+See the [command-line interface](/vignettes/basic_cli.md) vignette.
+
+Or, access the CLI documentation by invoking the module:
 
 ```bash
 python -m flexeval --help
@@ -133,7 +137,7 @@ python -m flexeval --help
 
 ### Interpreting results
 
-Results are saved in an SQLite database. We will create a vignette demonstrating accessing and interpreting result metrics in July 2025.
+Results are saved in an SQLite database. See the [Metric Analysis](/vignettes/metric_analysis.ipynb) vignette for a sample analysis demonstrating the structure and utility of the data saved by FlexEval.
 
 ### Pre-installed functionality
 
@@ -271,3 +275,12 @@ uv run python -m flexeval --eval_name {eval_suite_name}
 ```
 
 
+## Documentation
+
+We use Sphinx to generate docs.
+
+Developing the docs website:
+
+```bash
+uv run sphinx-autobuild docs build
+```

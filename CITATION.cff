@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: 'If FlexEval contributes to a project that leads to a scientific publication, please acknowledge this fact by citing: S. Thomas Christie, Baptiste Moreau-Pernet, Yu Tian, and John Whitmer, "FlexEval: a customizable tool for chatbot performance evaluation and dialogue analysis", Proceedings of the 17th International Conference on Educational Data Mining, pp. 903-908, 2024.'
+title: 'FlexEval: a customizable tool for chatbot performance evaluation and dialogue analysis'
+authors:
+  - family-names: Christie
+    given-names: S. Thomas
+  - family-names: Moreau-Pernet
+    given-names: Baptiste
+  - family-names: Tian
+    given-names: Yu
+  - family-names: Whitmer
+    given-names: John
+type: software
+url: 'https://github.com/DigitalHarborFoundation/FlexEval'
+repository-code: 'https://github.com/DigitalHarborFoundation/FlexEval'
+preferred-citation:
+  type: conference-paper
+  authors:
+    - family-names: Christie
+      given-names: S. Thomas
+    - family-names: Moreau-Pernet
+      given-names: Baptiste
+    - family-names: Tian
+      given-names: Yu
+    - family-names: Whitmer
+      given-names: John
+  title: "FlexEval: a customizable tool for chatbot performance evaluation and dialogue analysis"
+  year: 2024
+  date-published: 2024-07
+  conference: 17th International Conference on Educational Data Mining
+  venue: Atlanta, Georgia, USA
+  start: 903
+  end: 908
+  doi: 10.5281/zenodo.12729993
+  publisher:
+    name: International Educational Data Mining Society
+    website: 'https://educationaldatamining.org/'

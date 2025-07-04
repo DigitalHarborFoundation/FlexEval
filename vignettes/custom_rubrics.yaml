@@ -1,0 +1,41 @@
+assistant_asks_a_question:
+  notes: |-
+    Rubric to ensure the assistant asks follow-up questions.
+    The content of this note aren't part of the prompt in any way, this is just a convenient place to write documentation.
+  prompt: |-
+    Your Role:
+      You are a helpful assistant. You have solid knowledge in K-12 math instruction. 
+
+    Context:
+      A K-12 student learns math using an online tutoring system. 
+      During the session, the student (user) asks the tutor (assistant) for help with some math problems. 
+
+    Your Task:
+      The tutor (assistant) is supposed to provide explicit follow-up or clarification questions in response to the student.
+      Your job is to determine whether the tutor (assistant) asked a question in their response. 
+
+    Data:
+      The following contains messages from the tutor (assistant).
+      
+      [BEGIN DATA]
+      ***
+      {content}
+      ***
+      [END DATA]
+
+    __start rubric__
+    YES: If the message(s) contain a question in response to the student.
+    NO: If the message has no question.
+
+    Note:
+    If there is no question, then print "NO".
+    __end rubric__
+
+    Output:
+      First, report your reasoning for your decision. 
+      Second, print your decision.
+      IMPORTANT: After your reasoning, print the choice string of "YES" or "NO" on a separate line with NO OTHER TEXT on that line.
+
+  choice_scores:
+    "YES": 1
+    "NO": 0
