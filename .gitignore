@@ -181,3 +181,7 @@ src/llm-evals/evals_sync/
 
 # Claude Code
 .claude/
+
+# Docs
+docs/generated
+
