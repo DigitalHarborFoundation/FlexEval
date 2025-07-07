@@ -1,7 +1,26 @@
 [project]
-name = "FlexEval"
+name = "python-flexeval"
 version = "0.1.0"
 description = "FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems."
+authors = [
+  { name="S. Thomas Christie", email="thomas.christie@levi.digitalharbor.org" },
+  { name="Zachary Levonian", email="zach@levi.digitalharbor.org" },
+  { name="Baptiste Moreau-Pernet", email="baptiste@levi.digitalharbor.org" },
+  { name="Anna Rafferty" },
+  { name="Terry Yu Tian" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering",
+    "Natural Language :: English",
+]
+keywords = ["learning engineering", "education", "evaluation", "conversation", "large language models"]
+license = "MIT"
+license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -24,6 +43,11 @@ dependencies = [
     "textstat>=0.7.5",
     "typer>=0.16.0",
 ]
+
+[project.urls]
+Homepage = "https://digitalharborfoundation.github.io/FlexEval/"
+GitHub = "https://github.com/DigitalHarborFoundation/FlexEval"
+Issues = "https://github.com/DigitalHarborFoundation/FlexEval/issues"
 
 [dependency-groups]
 dev = [
