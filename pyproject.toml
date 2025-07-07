@@ -1,11 +1,11 @@
 [project]
 name = "python-flexeval"
-version = "0.1.0"
+version = "0.1.1"
 description = "FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems."
 authors = [
-  { name="S. Thomas Christie", email="thomas.christie@levi.digitalharbor.org" },
-  { name="Zachary Levonian", email="zach@levi.digitalharbor.org" },
-  { name="Baptiste Moreau-Pernet", email="baptiste@levi.digitalharbor.org" },
+  { name="S. Thomas Christie" },
+  { name="Zachary Levonian" },
+  { name="Baptiste Moreau-Pernet" },
   { name="Anna Rafferty" },
   { name="Terry Yu Tian" },
 ]
