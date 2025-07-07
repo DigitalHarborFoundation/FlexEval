@@ -1,9 +1,9 @@
 API
 ===
 
-The API is still largely undocumented, although the package is not large.
+The API for FlexEval is still largely undocumented, although the package is not large.
 
-Key packages:
+Packages:
 
 .. autosummary::
    :toctree: generated

@@ -9,11 +9,15 @@ FlexEval documentation
 .. image:: /_static/flexeval_banner.svg
    :alt: FlexEval banner
 
+|
+
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.12729993.svg
    :target: https://doi.org/10.5281/zenodo.12729993
+   :alt: Zenodo
 
 .. image:: https://img.shields.io/github/license/DigitalHarborFoundation/FlexEval
    :target: https://github.com/DigitalHarborFoundation/FlexEval/blob/main/LICENSE
+   :alt: FlexEval license
 
 .. toctree::
    :maxdepth: 2
