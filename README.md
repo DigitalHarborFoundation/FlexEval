@@ -9,6 +9,8 @@ FlexEval is a tool for designing custom metrics, completion functions, and LLM-g
 
 Additional details about FlexEval can be found [in our paper](/EDM_2024_FlexEval.pdf) at the _Educational Data Mining_ 2024 conference.
 
+Documentation: <https://digitalharborfoundation.github.io/FlexEval>
+
 ## Usage
 
 Basic usage: 
@@ -40,19 +42,19 @@ You can install FlexEval from the GitHub repository. FlexEval is not yet availab
 Using `pip`:
 
 ```bash
-pip install git+https://github.com/DigitalHarborFoundation/FlexEval.git
+pip install python-flexeval
 ```
 
 Using `uv`:
 
 ```bash
-uv add git+https://github.com/DigitalHarborFoundation/FlexEval.git
+uv add python-flexeval
 ```
 
 Using `poetry`:
 
 ```bash
-poetry add git+https://github.com/DigitalHarborFoundation/FlexEval.git
+poetry add python-flexeval
 ```
 
 ## Why create FlexEval?
