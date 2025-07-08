@@ -171,4 +171,4 @@ def skip_inherited_members(app, what, name, obj, skip, options):
 
 def setup(app):
     app.connect("autodoc-skip-member", skip_inherited_members)
-    app.connect("config-inited", vignettes.generate_custom_stubs)
+    app.connect("builder-inited", vignettes.generate_custom_stubs)

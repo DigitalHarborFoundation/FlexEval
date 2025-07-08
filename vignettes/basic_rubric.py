@@ -1,3 +1,5 @@
+# This vignette includes a rubric and uses a "grader function".
+# Rubrics are defined with a prompt template and a map of string outputs to numeric choice scores.
 import flexeval
 from flexeval.metrics import access
 from flexeval.schema import (

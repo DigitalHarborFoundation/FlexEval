@@ -8,6 +8,8 @@ SPHINXBUILD   ?= uv run sphinx-build
 SOURCEDIR     = docs
 BUILDDIR      = build
 
+.PHONY: dochelp docautobuild docclean Makefile
+
 # Put it first so that "make" without argument is like "make help".
 dochelp:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
@@ -15,7 +17,9 @@ dochelp:
 docautobuild:
 	@uv run sphinx-autobuild "$(SOURCEDIR)" "$(BUILDDIR)"
 
-.PHONY: dochelp Makefile
+docclean:
+	@echo "Cleaning build directory and generated sources..."
+	@rm -rf "$(BUILDDIR)" "$(SOURCEDIR)/generated"
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).

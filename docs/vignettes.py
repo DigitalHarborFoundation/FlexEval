@@ -1,19 +1,35 @@
-import os
 from pathlib import Path
 import ast
 import re
 
+import tokenize
+from io import StringIO
 
-def extract_vignette_path_strings(file_contents: str):
+
+def extract_top_comments(file_contents: str) -> list[str]:
+    comments = []
+    tokens = tokenize.generate_tokens(StringIO(file_contents).readline)
+
+    for tok_type, tok_str, start, end, line in tokens:
+        if tok_type == tokenize.COMMENT:
+            comments.append(tok_str.lstrip("# ").rstrip())
+        elif tok_type in {tokenize.NL, tokenize.NEWLINE}:
+            continue
+        elif tok_type == tokenize.ENCODING:
+            continue
+        else:
+            # First non-comment, non-blank, non-encoding token
+            break
+
+    return comments
+
+
+def extract_vignette_path_strings(file_contents: str) -> list[str]:
     tree = ast.parse(file_contents, filename="vignette.py")
     strings = []
 
     class StringVisitor(ast.NodeVisitor):
-        def visit_Str(self, node):  # For Python <3.8
-            if re.match(r'^vignettes/[^"\']+$', node.s):
-                strings.append(node.s)
-
-        def visit_Constant(self, node):  # For Python 3.8+
+        def visit_Constant(self, node):
             if isinstance(node.value, str) and re.match(
                 r'^vignettes/[^"\']+$', node.value
             ):
@@ -31,9 +47,10 @@ def write_if_changed(path: Path, old_content: str, new_content: str):
     path.write_text(new_content)
 
 
-def generate_custom_stubs(app, config):
+def generate_custom_stubs(app):
     """
-    config-inited
+    builder-inited callback.
+    see: https://www.sphinx-doc.org/en/master/extdev/event_callbacks.html
     """
     src_dir = Path(app.srcdir)
     output_dir = src_dir / "generated" / "vignettes"
@@ -49,11 +66,18 @@ def generate_custom_stubs(app, config):
         if rst_file.exists():
             current_contents = rst_file.read_text()
         py_file_contents = py_file.read_text()
-        # TODO designate some kind of comment indicator that shows a thing should be skipped
         other_source_paths = extract_vignette_path_strings(py_file_contents)
+        comments = extract_top_comments(py_file_contents)
+        if len(comments) > 0:
+            top_comment = " ".join(comments)
+        else:
+            continue
+
         new_contents = f"""
 {stem}
 {'=' * len(stem)}
+
+{top_comment}
 
 Python source: ``{py_file.name}``
 
