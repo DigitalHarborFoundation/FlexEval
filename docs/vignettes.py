@@ -48,7 +48,9 @@ def generate_custom_stubs(app, config):
         current_contents = ""
         if rst_file.exists():
             current_contents = rst_file.read_text()
-        other_source_paths = extract_vignette_path_strings(py_file.read_text())
+        py_file_contents = py_file.read_text()
+        # TODO designate some kind of comment indicator that shows a thing should be skipped
+        other_source_paths = extract_vignette_path_strings(py_file_contents)
         new_contents = f"""
 {stem}
 {'=' * len(stem)}
@@ -58,8 +60,16 @@ Python source: ``{py_file.name}``
 .. literalinclude:: ../../../{py_file.relative_to(src_dir.parent)}
    :language: python
    :linenos:
+"""
+        for other_source_path in other_source_paths:
+            other_source_path = Path(other_source_path)
+            # other_source_contents = other_source_path.read_text()
+            new_contents += f"""
+``{other_source_path.name}`` contents:
 
-{other_source_paths}
+.. literalinclude:: ../../../{other_source_path}
+   :language: python
+   :linenos:
 """
         # TODO for each other referenced source path, do a literal include
         write_if_changed(rst_file, current_contents, new_contents)
