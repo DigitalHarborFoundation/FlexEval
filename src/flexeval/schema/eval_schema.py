@@ -60,8 +60,9 @@ class MetricItem(BaseModel):
         ...,
         description="The function to call or name of rubric to use to compute this metric.",
     )
+    # made depends equal to an empty list by default, because before there were issues with child.get('depends_on', []) in dependency_graph.py
     depends_on: Optional[List[DependsOnItem]] = Field(
-        default_factory=list,
+        [],
         description="List of dependencies that must be satisfied for this metric to be computed.",
     )
     # TODO why is metric_level optional? Should likely make it required
