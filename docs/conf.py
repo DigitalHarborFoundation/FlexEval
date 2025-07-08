@@ -13,6 +13,8 @@ import flexeval
 sys.path.append(os.path.abspath("."))
 sys.path.append(".")
 
+import vignettes
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -40,8 +42,14 @@ extensions = [
     "sphinx_design",
     "sphinx_tags",
     "sphinx.ext.linkcode",
-    "myst_parser",
+    # "myst_parser",  # don't use myst_parser with myst_nb; it is automatically loaded by myst_parser
+    "myst_nb",
 ]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".ipynb": "myst-nb",
+    ".md": "myst-nb",
+}
 
 templates_path = ["_templates"]
 exclude_patterns = []
@@ -128,6 +136,15 @@ def linkcode_resolve(domain, info):
 # myst-parser
 # https://myst-parser.readthedocs.io/en/latest/configuration.html
 myst_gfm_only = True
+# https://myst-nb.readthedocs.io/en/latest/authoring/jupyter-notebooks.html
+myst_enable_extensions = [
+    "amsmath",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    "html_image",
+]
+myst_url_schemes = ("http", "https", "mailto")
 
 autosummary_generate = True
 autodoc_typehints = "signature"
@@ -154,3 +171,4 @@ def skip_inherited_members(app, what, name, obj, skip, options):
 
 def setup(app):
     app.connect("autodoc-skip-member", skip_inherited_members)
+    app.connect("config-inited", vignettes.generate_custom_stubs)
