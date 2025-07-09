@@ -1,16 +1,15 @@
 Vignettes
 =========
 
-Under construction.
+These vignettes demonstrate how to use FlexEval.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
    :caption: Vignettes:
 
-   generated/vignettes/*
-
-.. include:: ../vignettes/metric_analysis.ipynb
-   :parser: myst_nb.docutils_
-
-End of include.
+   generated/vignettes/basic
+   generated/vignettes/basic_rubric
+   generated/vignettes/custom_rubric
+   generated/vignettes/basic_cli
+   generated/vignettes/metric_analysis
+   

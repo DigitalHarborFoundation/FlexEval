@@ -4,6 +4,9 @@ import re
 
 import tokenize
 from io import StringIO
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def extract_top_comments(file_contents: str) -> list[str]:
@@ -54,28 +57,72 @@ def generate_custom_stubs(app):
     """
     src_dir = Path(app.srcdir)
     output_dir = src_dir / "generated" / "vignettes"
-    target_dir = src_dir.parent / "vignettes"
+    vignettes_dir = src_dir.parent / "vignettes"
+    if not vignettes_dir.exists():
+        raise ValueError(
+            f"Expected vignettes directory {vignettes_dir} does not exist."
+        )
 
     output_dir.mkdir(exist_ok=True, parents=True)
 
-    for py_file in target_dir.glob("*.py"):
-        stem = py_file.stem
+    for vignette_file in vignettes_dir.glob("*"):
+        stem = vignette_file.stem
         rst_file = output_dir / f"{stem}.rst"
 
         current_contents = ""
         if rst_file.exists():
             current_contents = rst_file.read_text()
-        py_file_contents = py_file.read_text()
-        other_source_paths = extract_vignette_path_strings(py_file_contents)
-        comments = extract_top_comments(py_file_contents)
-        if len(comments) > 0:
-            top_comment = " ".join(comments)
-        else:
-            continue
 
-        new_contents = f"""
-{stem}
-{'=' * len(stem)}
+        if vignette_file.suffix == ".py":
+            generate_python_stub(src_dir, vignette_file, rst_file, current_contents)
+        elif vignette_file.suffix == ".ipynb":
+            generate_ipynb_stub(src_dir, vignette_file, rst_file, current_contents)
+        elif vignette_file.suffix == ".md":
+            generate_md_stub(src_dir, vignette_file, rst_file, current_contents)
+        else:
+            logger.info(
+                f"Unsupported file type {vignette_file.suffix}; skipping while creating vignette stubs."
+            )
+
+
+def generate_ipynb_stub(
+    src_dir: Path, ipynb_file: Path, rst_file: Path, current_contents: str
+):
+    new_contents = f""".. include:: ../../../{ipynb_file.relative_to(src_dir.parent)}
+   :parser: myst_nb.docutils_
+"""
+    write_if_changed(rst_file, current_contents, new_contents)
+
+
+def generate_md_stub(
+    src_dir: Path, md_file: Path, rst_file: Path, current_contents: str
+):
+    new_contents = f""".. include:: ../../../{md_file.relative_to(src_dir.parent)}
+   :parser: myst_parser.docutils_
+"""
+    write_if_changed(rst_file, current_contents, new_contents)
+
+
+def generate_python_stub(
+    src_dir: Path, py_file: Path, rst_file: Path, current_contents: str
+):
+    stem = py_file.stem
+    py_file_contents = py_file.read_text()
+    other_source_paths = extract_vignette_path_strings(py_file_contents)
+    comments = extract_top_comments(py_file_contents)
+    title = stem.capitalize().replace("_", " ")
+    for i, comment in enumerate(comments):
+        if comment.strip().startswith(".. title::"):
+            title = comment.split("::")[1].strip()
+            comments[i] = ""
+            break
+    else:
+        # skip .py files without titles
+        return
+
+    top_comment = " ".join(comments).strip()
+    new_contents = f"""{title}
+{'=' * len(title)}
 
 {top_comment}
 
@@ -84,19 +131,20 @@ Python source: ``{py_file.name}``
 .. literalinclude:: ../../../{py_file.relative_to(src_dir.parent)}
    :language: python
    :linenos:
+   :lines: {len(comments)+1}-
+   :lineno-start: 1
 """
-        for other_source_path in other_source_paths:
-            other_source_path = Path(other_source_path)
-            # other_source_contents = other_source_path.read_text()
-            new_contents += f"""
+    for other_source_path in other_source_paths:
+        other_source_path = Path(other_source_path)
+        # other_source_contents = other_source_path.read_text()
+        new_contents += f"""
 ``{other_source_path.name}`` contents:
 
 .. literalinclude:: ../../../{other_source_path}
    :language: python
    :linenos:
 """
-        # TODO for each other referenced source path, do a literal include
-        write_if_changed(rst_file, current_contents, new_contents)
+    write_if_changed(rst_file, current_contents, new_contents)
 
 
 if __name__ == "__main__":

@@ -25,13 +25,14 @@ FlexEval documentation
    
    vignettes
    api
+   rubric_guide
 
 .. .. include:: ../README.md
 ..   :parser: myst_parser.sphinx_
 
 FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
 
-Additional details about FlexEval can be found in our `paper <EDM_2024_FlexEval.pdf>`_ at the *Educational Data Mining* 2024 conference.
+Additional details about FlexEval can be found in our `paper <https://doi.org/10.5281/zenodo.12729993>`_ at the *Educational Data Mining* 2024 conference.
 
 Usage
 =====

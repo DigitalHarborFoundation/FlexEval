@@ -1,3 +1,4 @@
+# .. title:: Basic usage
 # This vignette demonstrates basic usage of FlexEval.
 # We configure a single FileDataSource - a JSONL file containing one conversation.
 # We compute a single function metric: the index of each message within a thread.
