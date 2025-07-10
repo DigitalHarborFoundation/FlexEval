@@ -19,10 +19,16 @@ FlexEval documentation
    :target: https://github.com/DigitalHarborFoundation/FlexEval/blob/main/LICENSE
    :alt: FlexEval license
 
+FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
+
+Additional details about the motivation and design of FlexEval can be found in our `paper <https://doi.org/10.5281/zenodo.12729993>`_ at the *Educational Data Mining* 2024 conference.
+
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
    
+   getting_started
    vignettes
    api
    rubric_guide
@@ -30,14 +36,16 @@ FlexEval documentation
 .. .. include:: ../README.md
 ..   :parser: myst_parser.sphinx_
 
-FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
+Basic Usage
+-----------
 
-Additional details about FlexEval can be found in our `paper <https://doi.org/10.5281/zenodo.12729993>`_ at the *Educational Data Mining* 2024 conference.
+Install using pip:
 
-Usage
-=====
+.. code-block:: bash
 
-Basic usage:
+   pip install python-flexeval
+
+Create and run an evaluation:
 
 .. code-block:: python
 
@@ -57,4 +65,4 @@ Basic usage:
 
 This example computes `Flesch reading ease <https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests#Flesch_reading_ease>`_ for every turn in a list of conversations provided in JSONL format. The metric values are stored in an SQLite database called ``eval_results.db``.
 
-See additional usage examples in the :doc:`vignettes`.
+Read more in :doc:`getting_started` and see additional usage examples in the :doc:`vignettes`.

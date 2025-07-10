@@ -13,3 +13,7 @@ These vignettes demonstrate how to use FlexEval.
    generated/vignettes/basic_cli
    generated/vignettes/metric_analysis
    
+
+What are **vignettes**? 
+A `vignette <https://r-pkgs.org/vignettes.html>`__ is "a long-form guide to your package" that is common in the R community. 
+Vignettes allow us to show the kinds of problems that FlexEval is designed to solve.
