@@ -247,7 +247,7 @@ class MetricComputer:
                 try:
                     # TODO I think this is not necessary given the pydantic schema; this should always fail for filepaths
                     # alternately, we might call import_module() on the ModuleType modules, but I think that's unnecessary
-                    module = importlib.import_module(function_module)
+                    module = importlib.import_module(str(function_module))
                 except ModuleNotFoundError as module_not_found:
                     try:
                         spec = importlib.util.spec_from_file_location(
@@ -658,7 +658,15 @@ class MetricComputer:
         choice_scores = rubrics.get(rubric_name).get("choice_scores")
 
         # get rubric grader
+        if object.evalsetrun.grader_llm is None or object.evalsetrun.grader_llm == "":
+            raise ValueError(
+                f"Attempting to evaluate a rubric metric, but no grader LLM defined."
+            )
         grader_completion_function = json.loads(object.evalsetrun.grader_llm)
+        if grader_completion_function is None or len(grader_completion_function) == 0:
+            raise ValueError(
+                f"Attempting to evaluate a rubric metric, but no grader LLM defined."
+            )
         grader_completion_fn_name = grader_completion_function.get(
             "function_name", None
         )

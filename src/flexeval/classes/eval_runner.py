@@ -146,6 +146,12 @@ class EvalRunner:
         self.metrics_graph_ordered_list = dependency_graph.create_metrics_graph(
             self.evalrun.eval.metrics
         )
+        # validate: completion function defined
+        if len(self.metrics_graph_ordered_list) > 0:
+            if self.evalrun.eval.grader_llm is None:
+                self.logger.warning(
+                    f"{len(self.metrics_graph_ordered_list)} metrics defined, but no grader LLM defined."
+                )
 
     def shutdown_logging(self):
         # remove logging handler so we don't get repeat logs if we call run() twice

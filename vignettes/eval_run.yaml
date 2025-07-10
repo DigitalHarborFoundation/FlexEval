@@ -1,0 +1,28 @@
+data_sources:
+  - path: vignettes/conversations.jsonl
+database_path: eval_results.db
+eval:
+  metrics:
+    function:
+      - name: has_question_mark
+      - name: is_role
+        kwargs:
+          role: assistant
+    rubric:
+      - name: assistant_asks_a_question
+        depends_on:
+          - name: is_role
+            kwargs:
+              role: assistant
+            metric_min_value: 1
+  grader_llm:
+    function_name: echo_completion
+    kwargs:
+      response: Reasoning.\nNO
+config:
+  clear_tables: True
+  logs_path: vignettes/log
+rubric_paths:
+ - vignettes/custom_rubrics.yaml
+function_modules:
+ - vignettes/custom_functions.py
