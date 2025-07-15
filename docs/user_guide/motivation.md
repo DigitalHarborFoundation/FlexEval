@@ -1,5 +1,9 @@
 # Motivation
 
+Here, we describe FlexEval at a high level.
+Additional details about the motivation and design of FlexEval can be found in our [paper](https://doi.org/10.5281/zenodo.12729993) at the *Educational Data Mining* 2024 conference.
+
+
 ## Why create FlexEval?
 
 _To make evaluations easier for LLM-powered systems._
