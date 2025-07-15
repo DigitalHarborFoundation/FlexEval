@@ -17,7 +17,7 @@ def global_callback(
         log_utils.LogLevel, typer.Option(help="Log level to use.", case_sensitive=False)
     ] = log_utils.LogLevel.INFO.value,
 ):
-    """plus_etl is a single entrypoint for most PLUS ETL jobs."""
+    """FlexEval offers a number of CLI commands for convenience."""
     log_utils.set_up_logging(log_utils.LogLevel.get_logging_constant(log_level.value))
 
 

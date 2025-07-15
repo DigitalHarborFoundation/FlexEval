@@ -88,7 +88,9 @@ def generate_custom_stubs(app):
 def generate_ipynb_stub(
     src_dir: Path, ipynb_file: Path, rst_file: Path, current_contents: str
 ):
-    new_contents = f""".. include:: ../../../{ipynb_file.relative_to(src_dir.parent)}
+    new_contents = f""".. _{ipynb_file.stem}:
+
+.. include:: ../../../{ipynb_file.relative_to(src_dir.parent)}
    :parser: myst_nb.docutils_
 """
     write_if_changed(rst_file, current_contents, new_contents)
@@ -97,7 +99,9 @@ def generate_ipynb_stub(
 def generate_md_stub(
     src_dir: Path, md_file: Path, rst_file: Path, current_contents: str
 ):
-    new_contents = f""".. include:: ../../../{md_file.relative_to(src_dir.parent)}
+    new_contents = f""".. _{md_file.stem}:
+    
+.. include:: ../../../{md_file.relative_to(src_dir.parent)}
    :parser: myst_parser.docutils_
 """
     write_if_changed(rst_file, current_contents, new_contents)
@@ -121,7 +125,9 @@ def generate_python_stub(
         return
 
     top_comment = " ".join(comments).strip()
-    new_contents = f"""{title}
+    new_contents = f""".. _{py_file.stem}:
+
+{title}
 {'=' * len(title)}
 
 {top_comment}

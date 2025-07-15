@@ -44,6 +44,9 @@ extensions = [
     "sphinx.ext.linkcode",
     # "myst_parser",  # don't use myst_parser with myst_nb; it is automatically loaded by myst_parser
     "myst_nb",
+    "sphinxcontrib.autodoc_pydantic",  # because sphinx plays badly with pydantic
+    "sphinx.ext.viewcode",  # should add a view code link
+    "sphinxcontrib.programoutput",  # for inline bash execution
 ]
 source_suffix = {
     ".rst": "restructuredtext",
@@ -66,14 +69,23 @@ html_theme_options = {
         "text": "FlexEval",
         "image_light": "_static/flexeval_logo.png",
         "image_dark": "_static/flexeval_logo.png",
-    }
+    },
+    "use_edit_page_button": True,
+    "primary_sidebar_end": ["indices.html"],
 }
 html_favicon = "_static/flexeval_favicon.svg"
+html_context = {
+    "github_user": "DigitalHarborFoundation",
+    "github_repo": "FlexEval",
+    "github_version": "main",
+    "doc_path": "docs",
+}
 
 intersphinx_mapping = {
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
     "python": ("https://docs.python.org/3/", None),
     "peewee": ("https://docs.peewee-orm.com/en/latest/", None),
+    "pydantic": ("https://docs.pydantic.dev/latest", None),
 }
 
 

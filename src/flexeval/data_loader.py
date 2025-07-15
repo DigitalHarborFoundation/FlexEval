@@ -1,3 +1,5 @@
+"""Dataset loading functions. Maybe should move to :mod:`~flexeval.io`."""
+
 import json
 import logging
 import pathlib

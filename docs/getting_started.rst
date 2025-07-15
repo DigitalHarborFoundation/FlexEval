@@ -1,5 +1,9 @@
-Getting Started
+.. _getting_started:
+
+Getting started
 ===============
+
+.. _installation:
 
 Installation
 ------------
@@ -24,10 +28,13 @@ Install using `uv <https://docs.astral.sh/uv/>`__:
 
     uv add python-flexeval
 
+.. _getting-started-usage:
 
 Usage
 -----
 
 Under construction.
 
-See the :doc:`vignettes`.
+For more information about using FlexEval, consult the :ref:`user_guide`.
+
+For usage examples, consult the :doc:`vignettes`.

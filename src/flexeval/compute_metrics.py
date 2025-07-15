@@ -1,3 +1,5 @@
+"""Utilities for computing needed metric computations and actually invoking those computations."""
+
 import copy
 import importlib
 import importlib.util
@@ -40,6 +42,8 @@ class ObjectMetric:
 
 
 class MetricGraphBuilder:
+    """Builds :class:`networkx.DiGraph`\s of :class:`~flexeval.compute_metrics.ObjectMetric` instances that reflect any computational dependencies between them."""
+
     def __init__(self):
         # key: tuple(metric_level, metric_id, object_id)
         # value: ObjectMetric

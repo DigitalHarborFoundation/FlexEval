@@ -1,3 +1,5 @@
+"""Peewee database utilities."""
+
 import peewee as pw
 
 from flexeval.classes import base as classes_base

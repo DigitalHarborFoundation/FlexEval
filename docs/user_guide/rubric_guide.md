@@ -1,6 +1,6 @@
 # Rubric Guide
 
-Note: this guide is out of date. It's advice may still be useful.
+Note: this guide has not yet been updated for the current version of FlexEval. Its advice may still be useful.
 
 FlexEval allows users to write their own rubrics to guide the grader LLM in grading conversational turns or entire conversations to approximate human judgment. To use this functionality, users need to 1) write rubrics in `configuration/rubric_metrics`.yaml, and 2) set test specifications for the rubric metric in `configuration/eval`.yaml.
 

@@ -6,40 +6,30 @@
 FlexEval documentation
 ======================
 
-.. image:: /_static/flexeval_banner.svg
-   :alt: FlexEval banner
-
-|
-
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.12729993.svg
    :target: https://doi.org/10.5281/zenodo.12729993
-   :alt: Zenodo
+   :alt: Zenodo DOI
 
 .. image:: https://img.shields.io/github/license/DigitalHarborFoundation/FlexEval
    :target: https://github.com/DigitalHarborFoundation/FlexEval/blob/main/LICENSE
    :alt: FlexEval license
 
+.. raw:: html
+
+   <br>
+
+.. image:: /_static/flexeval_banner.svg
+   :alt: FlexEval banner
+
+
 FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
 
 Additional details about the motivation and design of FlexEval can be found in our `paper <https://doi.org/10.5281/zenodo.12729993>`_ at the *Educational Data Mining* 2024 conference.
 
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-   
-   getting_started
-   vignettes
-   api
-   rubric_guide
-
-.. .. include:: ../README.md
-..   :parser: myst_parser.sphinx_
-
 Basic Usage
 -----------
 
-Install using pip:
+:ref:`Install <installation>` using pip:
 
 .. code-block:: bash
 
@@ -66,3 +56,12 @@ Create and run an evaluation:
 This example computes `Flesch reading ease <https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests#Flesch_reading_ease>`_ for every turn in a list of conversations provided in JSONL format. The metric values are stored in an SQLite database called ``eval_results.db``.
 
 Read more in :doc:`getting_started` and see additional usage examples in the :doc:`vignettes`.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+   
+   getting_started
+   user_guide/index
+   vignettes
+   api

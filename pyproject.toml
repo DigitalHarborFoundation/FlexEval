@@ -55,6 +55,7 @@ dev = [
     "ruff>=0.12.2",
 ]
 docs = [
+    "autodoc-pydantic>=2.2.0",
     "linkify-it-py>=2.0.3",
     "myst-nb>=1.2.0",
     "myst-parser>=4.0.1",
@@ -65,7 +66,11 @@ docs = [
     "sphinx-copybutton>=0.5.2",
     "sphinx-design>=0.6.1",
     "sphinx-tags>=0.4",
+    "sphinxcontrib-programoutput>=0.18",
 ]
+
+[project.scripts]
+flexeval = "flexeval.__main__:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -1,3 +1,8 @@
+"""Inspection utilities that use type hints to determine the appropriate object to pass to a function metric.
+
+See :mod:`~flexeval.schema.eval_schema`.
+"""
+
 import inspect
 import logging
 import types
