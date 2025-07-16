@@ -28,7 +28,9 @@ class Config(BaseModel):
     )
     max_workers: int = Field(1, description="Max worker count. Multiprocessing if > 1")
     random_seed_conversation_sampling: int = 42
-    max_n_conversation_threads: int = 50
+    max_n_conversation_threads: int = (
+        50  # TODO allow setting this to None, and set it to None by default
+    )
     nb_evaluations_per_thread: int = 1
 
     raise_on_completion_error: bool = Field(

@@ -6,7 +6,7 @@ from flexeval.classes.eval_set_run import EvalSetRun
 
 
 class Thread(BaseModel):
-    """Class for holding a single thread / converseation
+    """Class for holding a single thread / conversation
     This corresponds to a single row in a jsonl file
     or a single 'thread_id' in a langgraph checkpoint database"""
 

@@ -10,6 +10,20 @@ To develop FlexEval, you should [install `uv`](https://docs.astral.sh/uv/getting
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+### Installing dependencies
+
+This installs all optional dependencies as well.
+
+```bash
+uv sync --all-groups
+```
+
+You can force an upgrade for all dependencies:
+
+```bash
+uv sync --upgrade --all-groups
+```
+
 ### Making a build
 
 ```bash

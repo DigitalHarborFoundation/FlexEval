@@ -114,7 +114,7 @@ def constant(object: Union[Thread, Turn, Message, ToolCall], **kwargs) -> int | 
 
 def is_role(object: Union[Turn, Message], role: str) -> dict:
     """
-    Return 1 is the role for this Turn or Message matches the passed in role,
+    Returns 1 if the role for this Turn or Message matches the passed in role,
     and 0 otherwise.
 
     Args:

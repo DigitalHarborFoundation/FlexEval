@@ -28,6 +28,7 @@ import logging
 import os
 from typing import Any, Dict, List
 
+import litellm
 import requests
 import tiktoken
 from openai import OpenAI
@@ -64,6 +65,33 @@ def echo_completion(
         },
     }
     return completion
+
+
+def litellm_completion(
+    conversation_history: List[Dict[str, Any]],
+    model: str,
+    n: int = 1,
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    """
+    Generate a completion for a given conversation history using LiteLLM's completion().
+
+    Args:
+        conversation_history (List[Dict[str, Any]]): The conversation history as a list of message dictionaries.
+        model (str): The name of the model to use for the completion.
+        n (int, optional): The number of completion choices to generate. Defaults to 1.
+        **kwargs (Any): Additional keyword arguments to pass to completion(). Allowed values vary depending on the chosen model.
+
+    Returns:
+        Dict[str, Any]: The response.
+    """
+    response = litellm.completion(
+        messages=conversation_history,
+        model=model,
+        n=n,
+        **kwargs,
+    )
+    return response.model_dump(exclude_unset=True)
 
 
 def open_ai_completion(
@@ -149,7 +177,6 @@ def lm_studio_completion(conversation_history, model_name, endpoint, **kwargs):
 
 def generic_rest_api_completion(
     conversation_history,
-    model_name,
     api_key_name: str,
     endpoint: str,
     **kwargs,
