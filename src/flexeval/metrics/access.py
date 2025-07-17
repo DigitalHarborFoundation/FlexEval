@@ -3,17 +3,17 @@ from collections import Counter
 from flexeval.classes import metric
 
 
-def count_dict_values(l: list[dict]) -> dict[str, Counter]:
+def count_dict_values(lst: list[dict]) -> dict[str, Counter]:
     """Convenience function for counting key values.
 
     Args:
-        l (list[dict]): List of dictionaries.
+        lst (list[dict]): List of dictionaries.
 
     Returns:
-        dict[str, Counter]: counter for each key that appears in the dicts in l.
+        dict[str, Counter]: counter for each key that appears in the dicts in lst.
     """
     counts = {}
-    for d in l:
+    for d in lst:
         for k, v in d.items():
             if k not in counts:
                 counts[k] = Counter()

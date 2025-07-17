@@ -85,6 +85,19 @@ uv run pre-commit install
 uv run pre-commit run --all-files
 ```
 
+Are you using the pre-commits and want to push a commit that doesn't pass the pre-commit checks?
+No problem, happens to the best of us:
+
+```bash
+git commit --no-verify
+```
+
+Update the pre-commit versions used occasionally:
+
+```bash
+uv run pre-commit autoupdate
+```
+
 ## Command-line Interface (CLI)
 
 FlexEval exposes a CLI.

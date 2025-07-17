@@ -686,8 +686,7 @@ class MetricComputer:
     First, write out in a step by step manner your reasoning to be sure that your conclusion is correct. Avoid simply stating the correct answer at the outset. Then print only a single choice from {list(choice_scores.keys())} (without quotes or punctuation) on its own line corresponding to the correct answer. At the end, repeat just the answer by itself on a new line.
 
     Reasoning:""".strip()
-            DEFAULT_EXTRACT_ANSWER_TEMPLATE = "\nGiven the above reasoning, the answer in the format requested by the question is:"
-            # This is the call to the grader completion function!
+            # This is the call to the grader completion function
             completion = completion_function(
                 conversation_history=[
                     {"role": "system", "content": "You are a helpful assistant."},

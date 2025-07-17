@@ -1,4 +1,8 @@
 """Utility functions for accessing metrics."""
 
-import flexeval.metrics.access
-import flexeval.metrics.save
+from flexeval.metrics import access, save
+
+__all__ = [
+    "access",
+    "save",
+]

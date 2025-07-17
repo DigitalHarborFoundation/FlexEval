@@ -2,5 +2,10 @@
 
 This top-level import exposes the :func:`~flexeval.runner.run` method."""
 
-import flexeval.metrics
+from flexeval import metrics
 from flexeval.runner import run
+
+__all__ = [
+    "metrics",
+    "run",
+]

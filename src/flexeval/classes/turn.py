@@ -157,10 +157,9 @@ class Turn(BaseModel):
         return content
 
     def format_input_for_rubric(
-        self, include_system_prompt=False, include_tool_messages=False
+        self, include_system_prompt: bool = False, include_tool_messages: bool = False
     ):
         """This is the 'public' method that returns the info for this Turn"""
-        input = self.get_formatted_prompt()
         output_minus_completion = ""
         if include_system_prompt:
             output_minus_completion.append(

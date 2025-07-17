@@ -29,6 +29,7 @@ from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 from flexeval.schema import Config, Eval
+from flexeval.configuration import function_metrics
 
 logger = logging.getLogger(__name__)
 

@@ -24,16 +24,6 @@ class Thread(BaseModel):
         super().__init__(**kwargs)
         self.metrics_to_evaluate = []
 
-    def get_content(self):
-        """
-        Content is a list of dictionaries where each dictionary contains the
-        role and content of messages and tool calls in the thread
-        """
-        content = []
-        for turn in self.turns:
-            content = content + turn.get_content()
-        return content
-
     # TODO - test this!
     def format_input_for_rubric(self):
         input = self.get_formatted_prompt()

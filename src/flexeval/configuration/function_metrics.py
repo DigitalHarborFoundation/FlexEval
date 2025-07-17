@@ -260,9 +260,8 @@ def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
     for arg_name, arg_value in toolcall_args.items():
         try:
             numeric_val = float(arg_value)
-            # key = toolcall.function_name + "_" + arg_name
             results.append({"name": arg_name, "value": numeric_val})
-        except:
+        except ValueError:
             pass
 
     return results
@@ -512,8 +511,6 @@ def count_errors(object: Union[Thread, Turn, Message, ToolCall]) -> dict:
         "javascript_errors": 1
     }
     """
-    x = 1
-
     if isinstance(object, ToolCall):
         return {
             i: 1

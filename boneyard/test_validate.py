@@ -12,7 +12,7 @@ class TestValidate(mixins.DotenvMixin, unittest.TestCase):
 
         test_stream = io.StringIO()
         result = unittest.TextTestRunner(stream=test_stream, verbosity=1).run(suite)
-        # self.assertFalse(result.wasSuccessful())
+        self.assertFalse(result.wasSuccessful())
 
         validation_output = test_stream.getvalue()
         self.assertTrue(len(validation_output) > 0)

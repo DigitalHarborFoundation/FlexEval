@@ -69,7 +69,6 @@ class TestLanggraphDataLoading(
     mixins.TempPathMixin, mixins.DotenvMixin, unittest.TestCase
 ):
     def test_load_langgraph(self):
-        data_filepath = "tests/data/simple.jsonl"
         langgraph_db_path = self.temp_path / "data.db"
 
         def chatbot(state: State):
@@ -89,10 +88,8 @@ class TestLanggraphDataLoading(
 
                 config = {"configurable": {"thread_id": datetime.now().isoformat()}}
 
-                response = graph.invoke(
-                    {"messages": ["factor 190,913,277,151"]}, config
-                )
-                response = graph.invoke(
+                graph.invoke({"messages": ["factor 190,913,277,151"]}, config)
+                graph.invoke(
                     {"messages": ["print them again but reverse the order"]}, config
                 )
         self.assertTrue(langgraph_db_path.exists())

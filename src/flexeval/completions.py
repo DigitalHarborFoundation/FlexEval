@@ -57,7 +57,7 @@ def get_completion(turn: Turn, completion_llm: CompletionLlm):
 
 
 def get_completions(eval_run: EvalRun, evalsetrun: EvalSetRun):
-    n_workers = eval_run.config.max_workers
+    # n_workers = eval_run.config.max_workers
     completions = []
     for turn in evalsetrun.turns:
         completion = get_completion(turn, eval_run.eval.completion_llm)
