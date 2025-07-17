@@ -5,9 +5,7 @@ from collections.abc import Callable
 
 from flexeval.schema.evalrun_schema import EvalRun
 from flexeval.schema.eval_schema import CompletionLlm
-from flexeval.classes.turn import Turn
-from flexeval.classes.eval_set_run import EvalSetRun
-
+from flexeval import classes
 from flexeval.configuration import completion_functions
 
 
@@ -44,7 +42,7 @@ def get_completion_function(completion_llm: CompletionLlm) -> Callable:
         )
 
 
-def get_completion(turn: Turn, completion_llm: CompletionLlm):
+def get_completion(turn: classes.turn.Turn, completion_llm: CompletionLlm):
     completion_function = get_completion_function(completion_llm)
     conversation_history = turn.get_formatted_prompt(
         include_system_prompt=completion_llm.include_system_prompt
@@ -56,10 +54,58 @@ def get_completion(turn: Turn, completion_llm: CompletionLlm):
     return completion
 
 
-def get_completions(eval_run: EvalRun, evalsetrun: EvalSetRun):
+def get_completions(eval_run: EvalRun, evalsetrun: classes.eval_set_run.EvalSetRun):
     # n_workers = eval_run.config.max_workers
-    completions = []
-    for turn in evalsetrun.turns:
+    for thread in evalsetrun.threads:
+        # select last turn in thread
+        if len(thread.turns) == 0:
+            continue
+        turn = (
+            thread.turns.select()
+            .order_by(classes.turn.Turn.index_in_thread.desc())
+            .first()
+        )
         completion = get_completion(turn, eval_run.eval.completion_llm)
-        if completion is not None:
-            completions.append(completion)
+        if completion is None:
+            continue
+        new_message_completions = completion["choices"]
+        if len(new_message_completions) > 1:
+            logger.warning(
+                "We don't yet support multiple completions, using just the first one."
+            )
+        new_message_completion = new_message_completions[0]["message"]
+        new_turn = classes.turn.Turn.create(
+            evalsetrun=evalsetrun,
+            dataset=turn.dataset,
+            thread=turn.thread,
+            index_in_thread=turn.index_in_thread + 1,
+            role=new_message_completion["role"],
+        )
+        prev_message = (
+            turn.messages.select()
+            .order_by(classes.message.Message.index_in_thread.desc())
+            .first()
+        )
+        new_message_context = prev_message.get_context()
+        new_message_context.append(
+            {"role": prev_message.role, "content": prev_message.content}
+        )
+        classes.message.Message.create(
+            evalsetrun=evalsetrun,
+            dataset=turn.dataset,
+            thread=turn.thread,
+            turn=new_turn,
+            index_in_thread=prev_message.index_in_thread + 1,
+            role=new_message_completion["role"],
+            content=new_message_completion["content"],
+            context=new_message_context,
+            system_prompt=prev_message.system_prompt,
+            is_flexeval_completion=True,
+            # TODO I have no idea what model_name is supposed to be, and the completion function name doesn't seem that useful
+            model_name=eval_run.eval.completion_llm.function_name,
+            prompt_tokens=completion.get("usage", {}).get("prompt_tokens", None),
+            completion_tokens=completion.get("usage", {}).get(
+                "completion_tokens", None
+            ),
+        )
+        # TODO also save any toolcalls

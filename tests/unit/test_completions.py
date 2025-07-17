@@ -1,17 +1,20 @@
 import unittest
 
-from flexeval import completions, run_utils
+from flexeval import completions, run_utils, classes
 from flexeval.classes import eval_runner
 from flexeval.schema import config_schema, eval_schema, evalrun_schema
 
 
-def build_evalsetrun(metrics: eval_schema.Metrics):
+def build_evalsetrun(mock_response: str):
     data_sources = [evalrun_schema.FileDataSource(path="tests/data/simple.jsonl")]
     eval = eval_schema.Eval(
         do_completion=True,
         completion_llm=eval_schema.CompletionLlm(
             function_name="litellm_completion",
-            kwargs={"model": "gpt-4o-mini", "mock_response": "test_completions"},
+            kwargs={
+                "model": "gpt-4o-mini",
+                "mock_response": mock_response,
+            },
         ),
     )
     eval_run = evalrun_schema.EvalRun(
@@ -45,3 +48,39 @@ class TestCompletions(unittest.TestCase):
         self.assertEqual(
             response["choices"][0]["message"]["content"], expected_response
         )
+
+    def test_get_completions(self):
+        mock_response = "test_get_completions"
+        evalsetrun, runner = build_evalsetrun(mock_response)
+        for thread in evalsetrun.threads:
+            self.assertEqual(
+                len(thread.turns),
+                3,
+                "Expected 3 turns in each conversation before completions.",
+            )
+        completions.get_completions(runner.evalrun, evalsetrun)
+
+        for thread in evalsetrun.threads:
+            self.assertEqual(
+                len(thread.turns),
+                4,
+                "Expected 4 turns in each conversation after completions.",
+            )
+            self.assertEqual(
+                thread.turns.select()
+                .order_by(classes.turn.Turn.index_in_thread.asc())
+                .first()
+                .index_in_thread,
+                0,
+                "First turn in each thread should have index_in_thread == 0 by convention.",
+            )
+            turn = (
+                thread.turns.select()
+                .order_by(classes.turn.Turn.index_in_thread.desc())
+                .first()
+            )
+            self.assertEqual(turn.index_in_thread, 3)
+            self.assertEqual(len(turn.messages), 1)
+            message = turn.messages.first()
+            self.assertEqual(message.content, mock_response)
+            self.assertTrue(message.is_flexeval_completion)
