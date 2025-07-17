@@ -1,5 +1,6 @@
 """Completing conversations using LLMs."""
 
+import json
 import logging
 from collections.abc import Callable
 
@@ -98,7 +99,7 @@ def get_completions(eval_run: EvalRun, evalsetrun: classes.eval_set_run.EvalSetR
             index_in_thread=prev_message.index_in_thread + 1,
             role=new_message_completion["role"],
             content=new_message_completion["content"],
-            context=new_message_context,
+            context=json.dumps(new_message_context),
             system_prompt=prev_message.system_prompt,
             is_flexeval_completion=True,
             # TODO I have no idea what model_name is supposed to be, and the completion function name doesn't seem that useful

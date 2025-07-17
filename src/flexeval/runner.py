@@ -1,15 +1,12 @@
 """Convenience functions for running an Eval Run."""
 
-import json
 import logging
 import random as rd
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import flexeval.metrics
-from flexeval import compute_metrics, run_utils
+from flexeval import completions, compute_metrics, run_utils
 from flexeval.classes.eval_runner import EvalRunner
-from flexeval.classes.turn import Turn
 from flexeval.io.parsers import yaml_parser
 from flexeval.schema import EvalRun, FileDataSource
 
@@ -108,64 +105,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
         if evalsetrun.do_completion:
             # We do this by creating new turns
             runner.logger.info("Generating completions")
-
-            # Set up a ThreadPoolExecutor to manage threading
-            n_workers = runner.evalrun.config.max_workers
-            runner.logger.info(f"Generating completions with {n_workers} workers.")
-            if n_workers == 1:
-                completions = []
-                for turn in evalsetrun.turns:
-                    completion = turn.get_completion(
-                        include_system_prompt=False  # TODO - pull this from config, maybe from runner.evalrun.eval.completion_llm.include_system_prompt
-                    )
-                    if completion is not None:
-                        completions.append(completion)
-            elif n_workers > 1:
-                with ThreadPoolExecutor(max_workers=n_workers) as executor:
-                    # Submit all turns to the executor
-                    futures = [
-                        executor.submit(
-                            turn.get_completion, include_system_prompt=False
-                        )  # TODO - pull this from config, maybe from runner.evalrun.eval.completion_llm.include_system_prompt
-                        for turn in evalsetrun.turns
-                    ]
-
-                    # Optionally, wait for all futures to complete and handle exceptions
-                    for future in as_completed(futures):
-                        try:
-                            future.result()  # If you need to catch exceptions or ensure completion
-                        except Exception:
-                            runner.logger.exception(
-                                "An error occurred during processing"
-                            )
-                completions = [
-                    future.result() for future in futures if future.result() is not None
-                ]
-
-            runner.logger.info("Saving completions to database.")
-            for completion in completions:
-                # {"choices": [{"message": {"content": "hi", "role": "assistant"}}]}
-                for message in completion:
-                    assert isinstance(message["turn"], list)
-                    Turn.create(
-                        evalsetrun=message["evalsetrun"],
-                        dataset=message["dataset"],
-                        datasetrow=message["datasetrow"],
-                        turn_number=message["turn_number"],
-                        turn=json.dumps(message["turn"]),
-                        role=message["role"],
-                        content="\n".join(
-                            [i.get("content", "") for i in message["turn"]]
-                        ),
-                        tool_used=message["tool_used"],
-                        system_prompt=message["system_prompt"],
-                        context=json.dumps(message["context"]),
-                        is_final_turn_in_input=message["is_final_turn_in_input"],
-                        is_completion=True,
-                        prompt_tokens=message["prompt_tokens"],
-                        completion_tokens=message["completion_tokens"],
-                    )
-
+            completions.get_completions(eval_run, evalsetrun)
     except Exception:
         runner.logger.exception(
             "An error occurred generating completions.", exc_info=True

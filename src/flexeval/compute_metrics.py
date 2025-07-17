@@ -656,7 +656,10 @@ class MetricComputer:
         )
 
         # with do_completion == True, only the completion is evaluated with or without the context.
-        if object.evalsetrun.do_completion and object.is_completion:
+        if object.evalsetrun.do_completion and "{completion}" in prompt:
+            # TODO revisit this logic
+            # also included object.is_completion, which only works for Message rubrics
+            # but we can in principle check for a message in either a turn or a thread with is_flexeval_completion true
             populated_prompt = prompt.format(completion=content)
 
         choice_scores = rubrics.get(rubric_name).get("choice_scores")
