@@ -58,9 +58,9 @@ class TestConfiguration(unittest.TestCase):
 
     def test_openai_key_set(self):
         self.skip_if_no_openai_checks()
-        assert (
-            os.environ.get("OPENAI_API_KEY", "") != ""
-        ), "OPENAI_API_KEY must be set in the .env file"
+        assert os.environ.get("OPENAI_API_KEY", "") != "", (
+            "OPENAI_API_KEY must be set in the .env file"
+        )
 
     def test_openai_is_valid(self):
         self.skip_if_no_openai_checks()
@@ -161,22 +161,24 @@ class TestConfiguration(unittest.TestCase):
                         arg_tuple[1].default is not inspect.Parameter.empty
                         or arg_tuple[0] in function_metric.get("kwargs", {})
                         or arg_tuple[1].kind is inspect.Parameter.VAR_KEYWORD
-                    ), f"Argument `{arg_tuple[0]}` in function `{name}` must have a default value or the value must be specified in `kwargs` in the eval configuration"
+                    ), (
+                        f"Argument `{arg_tuple[0]}` in function `{name}` must have a default value or the value must be specified in `kwargs` in the eval configuration"
+                    )
                     var_keyword_arg_found = (
                         var_keyword_arg_found
                         or arg_tuple[1].kind is inspect.Parameter.VAR_KEYWORD
                     )
 
-            assert (
-                arg_found
-            ), f"Function metrics must take at least one input, but {name} does not have any arguments."
+            assert arg_found, (
+                f"Function metrics must take at least one input, but {name} does not have any arguments."
+            )
             # Check that there are no extra keyword arguments that don't match the function. If the function allows
             # variable length keyword arguments, then extra keyword arguments are allowed.
             if "kwargs" in function_metric and not var_keyword_arg_found:
                 for kwarg in function_metric["kwargs"]:
-                    assert (
-                        kwarg in arg_names
-                    ), f"Keyword argument `{kwarg}` specified in json for function `{name}`, but no argument with that name found in function signature."
+                    assert kwarg in arg_names, (
+                        f"Keyword argument `{kwarg}` specified in json for function `{name}`, but no argument with that name found in function signature."
+                    )
 
     def helper_valid_first_function_param(self, function_metric, first_arg_type):
         name = function_metric["name"]
@@ -190,7 +192,9 @@ class TestConfiguration(unittest.TestCase):
                 or first_arg_type is ForwardRef("Thread")
                 or Thread in get_args(first_arg_type)
                 or ForwardRef("Thread") in get_args(first_arg_type)
-            ), f"Input to metric function {name} with metric_level set to {metric_level} must be a string, list, or Thread but it was {first_arg_type}"
+            ), (
+                f"Input to metric function {name} with metric_level set to {metric_level} must be a string, list, or Thread but it was {first_arg_type}"
+            )
         elif metric_level.lower() == "turn":
             assert (
                 first_arg_type is str
@@ -199,7 +203,9 @@ class TestConfiguration(unittest.TestCase):
                 or first_arg_type is ForwardRef("Turn")
                 or Turn in get_args(first_arg_type)
                 or ForwardRef("Turn") in get_args(first_arg_type)
-            ), f"Input to metric function {name} with metric_level set to {metric_level} must be a string, list, or Turn but it was {first_arg_type}"
+            ), (
+                f"Input to metric function {name} with metric_level set to {metric_level} must be a string, list, or Turn but it was {first_arg_type}"
+            )
         elif metric_level.lower() == "message":
             assert (
                 first_arg_type is str
@@ -207,7 +213,9 @@ class TestConfiguration(unittest.TestCase):
                 or first_arg_type is ForwardRef("Message")
                 or Message in get_args(first_arg_type)
                 or ForwardRef("Message") in get_args(first_arg_type)
-            ), f"Input to metric function {name} with metric_level set to {metric_level} must be a string or Message but it was {first_arg_type}"
+            ), (
+                f"Input to metric function {name} with metric_level set to {metric_level} must be a string or Message but it was {first_arg_type}"
+            )
         elif metric_level.lower() == "toolcall":
             assert (
                 first_arg_type is dict
@@ -215,7 +223,9 @@ class TestConfiguration(unittest.TestCase):
                 or first_arg_type is ForwardRef("ToolCall")
                 or ToolCall in get_args(first_arg_type)
                 or ForwardRef("ToolCall") in get_args(first_arg_type)
-            ), f"Input to metric function {name} with `metric_level` set to {metric_level} must be a dict or ToolCall but it was {first_arg_type}"
+            ), (
+                f"Input to metric function {name} with `metric_level` set to {metric_level} must be a dict or ToolCall but it was {first_arg_type}"
+            )
         else:
             raise Exception(
                 f"You set `metric_level` for the metric function `{name}` to {metric_level}, but `metric_level` must be one of Thread, Turn, Message, or ToolCall."
@@ -255,9 +265,9 @@ class TestConfiguration(unittest.TestCase):
             return
         for rubric_metric in rubric_metrics:
             rubric_name = rubric_metric.name
-            assert (
-                rubric_name in self.rubric_metrics.keys()
-            ), f"You specified a rubric called `{rubric_name}` in the configuration, but only these rubrics are available: {list(self.rubric_metrics.keys())}."
+            assert rubric_name in self.rubric_metrics.keys(), (
+                f"You specified a rubric called `{rubric_name}` in the configuration, but only these rubrics are available: {list(self.rubric_metrics.keys())}."
+            )
             prompt = self.rubric_metrics[rubric_name]
             # The prompts will have three types
             # {context} -- everything BEFORE the last entry
@@ -270,9 +280,9 @@ class TestConfiguration(unittest.TestCase):
                     if all([o in prompt for o in option1]):
                         if option2 != option1:
                             for o2 in option2:
-                                assert (
-                                    o2 not in prompt
-                                ), f"Your rubric {rubric_name} is has the template `{','.join([i for i in option1])}` and cannot also contain the template option `{o2}`."
+                                assert o2 not in prompt, (
+                                    f"Your rubric {rubric_name} is has the template `{','.join([i for i in option1])}` and cannot also contain the template option `{o2}`."
+                                )
 
             if (
                 rubric_metric.context_only
@@ -305,7 +315,9 @@ class TestConfiguration(unittest.TestCase):
                 int,
                 dict,
                 list,
-            ], f"The return type of function {name} has type {first_argument_type}. The return type must be one of `int`, `float`, `dict`, or `list`."
+            ], (
+                f"The return type of function {name} has type {first_argument_type}. The return type must be one of `int`, `float`, `dict`, or `list`."
+            )
 
     def test_dataset_rows(self):
         filenames = self.eval.data

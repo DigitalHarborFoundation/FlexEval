@@ -21,7 +21,7 @@ def get_completion_function(completion_llm: CompletionLlm) -> Callable:
         completion_llm (CompletionLlm): The description of the function to retrieve.
 
     Raises:
-        ValueError: If not found in :doc:`~flexeval.configuration.completion_functions` or in globals by function_name.
+        ValueError: If not found in :mod:`~flexeval.configuration.completion_functions` or in globals by function_name.
 
     Returns:
         Callable: The completion function.

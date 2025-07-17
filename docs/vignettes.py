@@ -128,7 +128,7 @@ def generate_python_stub(
     new_contents = f""".. _{py_file.stem}:
 
 {title}
-{'=' * len(title)}
+{"=" * len(title)}
 
 {top_comment}
 
@@ -137,7 +137,7 @@ Python source: ``{py_file.name}``
 .. literalinclude:: ../../../{py_file.relative_to(src_dir.parent)}
    :language: python
    :linenos:
-   :lines: {len(comments)+1}-
+   :lines: {len(comments) + 1}-
    :lineno-start: 1
 """
     for other_source_path in other_source_paths:

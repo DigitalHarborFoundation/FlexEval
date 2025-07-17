@@ -664,12 +664,12 @@ class MetricComputer:
         # get rubric grader
         if object.evalsetrun.grader_llm is None or object.evalsetrun.grader_llm == "":
             raise ValueError(
-                f"Attempting to evaluate a rubric metric, but no grader LLM defined."
+                "Attempting to evaluate a rubric metric, but no grader LLM defined."
             )
         grader_completion_function = json.loads(object.evalsetrun.grader_llm)
         if grader_completion_function is None or len(grader_completion_function) == 0:
             raise ValueError(
-                f"Attempting to evaluate a rubric metric, but no grader LLM defined."
+                "Attempting to evaluate a rubric metric, but no grader LLM defined."
             )
         grader_completion_fn_name = grader_completion_function.get(
             "function_name", None

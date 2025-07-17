@@ -35,6 +35,8 @@ uv build
 Run the unit tests:
 
 ```bash
+make unittest
+# OR
 uv run python -m unittest discover -s tests.unit
 ```
 
@@ -73,6 +75,14 @@ We format code files using [`ruff`](https://github.com/astral-sh/ruff).
 ```bash
 uvx ruff check --fix
 uvx ruff format
+```
+
+You can avoid having to remember this by setting up the pre-commits:
+
+```bash
+uv run pre-commit install
+# run on any initial files
+uv run pre-commit run --all-files
 ```
 
 ## Command-line Interface (CLI)

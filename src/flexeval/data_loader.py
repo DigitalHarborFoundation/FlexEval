@@ -65,19 +65,22 @@ def load_jsonl(
 
                     # Context
                     context = []
-                    # Get system prompt used in the thread - assuming only 1
-                    system_prompt = [
-                        i["content"]
-                        for i in json.loads(thread)["input"]
-                        if i["role"] == "system"
-                    ][0]
+                    thread_input = json.loads(thread)["input"]
 
-                    # Add the system prompt as context
-                    context.append({"role": "system", "content": system_prompt})
+                    # Get system prompt used in the thread - assuming only 1
+                    for message in thread_input:
+                        if message["role"] == "system":
+                            system_prompt = message["content"]
+                            break
+                    else:
+                        system_prompt = None
+                    if system_prompt is not None:
+                        # Add the system prompt as context
+                        context.append({"role": "system", "content": system_prompt})
 
                     # Create messages
                     index_in_thread = 0
-                    for message in json.loads(thread)["input"]:
+                    for message in thread_input:
                         role = message.get("role", None)
                         if role != "system":
                             # System message shouldn't be added as a separate message
@@ -387,9 +390,9 @@ def load_langgraph_sqlite(
                     # DEBUG
                     # tool_call_id is defined
 
-                    assert (
-                        tool_call_id in tool_responses_dict
-                    ), f"Found a tool call without a tool response! id: {tool_call_id}"
+                    assert tool_call_id in tool_responses_dict, (
+                        f"Found a tool call without a tool response! id: {tool_call_id}"
+                    )
                     # get matching message - should now be accessible through thread now?
                     matching_message = [
                         m for m in thread.messages if tool_call_id in m.tool_call_ids

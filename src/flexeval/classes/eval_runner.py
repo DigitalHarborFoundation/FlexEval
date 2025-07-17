@@ -1,14 +1,11 @@
-import io
 import logging
-import os
-import unittest
 from datetime import datetime
 from pathlib import Path
 
 import dotenv
 from peewee import SqliteDatabase
 
-from flexeval import db_utils, dependency_graph, validate
+from flexeval import db_utils, dependency_graph
 from flexeval.schema import EvalRun
 
 logger = logging.getLogger(__name__)

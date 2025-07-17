@@ -142,7 +142,7 @@ def linkcode_resolve(domain, info):
 
     version = parse_version(flexeval.__version__)
     tag = "main" if version.is_devrelease else f"v{version.public}"
-    return "https://github.com/matplotlib/matplotlib/blob" f"/{tag}/lib/{fn}{linespec}"
+    return f"https://github.com/matplotlib/matplotlib/blob/{tag}/lib/{fn}{linespec}"
 
 
 # myst-parser

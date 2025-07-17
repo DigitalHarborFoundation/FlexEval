@@ -46,7 +46,7 @@ def make_link_node(rawtext, app, type, slug, options):
             base += "/"
     except AttributeError as err:
         raise ValueError(
-            f"github_project_url configuration value is not set " f"({err})"
+            f"github_project_url configuration value is not set ({err})"
         ) from err
 
     ref = base + type + "/" + slug + "/"
@@ -96,7 +96,7 @@ def ghissue_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
         category = "issues"
     else:
         msg = inliner.reporter.error(
-            'GitHub roles include "ghpull" and "ghissue", ' '"%s" is invalid.' % name,
+            'GitHub roles include "ghpull" and "ghissue", "%s" is invalid.' % name,
             line=lineno,
         )
         prb = inliner.problematic(rawtext, rawtext, msg)
@@ -151,7 +151,7 @@ def ghcommit_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
             base += "/"
     except AttributeError as err:
         raise ValueError(
-            f"github_project_url configuration value is not set " f"({err})"
+            f"github_project_url configuration value is not set ({err})"
         ) from err
 
     ref = base + text

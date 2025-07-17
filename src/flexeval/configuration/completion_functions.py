@@ -68,11 +68,11 @@ def echo_completion(
 
 
 def litellm_completion(
-    conversation_history: List[Dict[str, Any]],
+    conversation_history: list[dict[str, Any]],
     model: str,
     n: int = 1,
-    **kwargs: Any,
-) -> Dict[str, Any]:
+    **kwargs,
+) -> dict[str, Any]:
     """
     Generate a completion for a given conversation history using LiteLLM's completion().
 

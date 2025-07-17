@@ -54,6 +54,7 @@ Issues = "https://github.com/DigitalHarborFoundation/FlexEval/issues"
 dev = [
     "jupyter>=1.1.1",
     "matplotlib>=3.10.3",
+    "pre-commit>=4.2.0",
     "ruff>=0.12.2",
 ]
 docs = [
