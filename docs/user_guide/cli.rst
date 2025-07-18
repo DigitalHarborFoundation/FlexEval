@@ -13,7 +13,8 @@ FlexEval offers a command-line interface.
 
 The help output contains the list of valid commands:
 
-.. program-output:: uv run python -m flexeval --help
+.. program-output:: NO_COLOR=1 uv run python -m flexeval --help
+    :shell:
 
 
 See the :ref:`basic_cli` vignette for a working example of CLI usage.
