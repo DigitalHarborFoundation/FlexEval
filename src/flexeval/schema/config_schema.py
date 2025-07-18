@@ -26,7 +26,10 @@ class Config(BaseModel):
         False,
         description="Clear any existing tables, if the output SQLite database already exists.",
     )
-    max_workers: int = Field(1, description="Max worker count. Multiprocessing if > 1")
+    max_workers: int = Field(
+        1,
+        description="Max worker count. Multiple threads will be used if set to > 1. This may have usage limit implications if you are calling APIs.",
+    )
     random_seed_conversation_sampling: int = 42
     max_n_conversation_threads: int = (
         50  # TODO allow setting this to None, and set it to None by default
