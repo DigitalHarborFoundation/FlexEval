@@ -2,18 +2,24 @@
 
 In addition to the built-in rubrics, you can write your own rubrics.
 
-[`eval_run.yaml`](eval_run.yaml) shows an example Eval Run using a custom rubric.
+The `eval_run.yaml` schema used in {ref}`basic_cli` shows an example {class}`~flexeval.schema.evalrun_schema.EvalRun` using a custom rubric.
 
-The easiest way to provide custom rubrics is in a YAML file; [`eval_run.yaml`](custom_rubrics.yaml) is an example.
+The easiest way to provide custom rubrics is in a YAML file; here's `vignettes/custom_rubrics.yaml`:
 
-You then need to specify the path to that YAML file in your Eval Run configuration:
+```{literalinclude} ../../../vignettes/custom_rubrics.yaml
+:language: yaml
+:linenos:
+
+```
+
+You then need to specify the path to that YAML file in your {class}`~flexeval.schema.evalrun_schema.EvalRun` configuration:
 
 ```yaml
 rubric_paths:
  - vignettes/custom_rubrics.yaml
 ```
 
-Then, you can use custom rubrics
+Then, you can use those custom rubrics in your {attr}`~flexeval.schema.eval_schema.Metrics.rubrics` definition.
 
 ## Writing rubrics
 
@@ -21,7 +27,7 @@ Rubrics consist of a `prompt` and a set of `choice_scores`.
  - `choice_scores` are the LLM outputs that will result in a numeric score.
  - `prompt` is a template that will be formatted and passed to the rubric LLM (see Eval) for scoring.
 
-See the Rubric Guide for additional information on writing rubrics.
+See the {ref}`rubric_guide` for additional information on writing rubrics.
 
 ### Supported template parameters
 

@@ -129,3 +129,8 @@ Develop the documentation website locally:
 ```bash
 make docclean docautobuild
 ```
+
+You can also just build the site directly:
+```bash
+make html
+```

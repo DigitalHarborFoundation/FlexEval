@@ -1,3 +1,7 @@
+"""Built-in function metrics that can be used in any configuration.
+
+See :attr:`~flexeval.schema.evalrun_schema.EvalRun.add_default_functions`."""
+
 import datetime
 import json
 import logging
@@ -250,10 +254,15 @@ def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> 
     return toolcall_counts
 
 
-def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
-    """
-    Extracts the values of all numeric ToolCall parameter inputs, with
-    metric_name being the name of the corresponding parameter.
+def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list[dict]:
+    """Extracts the values of all numeric ToolCall parameter inputs,
+    with metric_name being the name of the corresponding parameter.
+
+    Args:
+        toolcall (ToolCall): The tool call.
+
+    Returns:
+        list[dict]: List of key -> numeric value pairs in the tool call.
     """
     results = []
     toolcall_args = json.loads(toolcall.args)
@@ -263,7 +272,6 @@ def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
             results.append({"name": arg_name, "value": numeric_val})
         except ValueError:
             pass
-
     return results
 
 

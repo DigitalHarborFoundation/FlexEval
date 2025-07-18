@@ -159,6 +159,40 @@ def ghcommit_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     return [node], []
 
 
+def ghfile_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
+    """
+    Link to a file in the GitHub repository.
+
+    Usage:
+        {ghfile}`src/path/to/file.yaml`
+        {ghfile}`link text <src/path/to/file.yaml>`
+    """
+    app = inliner.document.settings.env.app
+    try:
+        base = app.config.github_project_url
+        if not base:
+            raise AttributeError
+        if not base.endswith("/"):
+            base += "/"
+    except AttributeError as err:
+        raise ValueError(
+            f"github_project_url configuration value is not set ({err})"
+        ) from err
+
+    # Parse :title <target> syntax
+    if "<" in text and text.endswith(">"):
+        title, target = text.split("<", 1)
+        title = title.strip()
+        target = target[:-1].strip()  # Remove trailing '>'
+    else:
+        title = target = text.strip()
+
+    ref = base + "blob/main/" + target
+    set_classes(options)
+    node = nodes.reference(rawtext, utils.unescape(title), refuri=ref, **options)
+    return [node], []
+
+
 def setup(app):
     """
     Install the plugin.
@@ -169,6 +203,7 @@ def setup(app):
     app.add_role("ghpull", ghissue_role)
     app.add_role("ghuser", ghuser_role)
     app.add_role("ghcommit", ghcommit_role)
+    app.add_role("ghfile", ghfile_role)
     app.add_config_value("github_project_url", None, "env")
 
     metadata = {"parallel_read_safe": True, "parallel_write_safe": True}

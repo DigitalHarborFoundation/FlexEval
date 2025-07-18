@@ -75,13 +75,17 @@ def get_completions(eval_run: EvalRun, evalsetrun: classes.eval_set_run.EvalSetR
                 "We don't yet support multiple completions, using just the first one."
             )
         new_message_completion = new_message_completions[0]["message"]
-        new_turn = classes.turn.Turn.create(
-            evalsetrun=evalsetrun,
-            dataset=turn.dataset,
-            thread=turn.thread,
-            index_in_thread=turn.index_in_thread + 1,
-            role=new_message_completion["role"],
-        )
+        if turn.role == "assistant":
+            # don't create a new Turn, because this completion is a continuation of an existing assistant turn
+            new_turn = turn
+        else:
+            new_turn = classes.turn.Turn.create(
+                evalsetrun=evalsetrun,
+                dataset=turn.dataset,
+                thread=turn.thread,
+                index_in_thread=turn.index_in_thread + 1,
+                role=new_message_completion["role"],
+            )
         prev_message = (
             turn.messages.select()
             .order_by(classes.message.Message.index_in_thread.desc())

@@ -80,6 +80,7 @@ html_context = {
     "github_version": "main",
     "doc_path": "docs",
 }
+github_project_url = "https://github.com/DigitalHarborFoundation/FlexEval/"
 
 intersphinx_mapping = {
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
@@ -147,7 +148,7 @@ def linkcode_resolve(domain, info):
 
 # myst-parser
 # https://myst-parser.readthedocs.io/en/latest/configuration.html
-myst_gfm_only = True
+myst_gfm_only = False
 # https://myst-nb.readthedocs.io/en/latest/authoring/jupyter-notebooks.html
 myst_enable_extensions = [
     "amsmath",

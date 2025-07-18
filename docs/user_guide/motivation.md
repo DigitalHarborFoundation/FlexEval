@@ -66,7 +66,7 @@ The format of each line is JSON, with an `input` key, and a corresponding value 
 
   `{"input": [{"role": "user", "content": "Hi, Nice to meet you!"}, {"role": "assistant", "content": "Nice to meet you, too! How can I help you today?"}]}`
 
-- Add any Python modules containing function metrics to your configuration. Existing function metrics can be viewed in {ref}`flexeval.configuration.function_metrics` .
+- Add any Python modules containing function metrics to your configuration. Existing function metrics can be viewed in {mod}`flexeval.configuration.function_metrics`.
 
 - If desired, create any rubric metrics in a `rubric_metrics.yaml` file. Rubrics in this file will be used to evaluate conversations and completions using "chain-of-thoughts then classify" (COT classify) and will report a numeric score (e.g., 0 or 1) mapped to a choice string (e.g.,"Yes", "No") from the classification results. For more information on how to write and use rubrics in FlexEval, see the {ref}`Custom Rubric <custom_rubric>` vignette.
 

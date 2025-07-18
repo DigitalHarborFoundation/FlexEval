@@ -89,11 +89,13 @@ class RubricItem(MetricItem):
 
 
 class Metrics(BaseModel):
+    """Defines the metrics to be evaluated."""
+
     function: Optional[List[FunctionItem]] = Field(
         None, description="List of function-based metrics to be evaluated."
     )
     rubric: Optional[List[RubricItem]] = Field(
-        None, description="List of rubrics to be evaluated"
+        None, description="List of rubrics to be evaluated."
     )
 
 
@@ -127,6 +129,11 @@ class GraderLlm(BaseModel):
 
 
 class Eval(BaseModel):
+    """Defines the evaluation that should be executed.
+
+    The key fields are :attr:`metrics` and :attr:`grader_llm`.
+    """
+
     class Config:
         # TODO don't permit additional fields in Eval
         extra = "allow"

@@ -24,7 +24,10 @@ FlexEval documentation
 
 FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
 
-Additional details about the motivation and design of FlexEval can be found in our `paper <https://doi.org/10.5281/zenodo.12729993>`_ at the *Educational Data Mining* 2024 conference.
+Read about the motivation and design of FlexEval in our `paper <https://doi.org/10.5281/zenodo.12729993>`_ at *Educational Data Mining* 2024.
+
+:doc:`Get started <getting_started>` with FlexEval, go deeper with the :ref:`user_guide`, or learn by example in the :doc:`vignettes`.
+
 
 Basic Usage
 -----------

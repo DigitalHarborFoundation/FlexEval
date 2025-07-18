@@ -54,8 +54,8 @@ Create and run an evaluation:
 This example computes `Flesch reading ease <https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests#Flesch_reading_ease>`_ for every turn in a list of conversations provided in JSONL format. The metric values are stored in an SQLite database called ``eval_results.db``.
 
 The basic approach:
- - Create an :class:`~flexeval.schema.eval_schema.Eval` defining the functions and metrics that should be computed on the inputs
- - Create an :class:`~flexeval.schema.evalrun_schema.EvalRun` defining the input and output data sources
+ - Create an :class:`~flexeval.schema.eval_schema.Eval` defining the functions and metrics that should be computed on the inputs.
+ - Create an :class:`~flexeval.schema.evalrun_schema.EvalRun` defining the input and output data sources.
  - Invoke :func:`~flexeval.runner.run` to execute the evaluation.
 
 For more information about using FlexEval, continue on to the :ref:`user_guide`.
