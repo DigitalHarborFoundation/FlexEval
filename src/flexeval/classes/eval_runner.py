@@ -88,7 +88,7 @@ class EvalRunner:
 
     def load_env(self):
         env_filepath = self.evalrun.config.env_filepath
-        if env_filepath is not None and env_filepath.strip() != "":
+        if env_filepath is not None and str(env_filepath).strip() != "":
             if not env_filepath.exists():
                 raise ValueError(
                     f"Environment file not present at configured path '{env_filepath}'."
