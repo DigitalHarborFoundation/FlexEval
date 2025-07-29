@@ -1,5 +1,9 @@
 """
-https://github.com/matplotlib/matplotlib/blob/main/doc/sphinxext/github.py
+Adapted from: https://github.com/matplotlib/matplotlib/blob/main/doc/sphinxext/github.py
+Brief summary of changes:
+- Added ghfile role
+
+Original license: (see https://github.com/matplotlib/matplotlib/blob/main/LICENSE/LICENSE)
 Copyright (c)
 2012- Matplotlib Development Team; All Rights Reserved
 
