@@ -66,7 +66,7 @@ def get_first_parameter_types(metric_function: Callable) -> set[type]:
     ).annotation
     if input_type is inspect._empty:
         logger.debug(
-            f"Function {metric_function}'s first parameter has no type annotation."
+            f"Function '{metric_function}' has a first parameter with no type annotation."
         )
         return set()
     return get_acceptable_arg_types(input_type)
@@ -128,7 +128,7 @@ def get_function_input(
     accepted_parameter_types = get_first_parameter_types(metric_function)
     if len(accepted_parameter_types) == 0:
         logger.debug(
-            f"Metric function {metric_function}'s first parameter has no type hint, so we can't determine if a type transformation needs to be applied."
+            f"Metric function '{metric_function}' has a first parameter with no type hint, so we can't determine if a type transformation needs to be applied."
         )
         return input_object
     if input_type in accepted_parameter_types:
@@ -158,7 +158,7 @@ def get_function_input(
         # - it's a type we don't support at all e.g. set
         # - it's a type we don't support at this metric_level
         raise ValueError(
-            f"For metric level '{metric_level}', can't coerce {input_type.__name__} for function {metric_function} to accepted parameter type(s) '{', '.join([type.__name__ for type in accepted_parameter_types])}'."
+            f"For metric level '{metric_level}', can't coerce '{input_type.__name__}' for function '{metric_function}' to accepted parameter type(s) '{', '.join([type.__name__ for type in accepted_parameter_types])}'."
         )
 
 

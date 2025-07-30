@@ -70,7 +70,7 @@ class Dataset(BaseModel):
             )
         else:
             raise ValueError(
-                f"Unsupported format '{os.path.splitext(self.filename)[-1]}'. Each Data File must be either a jsonl or sqlite file. You provided the file: {self.filename}"
+                f"Unsupported format '{os.path.splitext(self.filename)[-1]}'. Each Data File must be either a jsonl or sqlite file. You provided the file: '{self.filename}'"
             )
 
 

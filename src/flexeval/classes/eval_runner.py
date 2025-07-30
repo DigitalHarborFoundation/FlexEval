@@ -127,12 +127,12 @@ class EvalRunner:
                     old_value = getattr(self.evalrun.config, field_name)
                     new_value = model_extra[field_name]
                     self.logger.info(
-                        f"Updating configuration setting: {field_name}={new_value} (old={old_value})"
+                        f"Updating configuration setting: '{field_name}'='{new_value}' (old='{old_value}')"
                     )
                     setattr(self.evalrun.config, field_name, new_value)
                 else:
                     self.logger.warning(
-                        f"Unknown configuration field {field_name} was ignored."
+                        f"Unknown configuration field '{field_name}' was ignored."
                     )
 
         # TODO verify that applying defaults is done solely by pydantic and this step is no longer necessary
@@ -147,7 +147,7 @@ class EvalRunner:
         if len(self.metrics_graph_ordered_list) > 0:
             if self.evalrun.eval.grader_llm is None:
                 self.logger.warning(
-                    f"{len(self.metrics_graph_ordered_list)} metrics defined, but no grader LLM defined."
+                    f"'{len(self.metrics_graph_ordered_list)}' metrics defined, but no grader LLM defined."
                 )
 
     def shutdown_logging(self):

@@ -38,7 +38,7 @@ def load_models_from_yaml_filepath(
             return load_models_from_yaml_stream(file, model_type)
     except (OSError, ValueError) as ex:
         raise ValueError(
-            f"Failed to load {filename} as a list of {model_type.__name__} models: {ex}"
+            f"Failed to load '{filename}' as a list of '{model_type.__name__}' models: {ex}"
         )
 
 
@@ -51,7 +51,7 @@ def load_models_from_yaml_stream(
         return {key: model_type(**value) for key, value in contents.items()}
     except (OSError, yaml.YAMLError, pydantic.ValidationError) as ex:
         raise ValueError(
-            f"Failed to load YAML stream as a list of {model_type.__name__} models: {ex}"
+            f"Failed to load YAML stream as a list of '{model_type.__name__}' models: {ex}"
         )
 
 
@@ -64,4 +64,6 @@ def load_model_from_yaml(
             contents = yaml.safe_load(file)
             return model_type(**contents)
     except (OSError, yaml.YAMLError, pydantic.ValidationError) as ex:
-        raise ValueError(f"Failed to load {filename} as a {model_type.__name__}: {ex}")
+        raise ValueError(
+            f"Failed to load '{filename}' as a '{model_type.__name__}': {ex}"
+        )

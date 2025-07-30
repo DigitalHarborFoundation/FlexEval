@@ -38,7 +38,7 @@ def run_from_name_args(
     evals = yaml_parser.load_evals_from_yaml(evals_path)
     if eval_name not in evals:
         raise ValueError(
-            f"Eval name {eval_name} not in defined evals: {list(evals.keys())}"
+            f"Eval name '{eval_name}' not in defined evals: {list(evals.keys())}"
         )
     selected_eval = evals[eval_name]
     if selected_eval.name is None or selected_eval.name.strip() == "":
@@ -84,7 +84,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
         # set random seed
         rd_seed = runner.evalrun.config.random_seed_conversation_sampling
         rd.seed(rd_seed)
-        runner.logger.info(f"Set random seed to {rd_seed}")
+        runner.logger.info(f"Set random seed to '{rd_seed}'.")
 
         run_utils.build_datasets(runner, evalsetrun)
     except Exception:
@@ -95,7 +95,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
     try:
         runner.logger.info("Parsing data files")
         for dataset in evalsetrun.datasets:
-            runner.logger.debug(f"Loading data from {dataset.filename}")
+            runner.logger.debug(f"Loading data from '{dataset.filename}'.")
             dataset.load_data()
     except Exception:
         runner.logger.exception("An error occurred loading data.", exc_info=True)
@@ -119,7 +119,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
     #######################################################
     try:
         metrics = compute_metrics.compute_metrics(eval_run, evalsetrun)
-        runner.logger.info(f"Saving {len(metrics)} metrics to database.")
+        runner.logger.info(f"Saving '{len(metrics)}' metrics to database.")
         flexeval.metrics.save.save_metrics(metrics)
     except Exception:
         runner.logger.exception("An error occurred computing metrics.", exc_info=True)

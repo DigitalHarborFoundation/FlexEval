@@ -81,7 +81,7 @@ class MetricGraphBuilder:
                 break
         else:
             raise ValueError(
-                f"Failed to find object with id {target_id} in {len(objects)} objects."
+                f"Failed to find object with id '{target_id}' in '{len(objects)}' objects."
             )
         return i
 
@@ -133,18 +133,18 @@ class MetricGraphBuilder:
                 current_index = 0  # only a single thread, by definition
             elif dependency_metric_level == "ToolCall":
                 raise ValueError(
-                    f"Can't depend on a {dependency_metric_level} metric from a {current_metric_level} metric."
+                    f"Can't depend on a '{dependency_metric_level}' metric from a '{current_metric_level}' metric."
                 )
         elif current_metric_level == "Turn":
             if dependency_metric_level == "Thread":
                 current_index = 0  # only a single thread, by definition
             else:
                 raise ValueError(
-                    f"Can't depend on a {dependency_metric_level} metric from a {current_metric_level} metric."
+                    f"Can't depend on a '{dependency_metric_level}' metric from a '{current_metric_level}' metric."
                 )
         elif current_metric_level == "Thread":
             raise ValueError(
-                f"Can't depend on a {dependency_metric_level} metric from a {current_metric_level} metric."
+                f"Can't depend on a '{dependency_metric_level}' metric from a '{current_metric_level}' metric."
             )
         else:
             raise ValueError(f"Unsupported level: {current_metric_level=}")
@@ -152,7 +152,7 @@ class MetricGraphBuilder:
         target_object_index = current_index + relative_object_position
         if target_object_index < 0:
             logger.debug(
-                f"Object at position {current_index} object cannot in principle satisfy this dependency, so skipping it."
+                f"Object at position '{current_index}' object cannot in principle satisfy this dependency, so skipping it."
             )
             return None
         object = self.objects_by_level[dependency_metric_level][target_object_index]
@@ -261,7 +261,7 @@ class MetricComputer:
                         spec.loader.exec_module(module)
                     except Exception as module_not_loaded:
                         raise ValueError(
-                            f"Failed to load function module specified by {function_module}. (module not found: {module_not_found}, and failed to load from file location: {module_not_loaded})"
+                            f"Failed to load function module specified by '{function_module}.' (module not found: {module_not_found}, and failed to load from file location: {module_not_loaded})"
                         )
                 actual_modules.append(module)
         if evalrun.add_default_functions and function_metrics not in actual_modules:
@@ -277,7 +277,7 @@ class MetricComputer:
                     missing_functions.add(function_item.name)
         if len(missing_functions) > 0:
             raise ValueError(
-                f"Failed to find {len(missing_functions)} functions in the provided function module. Missing function names: {', '.join(sorted(missing_functions))}"
+                f"Failed to find '{len(missing_functions)}' functions in the provided function module. Missing function names: {', '.join(sorted(missing_functions))}"
             )
         # validation step: verify that all rubrics are present
         missing_rubrics = set()
@@ -287,7 +287,7 @@ class MetricComputer:
                     missing_rubrics.add(rubric_item.name)
         if len(missing_rubrics) > 0:
             raise ValueError(
-                f"Failed to find {len(missing_rubrics)} rubrics in the provided rubric set. Missing rubric names: {', '.join(sorted(missing_rubrics))}"
+                f"Failed to find '{len(missing_rubrics)}' rubrics in the provided rubric set. Missing rubric names: {', '.join(sorted(missing_rubrics))}"
             )
         return mc
 
@@ -319,7 +319,7 @@ class MetricComputer:
                 for dependency in g.predecessors(object_metric):
                     if dependency.metric_results is None:
                         raise ValueError(
-                            f"FlexEval error: expected metric_result for dependency {dependency.metric['evaluation_name']} to be computed before processing metric {object_metric.metric['evaluation_name']}."
+                            f"FlexEval error: expected metric_result for dependency '{dependency.metric['evaluation_name']}' to be computed before processing metric '{object_metric.metric['evaluation_name']}'."
                         )
                     dependency_info = g.get_edge_data(dependency, object_metric)[
                         "depends_on"
@@ -347,7 +347,7 @@ class MetricComputer:
                                 break
                             else:
                                 logger.debug(
-                                    f"Key {dependency_info['metric_name']} not found in results for dependency {dependency.metric['evaluation_name']}."
+                                    f"Key '{dependency_info['metric_name']}' not found in results for dependency '{dependency.metric['evaluation_name']}'."
                                 )
                     elif len(dependency.metric_results) == 1:
                         metric_result = dependency.metric_results[0]
@@ -493,7 +493,7 @@ class MetricComputer:
             )
         else:
             raise ValueError(
-                f"The argument evaluation_type provided to compute_metric is invalid. Must be one of `function` or `rubric`. You passed `{type}`."
+                f"The argument evaluation_type provided to compute_metric is invalid. Must be one of 'function' or 'rubric'. You passed '{type}'."
             )
         self._validate_metrics(metrics)
         return metrics
@@ -502,11 +502,11 @@ class MetricComputer:
         for m in metrics:
             if m.get("evaluation_type", None) is None:
                 raise ValueError(
-                    f"Metric {m} does not have a value for the key `type`."
+                    f"Metric '{m}' does not have a value for the key `type`."
                 )
             if m.get("metric_value", None) is None:
                 raise ValueError(
-                    f"Metric {m} does not have a value for the key `metric_value`."
+                    f"Metric '{m}' does not have a value for the key `metric_value`."
                 )
 
     def invoke_function(
@@ -532,7 +532,7 @@ class MetricComputer:
                 metric_source = inspect.getsource(metric_function)
                 return metric_function, metric_source
         raise ValueError(
-            f"Metric function with name `{function_name}` was not found in any of the {len(self.function_modules)} provided function modules."
+            f"Metric function with name '{function_name}' was not found in any of the '{len(self.function_modules)}' provided function modules."
         )
 
     def compute_function_metric(
@@ -596,7 +596,7 @@ class MetricComputer:
             return result_list
         else:
             raise ValueError(
-                f"The metric type returned from `{metric_function}` is not a supported type. It must be one of `list`, `int`, `float`, or `dict`. You supplied `{type(metrics_result)}`."
+                f"The metric type returned from '{metric_function}' is not a supported type. It must be one of `list`, `int`, `float`, or `dict`. You supplied '{type(metrics_result)}'."
             )
 
     def compute_rubric_metric(
@@ -614,7 +614,7 @@ class MetricComputer:
             rubrics = json.loads(object.evalsetrun.rubrics)
         if rubric_name not in rubrics:
             raise ValueError(
-                f"You requested a rubric called `{rubric_name}`, but only these were found: {rubrics.keys()}."
+                f"You requested a rubric called '{rubric_name}', but only these were found: {rubrics.keys()}."
             )
 
         prompt = rubrics.get(rubric_name).get("prompt", "")
