@@ -6,9 +6,9 @@ from typing import Annotated
 
 import typer
 
-from flexeval import log_utils, runner, db_utils
-from flexeval.metrics import access
+from flexeval import db_utils, log_utils, runner
 from flexeval.io.parsers import yaml_parser
+from flexeval.metrics import access
 
 logger = logging.getLogger(__name__)
 

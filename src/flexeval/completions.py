@@ -2,14 +2,13 @@
 
 import json
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed, Future
 from collections.abc import Callable
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
-from flexeval.schema.evalrun_schema import EvalRun
-from flexeval.schema.eval_schema import CompletionLlm
 from flexeval import classes
 from flexeval.configuration import completion_functions
-
+from flexeval.schema.eval_schema import CompletionLlm
+from flexeval.schema.evalrun_schema import EvalRun
 
 logger = logging.getLogger(__name__)
 
