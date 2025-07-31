@@ -89,11 +89,13 @@ class RubricItem(MetricItem):
 
 
 class Metrics(BaseModel):
+    """Defines the metrics to be evaluated."""
+
     function: Optional[List[FunctionItem]] = Field(
         None, description="List of function-based metrics to be evaluated."
     )
     rubric: Optional[List[RubricItem]] = Field(
-        None, description="List of rubrics to be evaluated"
+        None, description="List of rubrics to be evaluated."
     )
 
 
@@ -103,12 +105,12 @@ class CompletionLlm(BaseModel):
 
     function_name: str = Field(
         ...,
-        description="Completion function defined in `completion_functions.py`. Must be specified.",
+        description="Completion function defined in `completion_functions.py` or available in the global namespace.",
     )
-    include_system_prompt: Optional[bool] = False
-    kwargs: Optional[Dict[str, Any]] = Field(
+    include_system_prompt: bool = True
+    kwargs: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Additional arguments that will be passed to the completion function. Must correspond to arguments in tne named function.",
+        description="Additional arguments that will be passed to the completion function. Must correspond to arguments in the named function.",
     )
 
 
@@ -120,26 +122,31 @@ class GraderLlm(BaseModel):
         ...,
         description="Function defined in `completion_functions.py`. We're not really completing a conversation, but we ARE asking an LLM to provide a response to an input - in this case, the rubric.",
     )
-    kwargs: Optional[Dict[str, Any]] = Field(
+    kwargs: Dict[str, Any] = Field(
         default_factory=dict,
         description="Additional arguments that will be passed to the completion function. Must correspond to arguments in tne named function.",
     )
 
 
 class Eval(BaseModel):
+    """Defines the evaluation that should be executed.
+
+    The key fields are :attr:`metrics` and :attr:`grader_llm`.
+    """
+
     class Config:
         # TODO don't permit additional fields in Eval
         extra = "allow"
 
     do_completion: bool = Field(
         False,
-        description="DEPRECATED. Flag to determine if completions should be done for each conversation. Set to 'true' if you are testing a new API and want to evaluate the API responses. Set to 'false' (default) if you are evaluating past conversations and do not need to generate new completions.",
+        description="Flag to determine if completions should be done in each thread. Set to 'true' if you are testing a new API and want to evaluate the API responses. Set to 'false' (default) if you are evaluating past conversations and do not need to generate new completions.",
     )
     name: Optional[str] = Field(
         None,
         description="Name of the test suite. Used as metadata only. Does not need to match the key of the entry in the evals.yaml file.",
     )
-    notes: Optional[str] = Field(
+    notes: str = Field(
         "",
         description="Additional notes regarding the configuration. Used as metadata only.",
     )

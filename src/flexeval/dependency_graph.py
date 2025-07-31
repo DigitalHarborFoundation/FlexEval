@@ -1,3 +1,5 @@
+"""Determines how configured metrics depend on each other."""
+
 import json
 from typing import Any
 

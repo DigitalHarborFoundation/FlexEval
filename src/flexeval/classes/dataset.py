@@ -1,3 +1,5 @@
+import os.path
+
 import peewee as pw
 
 from flexeval.classes.base import BaseModel
@@ -45,8 +47,9 @@ class Dataset(BaseModel):
     #   turn_id
 
     def load_data(self):
-        from flexeval import \
-            data_loader  # Local import as this needs to happen after the module is fully loaded
+        from flexeval import (
+            data_loader,
+        )  # Local import as this needs to happen after the module is fully loaded
 
         if self.filename.endswith(".jsonl"):
             self.datatype = "json"
@@ -65,10 +68,9 @@ class Dataset(BaseModel):
                 max_n_conversation_threads=self.max_n_conversation_threads,
                 nb_evaluations_per_thread=self.nb_evaluations_per_thread,
             )
-
         else:
-            raise Exception(
-                f"Each Data File must be either a jsonl or sqlite file. You provided the file: {self.filename}"
+            raise ValueError(
+                f"Unsupported format '{os.path.splitext(self.filename)[-1]}'. Each Data File must be either a jsonl or sqlite file. You provided the file: '{self.filename}'"
             )
 
 

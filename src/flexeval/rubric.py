@@ -1,3 +1,5 @@
+"""Rubric metric IO utilities. Should maybe be moved to :mod:`~flexeval.io`."""
+
 import importlib.resources
 import logging
 from pathlib import Path

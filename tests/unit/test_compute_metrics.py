@@ -47,9 +47,9 @@ def build_evalsetrun(metrics: eval_schema.Metrics):
 
     # build an EvalRunner and an EvalSetRun
     runner = eval_runner.EvalRunner(eval_run)
-    assert (
-        len(eval_set_run.EvalSetRun.select()) == 0
-    ), "Unexpected state; didn't clear tables."
+    assert len(eval_set_run.EvalSetRun.select()) == 0, (
+        "Unexpected state; didn't clear tables."
+    )
     evalsetrun = run_utils.build_eval_set_run(runner)
 
     # build datasets

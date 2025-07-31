@@ -1,3 +1,5 @@
+"""Generic utility functions."""
+
 import datetime
 import hashlib
 
@@ -20,6 +22,15 @@ def generate_hash():
 
 
 def visualize_graph(graph: nx.DiGraph, output_path: str | None = None):
+    """Visualize graphs produced by :class:`~flexeval.compute_metrics.MetricGraphBuilder`.
+
+    Args:
+        graph (nx.DiGraph): The graph
+        output_path (str | None, optional): If not None, will save the graph as an image using :meth:`matplotlib.pyplot.Figure.savefig`.
+
+    Raises:
+        ImportError: If matplotlib is not installed.
+    """
     try:
         import matplotlib.pyplot as plt
     except ImportError:

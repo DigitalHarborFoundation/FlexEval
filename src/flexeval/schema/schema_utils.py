@@ -6,7 +6,7 @@ from pydantic import BeforeValidator, PlainSerializer, PlainValidator
 
 def validate_python_module(value: Any) -> Any:
     if not isinstance(value, types.ModuleType):
-        raise ValueError(f"Expected a module, got a {type(value)}.")
+        raise ValueError(f"Expected a module, got a '{type(value)}'.")
     return value
 
 

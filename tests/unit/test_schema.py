@@ -2,8 +2,7 @@ import unittest
 
 from pydantic import ValidationError
 
-from flexeval.schema import (config_schema, eval_schema, evalrun_schema,
-                             rubric_schema)
+from flexeval.schema import config_schema, eval_schema, evalrun_schema, rubric_schema
 
 
 class TestSchema(unittest.TestCase):

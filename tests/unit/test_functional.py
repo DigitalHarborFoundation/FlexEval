@@ -600,7 +600,6 @@ class TestListStringInputFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
         cls.database_path = cls.runner.get_database_path()
 
     def test_reading_ease_levels_by_level(self):
-
         message_id_to_reading_ease = {
             1: function_metrics.flesch_reading_ease("I need help."),
             2: function_metrics.flesch_reading_ease("Help with what?"),
