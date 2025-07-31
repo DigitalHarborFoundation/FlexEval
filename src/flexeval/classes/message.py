@@ -132,7 +132,7 @@ class Message(BaseModel):
         else:
             return None
 
-    def get_formatted_prompt(self, include_system_prompt=False):
+    def get_formatted_prompt(self, include_system_prompt=False) -> list[dict[str, str]]:
         formatted_prompt = []
         if include_system_prompt:
             formatted_prompt.append({"role": "system", "content": self.system_prompt})

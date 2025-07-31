@@ -1,3 +1,7 @@
+"""Built-in function metrics that can be used in any configuration.
+
+See :attr:`~flexeval.schema.evalrun_schema.EvalRun.add_default_functions`."""
+
 import datetime
 import json
 import logging
@@ -114,7 +118,7 @@ def constant(object: Union[Thread, Turn, Message, ToolCall], **kwargs) -> int | 
 
 def is_role(object: Union[Turn, Message], role: str) -> dict:
     """
-    Return 1 is the role for this Turn or Message matches the passed in role,
+    Returns 1 if the role for this Turn or Message matches the passed in role,
     and 0 otherwise.
 
     Args:
@@ -250,21 +254,24 @@ def count_tool_calls_by_name(object: Union[Thread, Turn, Message, ToolCall]) -> 
     return toolcall_counts
 
 
-def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list:
-    """
-    Extracts the values of all numeric ToolCall parameter inputs, with
-    metric_name being the name of the corresponding parameter.
+def count_numeric_tool_call_params_by_name(toolcall: ToolCall) -> list[dict]:
+    """Extracts the values of all numeric ToolCall parameter inputs,
+    with metric_name being the name of the corresponding parameter.
+
+    Args:
+        toolcall (ToolCall): The tool call.
+
+    Returns:
+        list[dict]: List of key -> numeric value pairs in the tool call.
     """
     results = []
     toolcall_args = json.loads(toolcall.args)
     for arg_name, arg_value in toolcall_args.items():
         try:
             numeric_val = float(arg_value)
-            # key = toolcall.function_name + "_" + arg_name
             results.append({"name": arg_name, "value": numeric_val})
-        except:
+        except ValueError:
             pass
-
     return results
 
 
@@ -512,8 +519,6 @@ def count_errors(object: Union[Thread, Turn, Message, ToolCall]) -> dict:
         "javascript_errors": 1
     }
     """
-    x = 1
-
     if isinstance(object, ToolCall):
         return {
             i: 1

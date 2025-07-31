@@ -1,3 +1,5 @@
+"""Dataset loading functions. Maybe should move to :mod:`~flexeval.io`."""
+
 import json
 import logging
 import pathlib
@@ -39,7 +41,7 @@ def load_jsonl(
             )
         else:
             logger.debug(
-                f"You requested up to {max_n_conversation_threads} conversations but only {len(all_lines)} are present in Jsonl dataset at '{filename}'."
+                f"You requested up to '{max_n_conversation_threads}' conversations but only '{len(all_lines)}' are present in Jsonl dataset at '{filename}'."
             )
             selected_thread_ids = list(range(len(all_lines)))
 
@@ -63,19 +65,22 @@ def load_jsonl(
 
                     # Context
                     context = []
-                    # Get system prompt used in the thread - assuming only 1
-                    system_prompt = [
-                        i["content"]
-                        for i in json.loads(thread)["input"]
-                        if i["role"] == "system"
-                    ][0]
+                    thread_input = json.loads(thread)["input"]
 
-                    # Add the system prompt as context
-                    context.append({"role": "system", "content": system_prompt})
+                    # Get system prompt used in the thread - assuming only 1
+                    for message in thread_input:
+                        if message["role"] == "system":
+                            system_prompt = message["content"]
+                            break
+                    else:
+                        system_prompt = None
+                    if system_prompt is not None:
+                        # Add the system prompt as context
+                        context.append({"role": "system", "content": system_prompt})
 
                     # Create messages
                     index_in_thread = 0
-                    for message in json.loads(thread)["input"]:
+                    for message in thread_input:
                         role = message.get("role", None)
                         if role != "system":
                             # System message shouldn't be added as a separate message
@@ -139,7 +144,7 @@ def load_langgraph_sqlite(
             selected_thread_ids = rd.sample(thread_ids, max_n_conversation_threads)
         else:
             logger.debug(
-                f"You requested up to {max_n_conversation_threads} conversations but only {nb_threads} are present in Sqlite dataset at '{filename}'."
+                f"You requested up to '{max_n_conversation_threads}' conversations but only '{nb_threads}' are present in Sqlite dataset at '{filename}'."
             )
             selected_thread_ids = thread_ids
 
@@ -249,7 +254,7 @@ def load_langgraph_sqlite(
                             role = "assistant"
                         else:
                             raise Exception(
-                                f"Unhandled input condition! here is the metadata: {metadata}"
+                                f"Unhandled input condition! Source not 'loop' or 'input'. Metadata: {metadata}"
                             )
                         # Add system prompt as first thing in context if not already present
                         if len(context) == 0:
@@ -382,12 +387,10 @@ def load_langgraph_sqlite(
 
                 ## Match up tool calls and make an object for each match
                 for tool_call_id, tool_call_vals in tool_calls_dict.items():
-                    # DEBUG
-                    # tool_call_id is defined
-
-                    assert (
-                        tool_call_id in tool_responses_dict
-                    ), f"Found a tool call without a tool response! id: {tool_call_id}"
+                    if tool_call_id not in tool_responses_dict:
+                        raise ValueError(
+                            f"Found a tool call without a tool response! id='{tool_call_id}'"
+                        )
                     # get matching message - should now be accessible through thread now?
                     matching_message = [
                         m for m in thread.messages if tool_call_id in m.tool_call_ids

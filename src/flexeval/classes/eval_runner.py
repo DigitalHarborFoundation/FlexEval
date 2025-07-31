@@ -1,14 +1,11 @@
-import io
 import logging
-import os
-import unittest
 from datetime import datetime
 from pathlib import Path
 
 import dotenv
 from peewee import SqliteDatabase
 
-from flexeval import db_utils, dependency_graph, validate
+from flexeval import db_utils, dependency_graph
 from flexeval.schema import EvalRun
 
 logger = logging.getLogger(__name__)
@@ -91,7 +88,7 @@ class EvalRunner:
 
     def load_env(self):
         env_filepath = self.evalrun.config.env_filepath
-        if env_filepath is not None and env_filepath.strip() != "":
+        if env_filepath is not None and str(env_filepath).strip() != "":
             if not env_filepath.exists():
                 raise ValueError(
                     f"Environment file not present at configured path '{env_filepath}'."
@@ -130,12 +127,12 @@ class EvalRunner:
                     old_value = getattr(self.evalrun.config, field_name)
                     new_value = model_extra[field_name]
                     self.logger.info(
-                        f"Updating configuration setting: {field_name}={new_value} (old={old_value})"
+                        f"Updating configuration setting: '{field_name}'='{new_value}' (old='{old_value}')"
                     )
                     setattr(self.evalrun.config, field_name, new_value)
                 else:
                     self.logger.warning(
-                        f"Unknown configuration field {field_name} was ignored."
+                        f"Unknown configuration field '{field_name}' was ignored."
                     )
 
         # TODO verify that applying defaults is done solely by pydantic and this step is no longer necessary
@@ -146,6 +143,12 @@ class EvalRunner:
         self.metrics_graph_ordered_list = dependency_graph.create_metrics_graph(
             self.evalrun.eval.metrics
         )
+        # validate: completion function defined
+        if len(self.metrics_graph_ordered_list) > 0:
+            if self.evalrun.eval.grader_llm is None:
+                self.logger.warning(
+                    f"'{len(self.metrics_graph_ordered_list)}' metrics defined, but no grader LLM defined."
+                )
 
     def shutdown_logging(self):
         # remove logging handler so we don't get repeat logs if we call run() twice

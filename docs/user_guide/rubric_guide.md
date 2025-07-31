@@ -1,8 +1,18 @@
-# Guidelines on Writing and Using Rubrics in FlexEval
+(rubric_guide)=
 
-FlexEval allows users to write their own rubrics to guide the grader LLM in grading conversational turns or entire conversations to approximate human judgment. To use this functionality, users need to 1) write rubrics in `configuration/rubric_metrics`.yaml, and 2) set test specifications for the rubric metric in `configuration/eval`.yaml. Read below for more details.
+# Rubric Guide
 
-## A General Template for FlexEval Rubrics
+Note: this guide has not yet been updated for the current version of FlexEval. Its advice may still be useful.
+
+FlexEval allows users to write their own rubrics to guide the grader LLM in grading conversational turns or entire conversations to approximate human judgment. To use this functionality, users need to 
+
+ 1. Write rubrics in a YAML file. (Examples can be viewed in {ghfile}`rubric_metrics.yaml <src/flexeval/configuration/rubric_metrics.yaml>` [{download}`raw <../../src/flexeval/configuration/rubric_metrics.yaml>`] in {mod}`flexeval.configuration`.)
+ 2. Alternately, create a {class}`~flexeval.schema.rubric_schema.RubricsCollection`.
+ 2. Add that path or collection to {class}`~flexeval.schema.evalrun_schema.EvalRun`'s {attr}`~flexeval.schema.evalrun_schema.EvalRun.rubric_paths`.
+
+Here, we offer guidelines on writing and using rubrics in FlexEval.
+
+## A general template for FlexEval rubrics
 
 A rubric in FlexEval typically comprises two main sections: "prompt" and "choice scores". In "prompt", users describe the task for the grader LLM, specify what data should be included, define the output format, and provide additional instructions, guidelines, or notes if necessary. In the section of "choice scores", users provide a mapping of output choices (e.g., "Yes", "No") to their scores (e.g., 1, 0). These scores are logged as metrics in evaluation results. Below is a typical rubric template used in FlexEval:
 
@@ -17,7 +27,7 @@ The name of your rubric:
 
     Data:
 	Give some background information about the data first (e.g., "The data includes a student message extracted from a conversation between the student and a tutor...").
-	Then specify what you want to include as data using key words (wrapped in curly braces, e.g., {turn}) in the data block marked by [BEGIN DATA] and [END DATA]. For more details about these key words, proceed to read "Key Words in Data Block".
+	Then specify what you want to include as data using fill words (wrapped in curly braces, e.g., {turn}) in the data block marked by [BEGIN DATA] and [END DATA]. We provide more details about the available fill words in the next section.
 
       [BEGIN DATA]
       ***
@@ -39,9 +49,9 @@ The name of your rubric:
 
 ```
 
-## Key Words in Data Block
+## Fill words in FlexEval templates
 
-Key words in the data block as demonstrated in the template above are used for populating rubrics with corresponding data. They are wrapped in curly braces (e.g., {conversation}, {turn}) to denote what should be included in the data. These key words are automatically filled out and graded when running the evals. There are four key words that you can use:
+Fill words in the data block – as demonstrated in the template above – are used for populating rubric templates with data from the conversation or message being evaluated. They are wrapped in curly braces (e.g., `{conversation}`, `{turn}`) to denote what should be included in the filled rubric. These fill words are automatically replaced and graded when running the evals. There are four fill words that you can use:
 
 - {conversation}: the whole conversation which may contain multiple conversational turns, including the previous and current entries
 - {context}: the previous entries that serve as the contextual information for the current entry
@@ -71,3 +81,7 @@ In configuration/evals.yaml, you can use two parameters to specify how the rubri
       metric_name: assistant
       metric_min_value: 1
 ```
+
+## Further reading
+
+ * Hamel Husain's ["Creating a LLM-as-a-Judge That Drives Business Results"](https://hamel.dev/blog/posts/llm-judge/index.html) contains useful advice on the utility of rubrics and how to iteratively craft effective rubrics.

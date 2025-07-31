@@ -1,3 +1,4 @@
+import json
 import unittest
 from datetime import datetime
 from typing import Annotated
@@ -7,8 +8,10 @@ from langgraph.graph import StateGraph
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
-from flexeval import run_utils
+from flexeval import run_utils, data_loader
 from flexeval.classes.eval_runner import EvalRunner
+from flexeval.classes.eval_set_run import EvalSetRun
+from flexeval.classes.dataset import Dataset
 from flexeval.io.parsers import yaml_parser
 from flexeval.schema import evalrun_schema
 from tests.unit import mixins
@@ -36,6 +39,26 @@ class TestDataLoader(mixins.DotenvMixin, unittest.TestCase):
         for dataset in eval_set_run.datasets:
             dataset.load_data()
 
+    def test_load_jsonl_nosystem(self):
+        datasets = [
+            "tests/data/simple.jsonl",
+            "tests/data/simple_nosystem.jsonl",
+        ]
+        evalsetrun = EvalSetRun.create(
+            dataset_files=json.dumps(datasets),
+            metrics="",
+            metrics_graph_ordered_list="",
+            do_completion=False,
+        )
+        for dataset_filepath in evalsetrun.get_datasets():
+            dataset = Dataset.create(
+                evalsetrun=evalsetrun,
+                filename=dataset_filepath,
+            )
+            dataset.load_data()
+            # This is redundant, but just in case:
+            data_loader.load_jsonl(dataset=dataset, filename=dataset_filepath)
+
 
 class State(TypedDict):
     # TODO move this to some kind of langgraph utility file
@@ -46,7 +69,6 @@ class TestLanggraphDataLoading(
     mixins.TempPathMixin, mixins.DotenvMixin, unittest.TestCase
 ):
     def test_load_langgraph(self):
-        data_filepath = "tests/data/simple.jsonl"
         langgraph_db_path = self.temp_path / "data.db"
 
         def chatbot(state: State):
@@ -66,10 +88,8 @@ class TestLanggraphDataLoading(
 
                 config = {"configurable": {"thread_id": datetime.now().isoformat()}}
 
-                response = graph.invoke(
-                    {"messages": ["factor 190,913,277,151"]}, config
-                )
-                response = graph.invoke(
+                graph.invoke({"messages": ["factor 190,913,277,151"]}, config)
+                graph.invoke(
                     {"messages": ["print them again but reverse the order"]}, config
                 )
         self.assertTrue(langgraph_db_path.exists())

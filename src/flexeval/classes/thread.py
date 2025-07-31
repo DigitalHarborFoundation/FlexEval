@@ -6,7 +6,7 @@ from flexeval.classes.eval_set_run import EvalSetRun
 
 
 class Thread(BaseModel):
-    """Class for holding a single thread / converseation
+    """Class for holding a single thread / conversation
     This corresponds to a single row in a jsonl file
     or a single 'thread_id' in a langgraph checkpoint database"""
 
@@ -23,16 +23,6 @@ class Thread(BaseModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.metrics_to_evaluate = []
-
-    def get_content(self):
-        """
-        Content is a list of dictionaries where each dictionary contains the
-        role and content of messages and tool calls in the thread
-        """
-        content = []
-        for turn in self.turns:
-            content = content + turn.get_content()
-        return content
 
     # TODO - test this!
     def format_input_for_rubric(self):

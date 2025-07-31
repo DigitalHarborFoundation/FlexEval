@@ -32,7 +32,7 @@ class Turn(BaseModel):
         super().__init__(**kwargs)
         self.metrics_to_evaluate = []
 
-    def get_completion(self, include_system_prompt=False):
+    def get_completion(self):
         # only get a completion if this is the final turn - we probably don't want to branch from mid-conversation
         if self.is_final_turn_in_input:
             completion_config = json.loads(self.evalsetrun.completion_llm)
@@ -120,7 +120,15 @@ class Turn(BaseModel):
     def get_formatted_prompt(self, include_system_prompt=False):
         formatted_prompt = []
         if include_system_prompt:
-            formatted_prompt.append({"role": "system", "content": self.system_prompt})
+            if hasattr(self, "system_prompt"):
+                # TODO this is a bit hacky; it allows for an override of the system prompt by setting it on the Turn object
+                system_prompt = self.system_prompt
+            else:
+                system_prompt = self.thread.system_prompt
+            # if system prompt not available in this thread, we have nothing to include
+            if system_prompt is not None:
+                formatted_prompt.append({"role": "system", "content": system_prompt})
+
         # context = json.loads(self.context)
         context = self.get_context()
 
@@ -128,8 +136,6 @@ class Turn(BaseModel):
             formatted_prompt += context  # TODO - we might just want a subset of this
 
         formatted_prompt += self.get_content()
-        # for t in json.loads(self.turn):
-        #     formatted_prompt.append({"role": t["role"], "content": t["content"]})
         return formatted_prompt
 
     def get_content(self, include_toolcalls=True, include_tool_messages=True):
@@ -151,10 +157,9 @@ class Turn(BaseModel):
         return content
 
     def format_input_for_rubric(
-        self, include_system_prompt=False, include_tool_messages=False
+        self, include_system_prompt: bool = False, include_tool_messages: bool = False
     ):
         """This is the 'public' method that returns the info for this Turn"""
-        input = self.get_formatted_prompt()
         output_minus_completion = ""
         if include_system_prompt:
             output_minus_completion.append(

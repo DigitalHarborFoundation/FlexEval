@@ -1,6 +1,0 @@
-- maybe min_value and max_value are both optional because perhaps downstream calculation just dependencies
-on the value itself (or the metric being run), rather than some threshold? 
-- add some kind of conditional to say that the rubric should only be run on the FULL (not necessarily 'completed' conversation)
-- allow relative or absolute paths in data
-
-

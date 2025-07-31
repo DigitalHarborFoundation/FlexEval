@@ -32,4 +32,9 @@ class Rubric(BaseModel):
 
 
 class RubricsCollection(BaseModel):
-    rubrics: dict[str, Rubric] = Field(default_factory=dict, description="")
+    """Collection of rubrics that can be used as :class:`~flexeval.schema.eval_schema.RubricItem`\s."""
+
+    rubrics: dict[str, Rubric] = Field(
+        default_factory=dict,
+        description="Mapping of rubric names to Rubrics. The rubric names are used for matching metrics to specific rubrics.",
+    )

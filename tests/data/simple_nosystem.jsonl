@@ -1,0 +1,2 @@
+{"input":[{"role":"user", "content": "I need help."}, {"role":"assistant", "content": "Help with what?"}, {"role":"user", "content": "My homework."}]}
+{"input": [{"role": "user", "content": "Hi, Nice to meet you!"}, {"role": "assistant", "content": "Nice to meet you, too! How can I help you today?"}, {"role": "user", "content": "How do I find cube roots by hand?"}]}
