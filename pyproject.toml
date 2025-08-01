@@ -1,6 +1,6 @@
 [project]
 name = "python-flexeval"
-version = "0.1.5"
+dynamic = ["version"]
 description = "FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems."
 authors = [
   { name="S. Thomas Christie" },
@@ -52,6 +52,7 @@ Issues = "https://github.com/DigitalHarborFoundation/FlexEval/issues"
 
 [dependency-groups]
 dev = [
+    "hatch>=1.14.1",
     "jupyter>=1.1.1",
     "matplotlib>=3.10.3",
     "pre-commit>=4.2.0",
@@ -81,3 +82,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flexeval"]
+
+[tool.hatch.version]
+path = "src/flexeval/__about__.py"

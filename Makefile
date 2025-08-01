@@ -23,6 +23,15 @@ docclean:
 unittest:
 	@uv run python -m unittest discover -s tests.unit
 
+get-version:
+	@uv run hatch version
+
+set-version:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "VERSION is not set. Usage: make set-version VERSION=x.y.z"; \
+		exit 1; \
+	fi
+	@uv run hatch version "$(VERSION)"
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
