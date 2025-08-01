@@ -1,7 +1,9 @@
 # FlexEval LLM Evals
 
+[![PyPi](https://img.shields.io/pypi/v/python-flexeval)](https://pypi.org/project/python-flexeval/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12729993.svg)](https://doi.org/10.5281/zenodo.12729993)
 [![License](https://img.shields.io/github/license/DigitalHarborFoundation/FlexEval)](https://github.com/DigitalHarborFoundation/FlexEval/blob/main/LICENSE)
+[![GitHub issues](https://img.shields.io/badge/issue_tracking-github-blue.svg)](https://github.com/DigitalHarborFoundation/FlexEval/issues)
 
 ![FlexEval banner](https://raw.githubusercontent.com/DigitalHarborFoundation/FlexEval/refs/heads/main/docs/_static/flexeval_banner.svg)
 
