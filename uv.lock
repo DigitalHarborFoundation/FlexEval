@@ -4059,16 +4059,16 @@ wheels = [
 
 [[package]]
 name = "textstat"
-version = "0.7.7"
+version = "0.7.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cmudict" },
     { name = "pyphen" },
     { name = "setuptools" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/df/a9/5999c082bd57df27634434fd130e043a8b0f5711562dbf1df81a59cbea71/textstat-0.7.7.tar.gz", hash = "sha256:290034cd7d3144f3b967b70fb70820bdc5531a7831baebfd7d0347d3422f48c7", size = 137297, upload-time = "2025-05-11T09:51:57.837Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f1/24/a7ff3572af79a905197a6022e11ded12d3231fbf50f07dd026eee5916e8d/textstat-0.7.8.tar.gz", hash = "sha256:1839f489fe6a59f73ab3948a1f3c38f7f12d1919b71b9f819c0bbd68a7c60758", size = 164785, upload-time = "2025-07-22T08:45:55.163Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/90/7c/c5506dab41cc67acef5e6554bdac0bc9953e7f3e91cf6103cbdff200d1c5/textstat-0.7.7-py3-none-any.whl", hash = "sha256:103296f6a6f7451a4f56f78a5fd2ff184574a80e63886229f988cb4cc688270b", size = 175336, upload-time = "2025-05-11T09:51:56.191Z" },
+    { url = "https://files.pythonhosted.org/packages/e2/db/e1c8e5afd18f712ba5426ec4c6068afd4ad88dc50ec765c4f6939d828341/textstat-0.7.8-py3-none-any.whl", hash = "sha256:26960cbe653e58761ff68d2e030cfb18e48f06d1c952cb39d169d898f6b3db2c", size = 239112, upload-time = "2025-07-22T08:45:53.927Z" },
 ]
 
 [[package]]
