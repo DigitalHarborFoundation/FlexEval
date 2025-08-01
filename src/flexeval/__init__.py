@@ -4,8 +4,10 @@ This top-level import exposes the :func:`~flexeval.runner.run` method."""
 
 from flexeval import metrics
 from flexeval.runner import run
+from .__about__ import __version__
 
 __all__ = [
     "metrics",
     "run",
+    "__version__",
 ]

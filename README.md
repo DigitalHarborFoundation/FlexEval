@@ -1,9 +1,11 @@
 # FlexEval LLM Evals
 
+[![PyPi](https://img.shields.io/pypi/v/python-flexeval)](https://pypi.org/project/python-flexeval/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12729993.svg)](https://doi.org/10.5281/zenodo.12729993)
 [![License](https://img.shields.io/github/license/DigitalHarborFoundation/FlexEval)](https://github.com/DigitalHarborFoundation/FlexEval/blob/main/LICENSE)
+[![GitHub issues](https://img.shields.io/badge/issue_tracking-github-blue.svg)](https://github.com/DigitalHarborFoundation/FlexEval/issues)
 
-![FlexEval banner](/docs/_static/flexeval_banner.svg)
+![FlexEval banner](https://raw.githubusercontent.com/DigitalHarborFoundation/FlexEval/refs/heads/main/docs/_static/flexeval_banner.svg)
 
 FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems.
 
@@ -33,7 +35,7 @@ flexeval.run(eval_run)
 
 This example computes [Flesch reading ease](https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests#Flesch_reading_ease) for every turn in a list of conversations provided in JSONL format. The metric values are stored in an SQLite database called `eval_results.db`.
 
-See additional usage examples in the [vignettes](/vignettes).
+See additional usage examples in the [vignettes](https://github.com/DigitalHarborFoundation/FlexEval/tree/main/vignettes).
 
 ## Installation
 
@@ -57,7 +59,7 @@ FlexEval is designed to be "batteries included" for many basic use cases. It sup
 - a set of useful rubrics
 - a set of useful Python functions
 
-Evaluation results are saved in an SQLite database. See the [Metric Analysis](/vignettes/metric_analysis.ipynb) vignette for a sample analysis demonstrating the structure and utility of the data saved by FlexEval.
+Evaluation results are saved in an SQLite database. See the [Metric Analysis](https://digitalharborfoundation.github.io/FlexEval/generated/vignettes/metric_analysis.html) vignette for a sample analysis demonstrating the structure and utility of the data saved by FlexEval.
 
 
 Read more in the [Getting Started](https://digitalharborfoundation.github.io/FlexEval/getting_started.html) guide.
@@ -75,4 +77,4 @@ Pull requests are welcome. Feel free to contribute:
 - Bug fixes
 - New features
 
-See [DEVELOPMENT.md](DEVELOPMENT.md).
+See [DEVELOPMENT.md](https://github.com/DigitalHarborFoundation/FlexEval/tree/main/DEVELOPMENT.md).
