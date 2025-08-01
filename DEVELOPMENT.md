@@ -117,7 +117,6 @@ export UV_ENV_FILE=.env
 uv run python -m flexeval --eval_name {eval_suite_name}
 ```
 
-
 ## Documentation
 
 We use Sphinx to generate the documentation website.
@@ -134,3 +133,19 @@ You can also just build the site directly:
 ```bash
 make html
 ```
+
+## Releasing a new version
+
+ 1. Create and merge a PR from `dev` to `main`.
+ 2. Check that the GitHub Actions jobs complete successfully (particularly the push to TestPyPI).
+ 3. Create a new release: <https://github.com/DigitalHarborFoundation/FlexEval/releases/new>
+     1. Set release title to "vX.X.X", with the appropriate version from the `pyproject.toml` file.
+     2. Create a new tag "vX.X.X", with the appropriate version from the `pyproject.toml` file.
+     3. Click "Generate release notes" (and make any additional edits if necessary).
+     4. Click "Publish release".
+ 4. Verify that the GitHub Actions completes successfully and that the new release is available on PyPI.
+
+A few notes:
+ - This process is overly manual at the moment. Plausibly, we should update the GitHub Action to push to TestPyPI for every commit on any PR that targets `main` (but not any tags). Then, only push to PyPI on tags.
+ - We could in the future automatically make a release using the GitHub API when a PR is merged to `main`. For now, this manual process requires us to validate before each release.
+ - We should potentially add a new step to the PyPI release that installs `python-flexeval` from PyPI and runs the *.py vignettes, to ensure the new release is actually installable via `pip`.

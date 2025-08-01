@@ -1,6 +1,6 @@
 [project]
 name = "python-flexeval"
-version = "0.1.4"
+version = "0.1.5"
 description = "FlexEval is a tool for designing custom metrics, completion functions, and LLM-graded rubrics for evaluating the behavior of LLM-powered systems."
 authors = [
   { name="S. Thomas Christie" },
