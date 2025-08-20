@@ -61,7 +61,7 @@ class MetricItem(BaseModel):
         description="The function to call or name of rubric to use to compute this metric.",
     )
     depends_on: Optional[List[DependsOnItem]] = Field(
-        default_factory=list,
+        [],
         description="List of dependencies that must be satisfied for this metric to be computed.",
     )
     # TODO why is metric_level optional? Should likely make it required
