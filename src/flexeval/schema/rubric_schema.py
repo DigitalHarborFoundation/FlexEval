@@ -32,7 +32,7 @@ class Rubric(BaseModel):
 
 
 class RubricsCollection(BaseModel):
-    """Collection of rubrics that can be used as :class:`~flexeval.schema.eval_schema.RubricItem`\s."""
+    """Collection of rubrics that can be used as :class:`~flexeval.schema.eval_schema.RubricItem` s."""
 
     rubrics: dict[str, Rubric] = Field(
         default_factory=dict,
