@@ -14,6 +14,11 @@ from flexeval.classes.turn import Turn
 DATABASE_TABLES = [EvalSetRun, Dataset, Thread, Turn, Message, ToolCall, Metric]
 
 
+def ensure_database(database_path: str):
+    if not classes_base.database.is_connection_usable():
+        initialize_database(database_path)
+
+
 def initialize_database(database_path: str, clear_tables: bool = False):
     classes_base.database.init(database_path)
     # classes_base.database.start()
@@ -34,5 +39,7 @@ def bind_to_database(database_path: str) -> pw.Database:
     new_database = classes_base.create_sqlite_database(database_path)
     new_database.bind(DATABASE_TABLES)
     # Verify the binding worked by checking one of the models
-    assert classes_base.BaseModel._meta.database == new_database
+    assert classes_base.BaseModel._meta.database == new_database, (
+        f"Binding to '{database_path}' failed."
+    )
     return new_database

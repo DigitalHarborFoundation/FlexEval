@@ -122,8 +122,8 @@ def is_role(object: Union[Turn, Message], role: str) -> dict:
     and 0 otherwise.
 
     Args:
-    object: the Turn or Message
-    role: a string with the desired role to check against
+        object: the Turn or Message
+        role: a string with the desired role to check against
     """
     return {role: int(object.role == role)}
 
