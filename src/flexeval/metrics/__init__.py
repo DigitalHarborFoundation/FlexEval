@@ -1,4 +1,4 @@
-"""Utility functions for accessing metrics."""
+"""Utility functions for working with metrics."""
 
 from flexeval.metrics import access, save
 

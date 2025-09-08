@@ -89,6 +89,10 @@ intersphinx_mapping = {
     "pydantic": ("https://docs.pydantic.dev/latest", None),
 }
 
+docutils_conf = {
+    "line-length-limit": None,  # Disable docutils line-length limit
+}
+
 
 def linkcode_resolve(domain, info):
     """
@@ -158,6 +162,10 @@ myst_enable_extensions = [
     "html_image",
 ]
 myst_url_schemes = ("http", "https", "mailto")
+
+# myst-nb configuration
+nb_execution_mode = "off"  # Don't re-execute, use existing outputs
+nb_merge_streams = True
 
 autosummary_generate = True
 autodoc_typehints = "signature"

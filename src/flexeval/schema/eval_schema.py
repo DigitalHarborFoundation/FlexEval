@@ -16,6 +16,8 @@ MetricLevel = Literal["Message", "Turn", "Thread", "ToolCall"]
 
 
 class DependsOnItem(BaseModel):
+    """Defines a metric dependency."""
+
     class Config:
         extra = "forbid"
 
@@ -56,6 +58,8 @@ class DependsOnItem(BaseModel):
 
 
 class MetricItem(BaseModel):
+    "Defines a metric."
+
     name: str = Field(
         ...,
         description="The function to call or name of rubric to use to compute this metric.",
@@ -72,6 +76,8 @@ class MetricItem(BaseModel):
 
 
 class FunctionItem(MetricItem):
+    """Defines a metric computed from a Python function."""
+
     kwargs: schema_utils.OptionalDict = Field(
         default_factory=dict,
         description="Keyword arguments for the function. Each key must correspond to an argument in the function. Extra keys will cause an error.",
@@ -80,6 +86,8 @@ class FunctionItem(MetricItem):
 
 
 class RubricItem(MetricItem):
+    """Defines a metric computed from a rubric."""
+
     # TODO is RubricItem.kwargs actually used?
     kwargs: Optional[Dict[str, Any]] = Field(
         default_factory=dict,
@@ -115,6 +123,8 @@ class CompletionLlm(BaseModel):
 
 
 class GraderLlm(BaseModel):
+    """Defines the LLM used for evaluating rubrics."""
+
     class Config:
         extra = "forbid"
 

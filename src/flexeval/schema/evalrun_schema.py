@@ -37,7 +37,7 @@ class FileDataSource(DataSource):
 
 
 class FunctionsCollection(BaseModel):
-    """Collection of functions that can be used as :class:`~flexeval.schema.eval_schema.FunctionItem`\s."""
+    """Collection of functions that can be used as :class:`~flexeval.schema.eval_schema.FunctionItem` s."""
 
     functions: list[Callable] = Field(
         default_factory=list,

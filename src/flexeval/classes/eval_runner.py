@@ -111,7 +111,7 @@ class EvalRunner:
 
     def load_evaluation_settings(self):
         """This function parses our eval suite and puts it in the data structure we'll need
-        for easy use at run-time
+        for easy use at run-time.
         """
         # if the current eval has a 'config' entry, overwrite configuration options with its entries
         if (
