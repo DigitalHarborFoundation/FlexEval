@@ -184,4 +184,5 @@ src/llm-evals/evals_sync/
 
 # Docs
 docs/generated
+jupyter_execute/
 
