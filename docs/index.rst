@@ -1,10 +1,11 @@
-.. FlexEval documentation master file, created by
-   sphinx-quickstart on Thu Jul  3 12:21:33 2025.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. FlexEval documentation master file, originally created by sphinx-quickstart on 2025 July 3 12:21:33.
 
 FlexEval documentation
 ======================
+
+.. image:: https://img.shields.io/pypi/v/python-flexeval
+   :target: https://pypi.org/project/python-flexeval/
+   :alt: PyPI
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.12729993.svg
    :target: https://doi.org/10.5281/zenodo.12729993
@@ -13,6 +14,10 @@ FlexEval documentation
 .. image:: https://img.shields.io/github/license/DigitalHarborFoundation/FlexEval
    :target: https://github.com/DigitalHarborFoundation/FlexEval/blob/main/LICENSE
    :alt: FlexEval license
+
+.. image:: https://img.shields.io/badge/issue_tracking-github-blue.svg
+   :target: https://github.com/DigitalHarborFoundation/FlexEval/issues
+   :alt: Issue tracking on GitHub
 
 .. raw:: html
 

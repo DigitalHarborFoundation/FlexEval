@@ -44,7 +44,7 @@ def extract_vignette_path_strings(file_contents: str) -> list[str]:
 
 def write_if_changed(path: Path, old_content: str, new_content: str):
     if path.exists():
-        old_content = path.read_text()
+        # check if the file contents are different
         if old_content == new_content:
             return  # No change — don't touch file
     path.write_text(new_content)
@@ -67,33 +67,30 @@ def generate_custom_stubs(app):
 
     for vignette_file in vignettes_dir.glob("*"):
         stem = vignette_file.stem
-        rst_file = output_dir / f"{stem}.rst"
+        target_file = output_dir / f"{stem}.rst"
+        if vignette_file.suffix == ".ipynb":
+            target_file = output_dir / f"{stem}.ipynb"
 
         current_contents = ""
-        if rst_file.exists():
-            current_contents = rst_file.read_text()
+        if target_file.exists():
+            current_contents = target_file.read_text()
 
         if vignette_file.suffix == ".py":
-            generate_python_stub(src_dir, vignette_file, rst_file, current_contents)
+            generate_python_stub(src_dir, vignette_file, target_file, current_contents)
         elif vignette_file.suffix == ".ipynb":
-            generate_ipynb_stub(src_dir, vignette_file, rst_file, current_contents)
+            generate_ipynb_stub(vignette_file, target_file, current_contents)
         elif vignette_file.suffix == ".md":
-            generate_md_stub(src_dir, vignette_file, rst_file, current_contents)
+            generate_md_stub(src_dir, vignette_file, target_file, current_contents)
         else:
             logger.info(
                 f"Unsupported file type {vignette_file.suffix}; skipping while creating vignette stubs."
             )
 
 
-def generate_ipynb_stub(
-    src_dir: Path, ipynb_file: Path, rst_file: Path, current_contents: str
-):
-    new_contents = f""".. _{ipynb_file.stem}:
-
-.. include:: ../../../{ipynb_file.relative_to(src_dir.parent)}
-   :parser: myst_nb.docutils_
-"""
-    write_if_changed(rst_file, current_contents, new_contents)
+def generate_ipynb_stub(ipynb_file: Path, target_file: Path, current_contents: str):
+    # unlike the other file types, we just copy ipynb files
+    new_contents = ipynb_file.read_text()
+    write_if_changed(target_file, current_contents, new_contents)
 
 
 def generate_md_stub(
