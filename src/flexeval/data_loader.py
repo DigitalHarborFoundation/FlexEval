@@ -54,18 +54,13 @@ def load_jsonl(
                 max(1, nb_evaluations_per_thread)
             ):  # duplicate stored threads for averaged evaluation results
                 if thread_id in selected_thread_ids:
-                    thread_object = Thread.create(
-                        evalsetrun=dataset.evalsetrun,
-                        dataset=dataset,
-                        jsonl_thread_id=thread_id,
-                        eval_run_thread_id=str(thread_id)
-                        + "_"
-                        + str(thread_eval_run_id),
-                    )
+                    thread_json = json.loads(thread)
+                    # extract any metadata
+                    thread_metadata = thread_json.copy()
+                    del thread_metadata["input"]
 
-                    # Context
                     context = []
-                    thread_input = json.loads(thread)["input"]
+                    thread_input = thread_json["input"]
 
                     # Get system prompt used in the thread - assuming only 1
                     for message in thread_input:
@@ -78,15 +73,35 @@ def load_jsonl(
                         # Add the system prompt as context
                         context.append({"role": "system", "content": system_prompt})
 
+                    thread_object: Thread = Thread.create(
+                        evalsetrun=dataset.evalsetrun,
+                        dataset=dataset,
+                        jsonl_thread_id=thread_id,
+                        eval_run_thread_id=str(thread_id)
+                        + "_"
+                        + str(thread_eval_run_id),
+                        system_prompt=system_prompt,
+                        metadata=json.dumps(thread_metadata),
+                    )
+
                     # Create messages
                     index_in_thread = 0
                     for message in thread_input:
+                        if not isinstance(message, dict):
+                            raise ValueError(
+                                f"Can't load unknown object type; expected dict. Check JSONL format: {message}"
+                            )
                         role = message.get("role", None)
                         if role != "system":
                             # System message shouldn't be added as a separate message
                             system_prompt_for_this_message = ""
                             if role != "user":
                                 system_prompt_for_this_message = system_prompt
+                            message_metadata = message.copy()
+                            if "content" in message_metadata:
+                                del message_metadata["content"]
+                            if "role" in message_metadata:
+                                del message_metadata["role"]
                             Message.create(
                                 evalsetrun=dataset.evalsetrun,
                                 dataset=dataset,
@@ -95,9 +110,9 @@ def load_jsonl(
                                 role=role,
                                 content=message.get("content", None),
                                 context=json.dumps(context),
-                                metadata=message.get("metadata", None),
                                 is_flexeval_completion=False,
                                 system_prompt=system_prompt_for_this_message,
+                                metadata=json.dumps(message_metadata),
                             )
                             # Update context
                             context.append(

@@ -3,6 +3,7 @@ import peewee as pw
 from flexeval.classes.base import BaseModel
 from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_set_run import EvalSetRun
+from flexeval.classes.jsonview import JsonView
 
 
 class Thread(BaseModel):
@@ -19,6 +20,9 @@ class Thread(BaseModel):
     jsonl_thread_id = pw.TextField(null=True)
 
     system_prompt = pw.TextField(null=True)
+
+    metadata = pw.TextField(default="{}", null=False)
+    metadata_dict = JsonView("metadata")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

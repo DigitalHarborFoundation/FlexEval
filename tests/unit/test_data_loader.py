@@ -59,6 +59,39 @@ class TestDataLoader(mixins.DotenvMixin, unittest.TestCase):
             # This is redundant, but just in case:
             data_loader.load_jsonl(dataset=dataset, filename=dataset_filepath)
 
+    def test_load_jsonl_metadata(self):
+        """Tests the inclusion of metadata in JSONL files."""
+        datasets = [
+            "tests/data/simple_metadata.jsonl",
+        ]
+        evalsetrun = EvalSetRun.create(
+            dataset_files=json.dumps(datasets),
+            metrics="",
+            metrics_graph_ordered_list="",
+            do_completion=False,
+        )
+        for dataset_filepath in evalsetrun.get_datasets():
+            dataset = Dataset.create(
+                evalsetrun=evalsetrun,
+                filename=dataset_filepath,
+            )
+            dataset.load_data()
+            # This is redundant, but just in case:
+            data_loader.load_jsonl(dataset=dataset, filename=dataset_filepath)
+
+            for thread in dataset.threads:
+                metadata = json.loads(thread.metadata)
+                assert "key_1" in metadata and metadata["key_1"] == "value_1"
+                assert (
+                    "key_2" in metadata
+                    and metadata["key_2"]["nested_key"] == "nested_value"
+                )
+                assert "input" not in metadata
+                for i, message in enumerate(thread.messages):
+                    metadata = json.loads(message.metadata)
+                    assert metadata["index"] == i
+                break
+
 
 class State(TypedDict):
     # TODO move this to some kind of langgraph utility file

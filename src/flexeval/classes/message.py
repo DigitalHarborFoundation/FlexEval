@@ -10,6 +10,7 @@ from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.thread import Thread
 from flexeval.classes.turn import Turn
+from flexeval.classes.jsonview import JsonView
 from flexeval.configuration import completion_functions
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,10 @@ class Message(BaseModel):
     role = pw.TextField()  # user or assistant - 'tools' are counted as assistants
     content = pw.TextField()
     context = pw.TextField(null=True)  # Previous messages
+
+    # metadata
+    metadata = pw.TextField(default="{}", null=False)
+    metadata_dict = JsonView("metadata")
 
     # helpers
     system_prompt = pw.TextField(null=True)
