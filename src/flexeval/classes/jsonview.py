@@ -23,7 +23,7 @@ class JsonViewDict(UserDict):
 
     def _sync_to_model(self):
         """Sync the current data back to the model field."""
-        json_str = self.json_loads_fn(self.data)
+        json_str = self.json_dumps_fn(self.data)
         setattr(self.model_instance, self.text_field_attr_name, json_str)
 
     # Override mutating methods to trigger sync
@@ -58,6 +58,14 @@ class JsonViewDict(UserDict):
         super().update(*args, **kwargs)
         self._sync_to_model()
 
+    def refresh_from_model(self):
+        """If the text attribute has been mutated in the model, this method brings the view back in sync.
+
+        If you're going to use the JsonView, avoid mutating the text attribute directly.
+        """
+        text_value = getattr(self.model_instance, self.text_field_attr_name)
+        self.update(self.json_loads_fn(text_value))
+
 
 class JsonView:
     """Descriptor that provides dict-like access to a JSON text field.
@@ -66,9 +74,6 @@ class JsonView:
     class SomeModel(pw.Model):
         some_field = pw.TextField(default="{}")
         some_field_dict = JsonView(text_field_attr_name="some_field")
-
-    m = SomeModel()
-    m.some_field_dict["chosen_mistake"] = "whatever"
     """
 
     def __init__(self, text_field_attr_name):
@@ -79,7 +84,7 @@ class JsonView:
         """Called when the descriptor is assigned to a class attribute."""
         self.attr_name = f"_{name}_dict"
 
-    def __get__(self, instance, owner):
+    def __get__(self, instance, owner) -> JsonViewDict:
         if instance is None:
             return self
 

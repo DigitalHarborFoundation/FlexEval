@@ -81,15 +81,16 @@ class TestDataLoader(mixins.DotenvMixin, unittest.TestCase):
 
             for thread in dataset.threads:
                 metadata = json.loads(thread.metadata)
-                assert "key_1" in metadata and metadata["key_1"] == "value_1"
-                assert (
-                    "key_2" in metadata
-                    and metadata["key_2"]["nested_key"] == "nested_value"
-                )
-                assert "input" not in metadata
+                self.assertIn("key_1", metadata)
+                self.assertEqual(metadata["key_1"], "value_1")
+                self.assertIn("key_2", metadata)
+                self.assertEqual(metadata["key_2"]["nested_key"], "nested_value")
+                self.assertNotIn("input", metadata)
                 for i, message in enumerate(thread.messages):
                     metadata = json.loads(message.metadata)
-                    assert metadata["index"] == i
+                    self.assertNotIn("role", metadata)
+                    self.assertIn("index", metadata)
+                    self.assertEqual(metadata["index"], i)
                 break
 
 
