@@ -1,0 +1,2 @@
+{"key_1": "value_1", "key_2": {"nested_key": "nested_value"}, "input":[{ "role": "system", "content": "my system prompt" }, {"role":"user", "content": "I need help.", "index": 0}, {"role":"assistant", "content": "Help with what?", "index": 1}, {"role":"user", "content": "My homework.", "index": 2}]}
+{"input": [{ "role": "system", "content": "my system prompt" }, {"role": "user", "content": "Hi, Nice to meet you!"}, {"role": "assistant", "content": "Nice to meet you, too! How can I help you today?"}, {"role": "user", "content": "How do I find cube roots by hand?"}]}
