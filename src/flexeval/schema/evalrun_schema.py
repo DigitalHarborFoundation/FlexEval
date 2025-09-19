@@ -1,7 +1,8 @@
 """The top-level :class:`~flexeval.schema.evalrun_schema.EvalRun` schema and associated sub-schema."""
 
+import enum
 from pathlib import Path
-from typing import Annotated, Callable, Iterable, Literal
+from typing import Annotated, Callable, Iterable
 
 from annotated_types import Len
 from pydantic import BaseModel, Field, FilePath
@@ -11,19 +12,36 @@ from flexeval.schema import config_schema, eval_schema, rubric_schema, schema_ut
 
 
 class DataSource(BaseModel):
+    """Represents a source of data that can be used in evaluations."""
+
     # TODO support more generic DataSource interface
-    # for now, we need to use FileDataSource because we path the JSONL paths along
-    name: str | None = Field(None, description="")
-    notes: str | None = Field(None, description="")
+    # for now, we need to use FileDataSource because we pass the JSONL paths along
+    name: str | None = Field(
+        None, description="Used as metadata. No uniqueness requirement."
+    )
+    notes: str | None = Field(
+        None, description="Used as metadata; put whatever you want here."
+    )
+
+
+class NamedDataSource(DataSource):
+    """Look up a previously loaded DataSource by name. Must have a unique name."""
+
+    name: str = Field(description="The name to match on.")
 
 
 class IterableDataSource(DataSource):
-    """Not yet implemented."""
+    """Iterable of data items."""
 
     contents: Iterable = Field(
         default_factory=list,
-        description="Iterable of data items, presumably in the jsonl format (for now).",
+        description="Iterable of data items. For now, each item must be a dictionary with role and content keys.",
     )
+
+
+class FileFormatEnum(str, enum.Enum):
+    jsonl = "jsonl"
+    langgraph_sqlite = "langgraph_sqlite"
 
 
 class FileDataSource(DataSource):
@@ -33,7 +51,9 @@ class FileDataSource(DataSource):
     path: FilePath = Field(
         description="Absolute or relative path to data file. Each file must be in jsonl format, with one conversation per line."
     )
-    format: Literal["jsonl"] = Field("jsonl", description="Format of the data file.")
+    format: FileFormatEnum = Field(
+        FileFormatEnum.jsonl, description="Format of the data file. Default: JSONL"
+    )
 
 
 class FunctionsCollection(BaseModel):
@@ -68,7 +88,7 @@ class EvalRun(BaseModel):
 
     Read more in the :ref:`user_guide`."""
 
-    data_sources: Annotated[list[FileDataSource], Len(min_length=1)] = Field(
+    data_sources: Annotated[list[DataSource], Len(min_length=1)] = Field(
         description="List of data sources.",
     )
     database_path: Path = Field(

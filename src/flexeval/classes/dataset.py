@@ -1,19 +1,26 @@
 import os.path
+import logging
+from datetime import datetime
 
 import peewee as pw
 
 from flexeval.classes.base import BaseModel
-from flexeval.classes.eval_set_run import EvalSetRun
+from flexeval.classes.jsonview import JsonView
+
+logger = logging.getLogger(__name__)
 
 
 class Dataset(BaseModel):
     """Holds a dataset, e.g. a jsonl file"""
 
     id = pw.IntegerField(primary_key=True)
-    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="datasets")
-    filename = pw.TextField()
-    datatype = pw.TextField(null=True)
-    contents = pw.TextField(null=True)  # raw contents
+    timestamp = pw.DateTimeField(default=datetime.now)
+    datasource_type = pw.TextField(null=False)
+    name = pw.TextField(default=None, null=True)
+    notes = pw.TextField(default=None, null=True)
+    is_loaded = pw.BooleanField(default=False)
+    metadata = pw.TextField(default="{}", null=False)
+    metadata_dict = JsonView("metadata")
 
     max_n_conversation_threads = pw.IntegerField(null=True)
     nb_evaluations_per_thread = pw.IntegerField(null=True, default=1)
@@ -47,6 +54,10 @@ class Dataset(BaseModel):
     #   turn_id
 
     def load_data(self):
+        if self.is_loaded:
+            logger.debug(f"Skipping redundant loading for dataset '{self.id}'.")
+            return
+
         from flexeval import (
             data_loader,
         )  # Local import as this needs to happen after the module is fully loaded
@@ -72,6 +83,9 @@ class Dataset(BaseModel):
             raise ValueError(
                 f"Unsupported format '{os.path.splitext(self.filename)[-1]}'. Each Data File must be either a jsonl or sqlite file. You provided the file: '{self.filename}'"
             )
+        # this database has been loaded
+        self.is_loaded = True
+        self.save()
 
 
 def is_sqlite_file(filepath):

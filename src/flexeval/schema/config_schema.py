@@ -44,3 +44,15 @@ class Config(BaseModel):
         False,
         description="If False (default), no exception will be thrown if a metric function raises an exception.",
     )
+    raise_on_duplicate_dataset_name: bool = Field(
+        True,
+        description="If True (default), throw an exception if two datasets would be created with the same name.",
+    )
+    raise_on_unnamed_dataset: bool = Field(
+        False,
+        description="If True (False by default), throw an exception if any dataset is unnamed.",
+    )
+    reuse_dataset_by_name: bool = Field(
+        False,
+        description="If True (False by default), throw an exception if any dataset is unnamed.",
+    )
