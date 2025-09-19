@@ -95,7 +95,7 @@ def run(eval_run: EvalRun) -> EvalRunner:
     try:
         runner.logger.info("Parsing data files")
         for dataset in evalsetrun.datasets:
-            runner.logger.debug(f"Loading data from '{dataset.filename}'.")
+            runner.logger.debug(f"Loading data from dataset ID='{dataset.id}'.")
             dataset.load_data()
     except Exception:
         runner.logger.exception("An error occurred loading data.", exc_info=True)

@@ -14,8 +14,98 @@ from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
+from flexeval.schema.evalrun_schema import FileDataSource, FileFormatEnum
 
 logger = logging.getLogger(__name__)
+
+
+def load_thread_to_dataset(
+    thread_id: str | int, thread: dict, dataset: Dataset
+) -> Thread:
+    if "input" not in thread:
+        raise ValueError(
+            f"Expected thread format is a dictionary containing at least an 'input' key. Instead, we found: {thread.keys()}"
+        )
+
+    # extract any metadata
+    thread_metadata = thread.copy()
+    del thread_metadata["input"]
+
+    context = []
+    thread_input = thread["input"]
+
+    # Get system prompt used in the thread - assuming only 1
+    for message in thread_input:
+        if message["role"] == "system":
+            system_prompt = message["content"]
+            break
+    else:
+        system_prompt = None
+    if system_prompt is not None:
+        # Add the system prompt as context
+        context.append({"role": "system", "content": system_prompt})
+
+    thread_object: Thread = Thread.create(
+        evalsetrun=dataset.evalsetrun,
+        dataset=dataset,
+        jsonl_thread_id=thread_id,
+        system_prompt=system_prompt,
+        metadata=json.dumps(thread_metadata),
+    )
+
+    # Create messages
+    index_in_thread = 0
+    for message in thread_input:
+        if not isinstance(message, dict):
+            raise ValueError(
+                f"Can't load unknown object type; expected dict. Check JSONL format: {message}"
+            )
+        role = message.get("role", None)
+        if role != "system":
+            # System message shouldn't be added as a separate message
+            system_prompt_for_this_message = ""
+            if role != "user":
+                system_prompt_for_this_message = system_prompt
+            message_metadata = message.copy()
+            if "content" in message_metadata:
+                del message_metadata["content"]
+            if "role" in message_metadata:
+                del message_metadata["role"]
+            Message.create(
+                evalsetrun=dataset.evalsetrun,
+                dataset=dataset,
+                thread=thread_object,
+                index_in_thread=index_in_thread,
+                role=role,
+                content=message.get("content", None),
+                context=json.dumps(context),
+                is_flexeval_completion=False,
+                system_prompt=system_prompt_for_this_message,
+                metadata=json.dumps(message_metadata),
+            )
+            # Update context
+            context.append({"role": role, "content": message.get("content", None)})
+            index_in_thread += 1
+
+    add_turns(thread_object)
+    return thread_object
+
+
+def load_file(dataset: Dataset, data_source: FileDataSource):
+    if data_source.format == FileFormatEnum.jsonl:
+        load_jsonl(dataset=dataset, filename=data_source.path)
+    elif data_source.format == FileFormatEnum.langgraph_sqlite:
+        load_langgraph_sqlite(dataset=dataset, filename=data_source.path)
+    else:
+        raise ValueError("Format not yet supported.")
+
+
+def load_iterable(
+    dataset: Dataset,
+    iterable,
+):
+    for thread_id, thread in enumerate(iterable):
+        load_thread_to_dataset(thread_id, thread, dataset)
 
 
 def load_jsonl(
@@ -55,72 +145,7 @@ def load_jsonl(
             ):  # duplicate stored threads for averaged evaluation results
                 if thread_id in selected_thread_ids:
                     thread_json = json.loads(thread)
-                    # extract any metadata
-                    thread_metadata = thread_json.copy()
-                    del thread_metadata["input"]
-
-                    context = []
-                    thread_input = thread_json["input"]
-
-                    # Get system prompt used in the thread - assuming only 1
-                    for message in thread_input:
-                        if message["role"] == "system":
-                            system_prompt = message["content"]
-                            break
-                    else:
-                        system_prompt = None
-                    if system_prompt is not None:
-                        # Add the system prompt as context
-                        context.append({"role": "system", "content": system_prompt})
-
-                    thread_object: Thread = Thread.create(
-                        evalsetrun=dataset.evalsetrun,
-                        dataset=dataset,
-                        jsonl_thread_id=thread_id,
-                        eval_run_thread_id=str(thread_id)
-                        + "_"
-                        + str(thread_eval_run_id),
-                        system_prompt=system_prompt,
-                        metadata=json.dumps(thread_metadata),
-                    )
-
-                    # Create messages
-                    index_in_thread = 0
-                    for message in thread_input:
-                        if not isinstance(message, dict):
-                            raise ValueError(
-                                f"Can't load unknown object type; expected dict. Check JSONL format: {message}"
-                            )
-                        role = message.get("role", None)
-                        if role != "system":
-                            # System message shouldn't be added as a separate message
-                            system_prompt_for_this_message = ""
-                            if role != "user":
-                                system_prompt_for_this_message = system_prompt
-                            message_metadata = message.copy()
-                            if "content" in message_metadata:
-                                del message_metadata["content"]
-                            if "role" in message_metadata:
-                                del message_metadata["role"]
-                            Message.create(
-                                evalsetrun=dataset.evalsetrun,
-                                dataset=dataset,
-                                thread=thread_object,
-                                index_in_thread=index_in_thread,
-                                role=role,
-                                content=message.get("content", None),
-                                context=json.dumps(context),
-                                is_flexeval_completion=False,
-                                system_prompt=system_prompt_for_this_message,
-                                metadata=json.dumps(message_metadata),
-                            )
-                            # Update context
-                            context.append(
-                                {"role": role, "content": message.get("content", None)}
-                            )
-                            index_in_thread += 1
-
-                    add_turns(thread_object)
+                    load_thread_to_dataset(thread_id, thread_json, dataset)
 
     # TODO - should we add ToolCall here? Is there a standard way to represent them in jsonl?
 
