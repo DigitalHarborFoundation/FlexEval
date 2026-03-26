@@ -55,10 +55,13 @@ def get_completion(turn: classes.turn.Turn, completion_llm: CompletionLlm):
     return completion
 
 
-def get_completions(eval_run: EvalRun, evalsetrun: classes.eval_set_run.EvalSetRun):
+def get_completions(
+    eval_run: EvalRun, evalsetrun: classes.eval_set_run.EvalSetRun, datasets: list
+):
     n_workers = eval_run.config.max_workers
+    threads = [thread for dataset in datasets for thread in dataset.threads]
     if n_workers == 1:
-        for thread in evalsetrun.threads:
+        for thread in threads:
             # select last turn in thread
             if len(thread.turns) == 0:
                 continue
@@ -75,7 +78,7 @@ def get_completions(eval_run: EvalRun, evalsetrun: classes.eval_set_run.EvalSetR
     else:
         with ThreadPoolExecutor(max_workers=n_workers) as executor:
             futures: dict[Future, classes.turn.Turn] = {}
-            for thread in evalsetrun.threads:
+            for thread in threads:
                 if len(thread.turns) == 0:
                     continue
                 turn = (
@@ -113,7 +116,6 @@ def save_completion(
         new_turn = turn
     else:
         new_turn = classes.turn.Turn.create(
-            evalsetrun=evalsetrun,
             dataset=turn.dataset,
             thread=turn.thread,
             index_in_thread=turn.index_in_thread + 1,
@@ -129,7 +131,6 @@ def save_completion(
         {"role": prev_message.role, "content": prev_message.content}
     )
     classes.message.Message.create(
-        evalsetrun=evalsetrun,
         dataset=turn.dataset,
         thread=turn.thread,
         turn=new_turn,

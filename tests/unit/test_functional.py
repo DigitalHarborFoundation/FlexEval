@@ -62,6 +62,7 @@ class TestSuite01(mixins.DotenvMixin, unittest.TestCase):
         table_names = [
             "dataset",
             "evalsetrun",
+            "evalsetrundatasets",
             "thread",
             "turn",
             "message",

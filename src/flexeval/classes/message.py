@@ -7,7 +7,6 @@ from playhouse.shortcuts import model_to_dict
 
 from flexeval.classes.base import BaseModel
 from flexeval.classes.dataset import Dataset
-from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.thread import Thread
 from flexeval.classes.turn import Turn
 from flexeval.classes.jsonview import JsonView
@@ -24,7 +23,6 @@ class Message(BaseModel):
 
     id = pw.IntegerField(primary_key=True)
 
-    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="messages")
     dataset = pw.ForeignKeyField(Dataset, backref="messages")
     thread = pw.ForeignKeyField(Thread, backref="messages")
     index_in_thread = pw.IntegerField()
@@ -71,10 +69,18 @@ class Message(BaseModel):
         super().__init__(**kwargs)
         self.metrics_to_evaluate = []
 
-    def get_completion(self, include_system_prompt=False):
+    def get_completion(
+        self,
+        include_system_prompt=False,
+        completion_config: dict | None = None,
+        evalsetrun=None,
+    ):
         # only get a completion if this is the final turn - we probably don't want to branch from mid-conversation
         if self.is_final_turn_in_input:
-            completion_config = json.loads(self.evalsetrun.completion_llm)
+            if completion_config is None:
+                raise ValueError(
+                    "completion_config must be provided to get_completion()"
+                )
             completion_fn_name = completion_config.get("function_name", None)
             completion_function_kwargs = completion_config.get("kwargs", None)
 
@@ -104,7 +110,7 @@ class Message(BaseModel):
             # which generally means it'll have a structure like this
             # {"choices": [{"message": {"content": "hi", "role": "assistant"}}]}
             result = model_to_dict(self, exclude=[self.id])
-            result["evalsetrun"] = self.evalsetrun
+            result["evalsetrun"] = evalsetrun
             result["dataset"] = self.dataset
             result["datasetrow"] = self.datasetrow
             result["turn_number"] = self.turn_number + 1

@@ -2,7 +2,6 @@ import peewee as pw
 
 from flexeval.classes.base import BaseModel
 from flexeval.classes.dataset import Dataset
-from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.turn import Turn
@@ -16,7 +15,6 @@ class ToolCall(BaseModel):
 
     id = pw.IntegerField(primary_key=True)
 
-    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="toolcalls")
     dataset = pw.ForeignKeyField(Dataset, backref="toolcalls")
     thread = pw.ForeignKeyField(Thread, backref="toolcalls")
     message = pw.ForeignKeyField(Message, backref="toolcalls")

@@ -46,7 +46,6 @@ def load_thread_to_dataset(
         context.append({"role": "system", "content": system_prompt})
 
     thread_object: Thread = Thread.create(
-        evalsetrun=dataset.evalsetrun,
         dataset=dataset,
         jsonl_thread_id=thread_id,
         system_prompt=system_prompt,
@@ -72,7 +71,6 @@ def load_thread_to_dataset(
             if "role" in message_metadata:
                 del message_metadata["role"]
             Message.create(
-                evalsetrun=dataset.evalsetrun,
                 dataset=dataset,
                 thread=thread_object,
                 index_in_thread=index_in_thread,
@@ -91,11 +89,26 @@ def load_thread_to_dataset(
     return thread_object
 
 
-def load_file(dataset: Dataset, data_source: FileDataSource):
+def load_file(
+    dataset: Dataset,
+    data_source: FileDataSource,
+    max_n_conversation_threads: int | None = None,
+    nb_evaluations_per_thread: int | None = 1,
+):
     if data_source.format == FileFormatEnum.jsonl:
-        load_jsonl(dataset=dataset, filename=data_source.path)
+        load_jsonl(
+            dataset=dataset,
+            filename=data_source.path,
+            max_n_conversation_threads=max_n_conversation_threads,
+            nb_evaluations_per_thread=nb_evaluations_per_thread,
+        )
     elif data_source.format == FileFormatEnum.langgraph_sqlite:
-        load_langgraph_sqlite(dataset=dataset, filename=data_source.path)
+        load_langgraph_sqlite(
+            dataset=dataset,
+            filename=data_source.path,
+            max_n_conversation_threads=max_n_conversation_threads,
+            nb_evaluations_per_thread=nb_evaluations_per_thread,
+        )
     else:
         raise ValueError("Format not yet supported.")
 
@@ -195,7 +208,6 @@ def load_langgraph_sqlite(
         ):  # duplicate stored threads for averaged evaluation results
             for thread_id in selected_thread_ids:
                 thread = Thread.create(
-                    evalsetrun=dataset.evalsetrun,
                     dataset=dataset,
                     langgraph_thread_id=thread_id[0],
                     eval_run_thread_id=str(thread_id[0])
@@ -327,7 +339,6 @@ def load_langgraph_sqlite(
                                             "`role` should be either user or assistant."
                                         )
                                     Message.create(
-                                        evalsetrun=dataset.evalsetrun,
                                         dataset=dataset,
                                         thread=thread,
                                         index_in_thread=index_in_thread,
@@ -437,7 +448,6 @@ def load_langgraph_sqlite(
                     ][0]
 
                     ToolCall.create(
-                        evalsetrun=dataset.evalsetrun,
                         dataset=dataset,
                         thread=thread,
                         turn=matching_message.turn,
@@ -466,7 +476,6 @@ def add_turns(thread: Thread):
     index_in_thread = 0
     for placeholder_turn_id, role in turn_dict.items():  # turns.items():
         t = Turn.create(
-            evalsetrun=thread.evalsetrun,
             dataset=thread.dataset,
             thread=thread,
             index_in_thread=index_in_thread,

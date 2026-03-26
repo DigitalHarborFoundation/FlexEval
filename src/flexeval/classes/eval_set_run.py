@@ -24,11 +24,20 @@ class EvalSetRun(BaseModel):
         default=datetime.now
     )  # Automatically set to current date and time
 
+    @property
+    def dataset_list(self) -> list[Dataset]:
+        """Returns the actual Dataset objects linked to this EvalSetRun via the join table."""
+        return list(
+            Dataset.select()
+            .join(EvalSetRunDatasets)
+            .where(EvalSetRunDatasets.evalsetrun == self)
+        )
+
 
 class EvalSetRunDatasets(BaseModel):
     """Datasets used by an EvalSetRun."""
 
     id = pw.IntegerField(primary_key=True)
     timestamp = pw.DateTimeField(default=datetime.now)
-    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="datasets")
-    dataset = pw.ForeignKeyField(Dataset, backref="evalsetruns")
+    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="dataset_links")
+    dataset = pw.ForeignKeyField(Dataset, backref="evalsetrun_links")

@@ -8,10 +8,8 @@ from langgraph.graph import StateGraph
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
-from flexeval import run_utils, data_loader
+from flexeval import run_utils
 from flexeval.classes.eval_runner import EvalRunner
-from flexeval.classes.eval_set_run import EvalSetRun
-from flexeval.classes.dataset import Dataset
 from flexeval.io.parsers import yaml_parser
 from flexeval.schema import evalrun_schema
 from tests.unit import mixins
@@ -35,63 +33,74 @@ class TestDataLoader(mixins.DotenvMixin, unittest.TestCase):
         runner = EvalRunner(eval_run)
 
         eval_set_run = run_utils.build_eval_set_run(runner)
-        run_utils.build_datasets(runner, eval_set_run)
-        for dataset in eval_set_run.datasets:
-            dataset.load_data()
+        datasets = run_utils.build_evalsetrun_datasets(eval_run, eval_set_run)
+        self.assertGreater(len(datasets), 0)
+        for dataset in datasets:
+            self.assertTrue(dataset.is_loaded)
+            self.assertGreater(len(list(dataset.threads)), 0)
 
     def test_load_jsonl_nosystem(self):
-        datasets = [
-            "tests/data/simple.jsonl",
-            "tests/data/simple_nosystem.jsonl",
+        data_sources = [
+            evalrun_schema.FileDataSource(path="tests/data/simple.jsonl"),
+            evalrun_schema.FileDataSource(path="tests/data/simple_nosystem.jsonl"),
         ]
-        evalsetrun = EvalSetRun.create(
-            dataset_files=json.dumps(datasets),
-            metrics="",
-            metrics_graph_ordered_list="",
-            do_completion=False,
+        config_path = "tests/resources/test_config.yaml"
+        config = yaml_parser.load_config_from_yaml(config_path)
+        evals_path = "tests/resources/test_evals.yaml"
+        evals = yaml_parser.load_evals_from_yaml(evals_path)
+        eval = evals["length_test"]
+        database_path = ".unittest/unittest.db"
+        eval_run = evalrun_schema.EvalRun(
+            data_sources=data_sources,
+            database_path=database_path,
+            eval=eval,
+            config=config,
         )
-        for dataset_filepath in evalsetrun.get_datasets():
-            dataset = Dataset.create(
-                evalsetrun=evalsetrun,
-                filename=dataset_filepath,
-            )
-            dataset.load_data()
-            # This is redundant, but just in case:
-            data_loader.load_jsonl(dataset=dataset, filename=dataset_filepath)
+        runner = EvalRunner(eval_run)
+
+        eval_set_run = run_utils.build_eval_set_run(runner)
+        datasets = run_utils.build_evalsetrun_datasets(eval_run, eval_set_run)
+        self.assertEqual(len(datasets), 2)
+        for dataset in datasets:
+            self.assertTrue(dataset.is_loaded)
 
     def test_load_jsonl_metadata(self):
         """Tests the inclusion of metadata in JSONL files."""
-        datasets = [
-            "tests/data/simple_metadata.jsonl",
+        data_sources = [
+            evalrun_schema.FileDataSource(path="tests/data/simple_metadata.jsonl"),
         ]
-        evalsetrun = EvalSetRun.create(
-            dataset_files=json.dumps(datasets),
-            metrics="",
-            metrics_graph_ordered_list="",
-            do_completion=False,
+        config_path = "tests/resources/test_config.yaml"
+        config = yaml_parser.load_config_from_yaml(config_path)
+        evals_path = "tests/resources/test_evals.yaml"
+        evals = yaml_parser.load_evals_from_yaml(evals_path)
+        eval = evals["length_test"]
+        database_path = ".unittest/unittest.db"
+        eval_run = evalrun_schema.EvalRun(
+            data_sources=data_sources,
+            database_path=database_path,
+            eval=eval,
+            config=config,
         )
-        for dataset_filepath in evalsetrun.get_datasets():
-            dataset = Dataset.create(
-                evalsetrun=evalsetrun,
-                filename=dataset_filepath,
-            )
-            dataset.load_data()
-            # This is redundant, but just in case:
-            data_loader.load_jsonl(dataset=dataset, filename=dataset_filepath)
+        runner = EvalRunner(eval_run)
 
-            for thread in dataset.threads:
-                metadata = json.loads(thread.metadata)
-                self.assertIn("key_1", metadata)
-                self.assertEqual(metadata["key_1"], "value_1")
-                self.assertIn("key_2", metadata)
-                self.assertEqual(metadata["key_2"]["nested_key"], "nested_value")
-                self.assertNotIn("input", metadata)
-                for i, message in enumerate(thread.messages):
-                    metadata = json.loads(message.metadata)
-                    self.assertNotIn("role", metadata)
-                    self.assertIn("index", metadata)
-                    self.assertEqual(metadata["index"], i)
-                break
+        eval_set_run = run_utils.build_eval_set_run(runner)
+        datasets = run_utils.build_evalsetrun_datasets(eval_run, eval_set_run)
+        self.assertEqual(len(datasets), 1)
+
+        dataset = datasets[0]
+        for thread in dataset.threads:
+            metadata = json.loads(thread.metadata)
+            self.assertIn("key_1", metadata)
+            self.assertEqual(metadata["key_1"], "value_1")
+            self.assertIn("key_2", metadata)
+            self.assertEqual(metadata["key_2"]["nested_key"], "nested_value")
+            self.assertNotIn("input", metadata)
+            for i, message in enumerate(thread.messages):
+                metadata = json.loads(message.metadata)
+                self.assertNotIn("role", metadata)
+                self.assertIn("index", metadata)
+                self.assertEqual(metadata["index"], i)
+            break
 
 
 class State(TypedDict):

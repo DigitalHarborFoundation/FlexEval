@@ -2,7 +2,6 @@ import peewee as pw
 
 from flexeval.classes.base import BaseModel
 from flexeval.classes.dataset import Dataset
-from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.jsonview import JsonView
 
 
@@ -13,7 +12,6 @@ class Thread(BaseModel):
 
     id = pw.IntegerField(primary_key=True)
     dataset = pw.ForeignKeyField(Dataset, backref="threads")
-    evalsetrun = pw.ForeignKeyField(EvalSetRun, backref="threads")
 
     langgraph_thread_id = pw.TextField(null=True)
     eval_run_thread_id = pw.TextField(null=True)

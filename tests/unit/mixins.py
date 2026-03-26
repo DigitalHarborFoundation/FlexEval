@@ -88,7 +88,7 @@ class DatasetsMixin(EvalSetRunMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # build datasets
-        run_utils.build_datasets(cls.runner, cls.evalsetrun)
-        for dataset in cls.evalsetrun.datasets:
-            dataset.load_data()
+        # build and load datasets
+        cls.datasets = run_utils.build_evalsetrun_datasets(
+            cls.runner.evalrun, cls.evalsetrun
+        )
