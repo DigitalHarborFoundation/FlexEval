@@ -33,7 +33,7 @@ def generate_langgraph_data(
 ):
     ## Create LLM
     tools = [factor_tool]
-    llm = ChatOpenAI(model="gpt-4o-mini")
+    llm = ChatOpenAI(model="gpt-5.4-nano")
     llm_with_tools = llm.bind_tools(tools)
 
     def chatbot(state: State):

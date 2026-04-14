@@ -103,7 +103,7 @@ test_suite_04:
   grader_llm:
     function_name: open_ai_completion
     kwargs:
-      model_name: gpt-4o-mini
+      model_name: gpt-5.4-nano
       api_key_name: OPENAI_API_KEY
 
 
@@ -138,7 +138,7 @@ test_suite_04_langgraph:
   grader_llm:
     function_name: open_ai_completion
     kwargs:
-      model_name: gpt-4o-mini
+      model_name: gpt-5.4-nano
       api_key_name: OPENAI_API_KEY
 
 test_plots_01:
@@ -209,7 +209,7 @@ test_plots_02:
   grader_llm:
     function_name: open_ai_completion
     kwargs:
-      model_name: gpt-4o-mini
+      model_name: gpt-5.4-nano
       api_key_name: OPENAI_API_KEY
 
 config_failure_01:

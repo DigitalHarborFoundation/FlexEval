@@ -79,6 +79,13 @@ def load_datasets(
     for data_source in evalrun.data_sources:
         datasource_type = type(data_source).__name__
 
+        # Auto-name unnamed IterableDataSources so same-instance reuse works
+        if (
+            isinstance(data_source, evalrun_schema.IterableDataSource)
+            and not data_source.name
+        ):
+            data_source.name = f"_iterable_{id(data_source)}"
+
         # 1. Validate naming constraints
         if config.raise_on_unnamed_dataset and (
             data_source.name is None or data_source.name.strip() == ""
@@ -108,13 +115,7 @@ def load_datasets(
             data_source,
             (evalrun_schema.FileDataSource, evalrun_schema.IterableDataSource),
         ):
-            # Check for duplicate name conflict
-            if config.raise_on_duplicate_dataset_name and existing_dataset is not None:
-                raise ValueError(
-                    f"Configuration requires unique dataset names, but '{data_source.name}' already exists (ID={existing_dataset.id})."
-                )
-
-            # Reuse if configured and existing dataset matches
+            # Reuse if configured and existing dataset matches (checked first, takes priority)
             if config.reuse_dataset_by_name and existing_dataset is not None:
                 if existing_dataset.datasource_type != datasource_type:
                     logger.warning(
@@ -126,6 +127,14 @@ def load_datasets(
                 )
                 dataset = existing_dataset
             else:
+                # Check for duplicate name conflict (only when not reusing)
+                if (
+                    config.raise_on_duplicate_dataset_name
+                    and existing_dataset is not None
+                ):
+                    raise ValueError(
+                        f"Configuration requires unique dataset names, but '{data_source.name}' already exists (ID={existing_dataset.id})."
+                    )
                 # Create and load new dataset
                 dataset = create_dataset(data_source)
                 if isinstance(data_source, evalrun_schema.IterableDataSource):

@@ -103,6 +103,233 @@ class TestDataLoader(mixins.DotenvMixin, unittest.TestCase):
             break
 
 
+class TestLoadDatasetsControlFlow(mixins.DotenvMixin, unittest.TestCase):
+    """Tests for the control flow logic in run_utils.load_datasets()."""
+
+    DB_PATH = ".unittest/test_control_flow.db"
+
+    def _init_db(self, clear_tables=True):
+        from flexeval import db_utils
+
+        db_utils.initialize_database(self.DB_PATH, clear_tables=clear_tables)
+
+    def _make_eval_run(self, data_sources, **config_kwargs):
+        """Helper to build a minimal EvalRun with given data sources and config overrides."""
+        return evalrun_schema.EvalRun(
+            data_sources=data_sources,
+            database_path=self.DB_PATH,
+            eval=evalrun_schema.eval_schema.Eval(
+                metrics=evalrun_schema.eval_schema.Metrics()
+            ),
+            config=evalrun_schema.config_schema.Config(**config_kwargs),
+        )
+
+    def test_named_datasource_success(self):
+        """NamedDataSource finds an existing loaded dataset by name."""
+        self._init_db(clear_tables=True)
+
+        # First, create and load a dataset
+        eval_run = self._make_eval_run(
+            [
+                evalrun_schema.FileDataSource(
+                    path="tests/data/simple.jsonl", name="my_dataset"
+                )
+            ]
+        )
+        datasets = run_utils.load_datasets(eval_run)
+        self.assertEqual(len(datasets), 1)
+        self.assertTrue(datasets[0].is_loaded)
+
+        # Now look it up via NamedDataSource
+        eval_run2 = self._make_eval_run(
+            [evalrun_schema.NamedDataSource(name="my_dataset")]
+        )
+        datasets2 = run_utils.load_datasets(eval_run2)
+        self.assertEqual(len(datasets2), 1)
+        self.assertEqual(datasets2[0].id, datasets[0].id)
+
+    def test_named_datasource_not_found(self):
+        """NamedDataSource raises ValueError when no matching dataset exists."""
+        self._init_db(clear_tables=True)
+        eval_run = self._make_eval_run(
+            [evalrun_schema.NamedDataSource(name="nonexistent")]
+        )
+        with self.assertRaises(ValueError):
+            run_utils.load_datasets(eval_run)
+
+    def test_file_datasource_reuse_by_name(self):
+        """A named FileDataSource is reused when reuse_dataset_by_name=True."""
+        from flexeval.classes.dataset import Dataset
+
+        self._init_db(clear_tables=True)
+        eval_run = self._make_eval_run(
+            [
+                evalrun_schema.FileDataSource(
+                    path="tests/data/simple.jsonl", name="reuse_me"
+                )
+            ],
+            reuse_dataset_by_name=True,
+        )
+        datasets1 = run_utils.load_datasets(eval_run)
+        self.assertEqual(len(datasets1), 1)
+
+        # Second call — same name, should reuse
+        eval_run2 = self._make_eval_run(
+            [
+                evalrun_schema.FileDataSource(
+                    path="tests/data/simple.jsonl", name="reuse_me"
+                )
+            ],
+            reuse_dataset_by_name=True,
+        )
+        datasets2 = run_utils.load_datasets(eval_run2)
+        self.assertEqual(len(datasets2), 1)
+        self.assertEqual(datasets2[0].id, datasets1[0].id)
+
+        # Only one Dataset in DB
+        all_datasets = list(Dataset.select())
+        self.assertEqual(len(all_datasets), 1)
+
+    def test_raise_on_duplicate_dataset_name(self):
+        """Raises ValueError when duplicate name exists and raise_on_duplicate_dataset_name=True."""
+        self._init_db(clear_tables=True)
+        eval_run = self._make_eval_run(
+            [
+                evalrun_schema.FileDataSource(
+                    path="tests/data/simple.jsonl", name="dup_name"
+                )
+            ],
+            reuse_dataset_by_name=False,
+            raise_on_duplicate_dataset_name=True,
+        )
+        run_utils.load_datasets(eval_run)
+
+        # Second call with same name — should raise
+        eval_run2 = self._make_eval_run(
+            [
+                evalrun_schema.FileDataSource(
+                    path="tests/data/simple.jsonl", name="dup_name"
+                )
+            ],
+            reuse_dataset_by_name=False,
+            raise_on_duplicate_dataset_name=True,
+        )
+        with self.assertRaises(ValueError):
+            run_utils.load_datasets(eval_run2)
+
+    def test_raise_on_unnamed_dataset(self):
+        """Raises ValueError when dataset is unnamed and raise_on_unnamed_dataset=True."""
+        self._init_db(clear_tables=True)
+        eval_run = self._make_eval_run(
+            [evalrun_schema.FileDataSource(path="tests/data/simple.jsonl")],
+            raise_on_unnamed_dataset=True,
+        )
+        with self.assertRaises(ValueError):
+            run_utils.load_datasets(eval_run)
+
+    def test_datasource_type_mismatch_warning(self):
+        """Logs a warning when reusing a dataset with a different datasource type."""
+        self._init_db(clear_tables=True)
+
+        # Create a dataset with IterableDataSource type
+        eval_run = self._make_eval_run(
+            [
+                evalrun_schema.IterableDataSource(
+                    name="type_mismatch",
+                    contents=[
+                        {
+                            "input": [
+                                {"role": "user", "content": "Hi"},
+                                {"role": "assistant", "content": "Hello"},
+                            ]
+                        }
+                    ],
+                )
+            ],
+            reuse_dataset_by_name=True,
+        )
+        run_utils.load_datasets(eval_run)
+
+        # Now try to reuse it with a FileDataSource of the same name
+        eval_run2 = self._make_eval_run(
+            [
+                evalrun_schema.FileDataSource(
+                    path="tests/data/simple.jsonl", name="type_mismatch"
+                )
+            ],
+            reuse_dataset_by_name=True,
+        )
+        with self.assertLogs("flexeval.run_utils", level="WARNING") as cm:
+            datasets = run_utils.load_datasets(eval_run2)
+        self.assertEqual(len(datasets), 1)
+        self.assertTrue(any("datasource type differs" in msg for msg in cm.output))
+
+
+class TestIterableDataSourceReuse(mixins.DotenvMixin, unittest.TestCase):
+    def test_unnamed_iterable_reused_across_runs(self):
+        """An unnamed IterableDataSource shared across two EvalRuns should be
+        auto-named and reused, not consumed twice."""
+        import flexeval
+        from flexeval.classes.dataset import Dataset
+        from flexeval.metrics import access
+
+        conversations = [
+            {
+                "input": [
+                    {"role": "user", "content": "Hello"},
+                    {"role": "assistant", "content": "Hi there"},
+                ]
+            },
+        ]
+        # Single unnamed IterableDataSource shared across both runs
+        data_source = evalrun_schema.IterableDataSource(contents=conversations)
+        data_sources = [data_source]
+
+        eval_run_1 = evalrun_schema.EvalRun(
+            data_sources=data_sources,
+            database_path=".unittest/test_iterable_reuse.db",
+            eval=evalrun_schema.eval_schema.Eval(
+                metrics=evalrun_schema.eval_schema.Metrics(
+                    function=[
+                        evalrun_schema.eval_schema.FunctionItem(name="index_in_thread")
+                    ]
+                )
+            ),
+            config=evalrun_schema.config_schema.Config(clear_tables=True),
+        )
+        flexeval.run(eval_run_1)
+        metrics_after_run_1 = access.get_all_metrics()
+        self.assertGreater(len(metrics_after_run_1), 0, "Run 1 should produce metrics.")
+
+        # Second run reuses the same data_source object (iterator already consumed)
+        eval_run_2 = evalrun_schema.EvalRun(
+            data_sources=data_sources,
+            database_path=".unittest/test_iterable_reuse.db",
+            eval=evalrun_schema.eval_schema.Eval(
+                metrics=evalrun_schema.eval_schema.Metrics(
+                    function=[
+                        evalrun_schema.eval_schema.FunctionItem(name="index_in_thread")
+                    ]
+                )
+            ),
+            config=evalrun_schema.config_schema.Config(clear_tables=False),
+        )
+        flexeval.run(eval_run_2)
+        metrics_after_run_2 = access.get_all_metrics()
+        self.assertGreater(
+            len(metrics_after_run_2),
+            len(metrics_after_run_1),
+            "Run 2 should produce additional metrics via dataset reuse.",
+        )
+
+        # Only one Dataset should exist (reused, not duplicated)
+        all_datasets = list(Dataset.select())
+        self.assertEqual(
+            len(all_datasets), 1, "Expected one dataset (reused), not two."
+        )
+        self.assertTrue(all_datasets[0].name.startswith("_iterable_"))
+
+
 class State(TypedDict):
     # TODO move this to some kind of langgraph utility file
     messages: Annotated[list, add_messages]

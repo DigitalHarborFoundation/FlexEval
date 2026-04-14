@@ -13,6 +13,7 @@ These vignettes demonstrate how to use FlexEval.
    generated/vignettes/basic_rubric
    generated/vignettes/custom_rubric
    generated/vignettes/basic_cli
+   generated/vignettes/multiple_configs
    generated/vignettes/metric_analysis
    
 

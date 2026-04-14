@@ -109,6 +109,7 @@ class Turn(BaseModel):
         """
         context = ""
         for message in self.messages:
+            # TODO why not just use message.get_context(include_system_prompt=include_system_prompt) here?
             context = message.context
             break
         context = json.loads(context)

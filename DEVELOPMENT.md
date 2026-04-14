@@ -30,7 +30,9 @@ uv sync --upgrade --all-groups
 uv build
 ```
 
-### Running tests
+### Unit tests
+
+Integration tests live in `tests/unit/` and are run in CI.
 
 Run the unit tests:
 
@@ -46,7 +48,35 @@ To run a specific file's tests:
 uv run python -m unittest tests.unit.{module_name}
 ```
 
-There are integration tests in tests/integration that can be executed.
+### Integration tests
+
+Integration tests live in `tests/integration/` and are **not** run in CI.
+
+Run the integration tests:
+
+```bash
+uv run python -m unittest tests.integration.functional_tests
+```
+
+**Prerequisites:**
+- An `.env` file at the repo root with `OPENAI_API_KEY` set
+- Suites with rubric metrics (`TestSuite04`) make **real API calls** to OpenAI (gpt-5.4-nano)
+- Function-only suites (`TestSuite01`, `TestSuite02`, `TestSuite03`) do not require API keys
+- LangGraph-based test suites are currently skipped pending test data regeneration
+
+To run only the function-metric suites (no API key required):
+
+```bash
+uv run python -m unittest tests.integration.functional_tests.TestSuite01 tests.integration.functional_tests.TestSuite02 tests.integration.functional_tests.TestSuite03
+```
+
+**Regenerating LangGraph test data:**
+
+The file `tests/resources/langgraph-test-data.db` is pre-generated. To regenerate it (requires `OPENAI_API_KEY`):
+
+```bash
+uv run python tests/integration/langgraph_data.py
+```
 
 ### Adding or updating dependencies
 
