@@ -472,10 +472,6 @@ class ConfigFailures(mixins.DotenvMixin, unittest.TestCase):
     def test_config_failure_06(cls):
         run_eval("config_failure_06", include_plot_convos_data=True)
 
-    def test_config_failure_07(cls):
-        # this used to fail, but is now valid
-        run_eval("config_failure_07", include_plot_convos_data=True)
-
 
 class TestBasicFunctionMetrics(mixins.DotenvMixin, unittest.TestCase):
     @classmethod

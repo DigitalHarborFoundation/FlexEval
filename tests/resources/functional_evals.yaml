@@ -283,14 +283,6 @@ config_failure_06:
       - name: count_numeric_tool_call_params_by_name 
         metric_level: Thread # function metric doesn't have a valid input type for this level
 
-config_failure_07:
-  data:
-    - tests/data/plot-convos.jsonl
-
-  metrics:
-    function:
-      - name: count_tool_calls_by_name
-        metric_level: Thread
 
 
 test_default_kwargs_01:

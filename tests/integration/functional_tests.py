@@ -788,42 +788,58 @@ class FunctionMetricValidation(unittest.TestCase):
 
 
 class ConfigFailures(unittest.TestCase):
-    """Tests that verify various invalid configurations are handled gracefully.
+    """Tests that verify various invalid configurations produce the expected errors.
 
-    config_failure_01, 02, 05: These raise during EvalRunner or EvalSetRun setup.
-    config_failure_03, 04, 06, 07: These raise during metric computation, but since
-        raise_on_metric_error defaults to False, the run completes without raising.
-        We test that they run without crashing; they should be updated to verify
-        that appropriate errors were logged or metrics are missing.
+    Setup-phase errors (01, 02, 05): raise ValueError during EvalSetRun/graph construction.
+    Runtime errors (03, 04, 06): run completes (raise_on_metric_error defaults to False)
+        but the broken metric produces zero rows in the database.
     """
 
-    @unittest.expectedFailure
     def test_config_failure_01(self):
-        run_from_yaml("config_failure_01")
+        # Ambiguous depends_on: two is_role metrics, no disambiguator
+        with self.assertRaisesRegex(ValueError, "more than one match"):
+            run_from_yaml("config_failure_01")
 
-    @unittest.expectedFailure
     def test_config_failure_02(self):
-        run_from_yaml("config_failure_02")
+        # depends_on references nonexistent metric name
+        with self.assertRaisesRegex(ValueError, "unable to locate"):
+            run_from_yaml("config_failure_02")
 
     def test_config_failure_03(self):
-        # is_role() missing required 'role' arg — error logged, run completes
-        run_from_yaml("config_failure_03", clear_tables=True)
+        # is_role() missing required 'role' arg — error logged, no metrics saved
+        _, db_path = run_from_yaml("config_failure_03", clear_tables=True)
+        with sqlite3.connect(db_path) as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM metric WHERE evaluation_name = 'is_role'"
+            ).fetchone()[0]
+        self.assertEqual(
+            count, 0, "is_role should produce no metrics when required kwarg is missing"
+        )
 
     def test_config_failure_04(self):
-        # is_role() gets unexpected kwarg — error logged, run completes
-        run_from_yaml("config_failure_04", clear_tables=True)
+        # is_role() gets unexpected kwarg — error logged, no metrics saved
+        _, db_path = run_from_yaml("config_failure_04", clear_tables=True)
+        with sqlite3.connect(db_path) as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM metric WHERE evaluation_name = 'is_role'"
+            ).fetchone()[0]
+        self.assertEqual(
+            count, 0, "is_role should produce no metrics with unexpected kwarg"
+        )
 
-    @unittest.expectedFailure
     def test_config_failure_05(self):
-        run_from_yaml("config_failure_05")
+        # Rubric name doesn't exist — KeyError from rubric lookup in run_utils
+        with self.assertRaises(KeyError):
+            run_from_yaml("config_failure_05")
 
     def test_config_failure_06(self):
-        # Invalid metric_level for function — error logged, run completes
-        run_from_yaml("config_failure_06", clear_tables=True)
-
-    def test_config_failure_07(self):
-        # count_tool_calls_by_name at Thread level — valid config, runs normally
-        run_from_yaml("config_failure_07", clear_tables=True)
+        # Invalid metric_level for function — error logged, no metrics saved
+        _, db_path = run_from_yaml("config_failure_06", clear_tables=True)
+        with sqlite3.connect(db_path) as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM metric WHERE evaluation_name = 'count_numeric_tool_call_params_by_name'"
+            ).fetchone()[0]
+        self.assertEqual(count, 0, "Metric with invalid level should produce no rows")
 
 
 class TestBasicFunctionMetrics(unittest.TestCase):
