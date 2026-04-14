@@ -62,7 +62,7 @@ uv run python -m unittest tests.integration.functional_tests
 - An `.env` file at the repo root with `OPENAI_API_KEY` set
 - Suites with rubric metrics (`TestSuite04`) make **real API calls** to OpenAI (gpt-5.4-nano)
 - Function-only suites (`TestSuite01`, `TestSuite02`, `TestSuite03`) do not require API keys
-- LangGraph-based test suites are currently skipped pending test data regeneration
+- LangGraph-based test suites use pre-generated test data from `tests/resources/langgraph-test-data.db`
 
 To run only the function-metric suites (no API key required):
 

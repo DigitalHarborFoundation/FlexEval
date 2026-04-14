@@ -456,7 +456,6 @@ class TestSuite04(unittest.TestCase):
         )
 
 
-@unittest.skip("LangGraph test data needs regeneration after langgraph 1.0 upgrade")
 class TestSuite01_langgraph(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -519,7 +518,6 @@ class TestSuite01_langgraph(unittest.TestCase):
             self.assertTrue(all([i[0] == "function" for i in result]))
 
 
-@unittest.skip("LangGraph test data needs regeneration after langgraph 1.0 upgrade")
 class TestSuite02_langgraph(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -541,7 +539,7 @@ class TestSuite02_langgraph(unittest.TestCase):
                 """
             ).fetchall()
         self.assertEqual(
-            len(metric), 2, "Expected 2 turns with long enough text to evaluate"
+            len(metric), 1, "Expected 1 turn with long enough text to evaluate"
         )
         self.assertAlmostEqual(metric[0][0], 2)
 
@@ -691,7 +689,6 @@ class TestSuite02_langgraph(unittest.TestCase):
         )
 
 
-@unittest.skip("LangGraph test data needs regeneration after langgraph 1.0 upgrade")
 class TestSuite04_langgraph(unittest.TestCase):
     # rubric associated tests — requires OPENAI_API_KEY
     @classmethod
@@ -953,7 +950,6 @@ class TestBasicFunctionMetrics(unittest.TestCase):
                     )
 
 
-@unittest.skip("LangGraph test data needs regeneration after langgraph 1.0 upgrade")
 class TestBasicFunctionMetrics_langgraph(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

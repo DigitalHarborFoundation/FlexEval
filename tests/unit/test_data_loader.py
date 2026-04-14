@@ -364,7 +364,40 @@ class TestLanggraphDataLoading(
                 )
         self.assertTrue(langgraph_db_path.exists())
 
-        # TODO finish implementing test
-        # build an eval that points to langgraph_db_path
-        # run the eval
-        # verify that the expected data exists in the flexeval database
+        # Load the LangGraph data into FlexEval
+        from flexeval import db_utils
+        from flexeval.classes.dataset import Dataset
+        from flexeval.classes.thread import Thread
+        from flexeval.classes.turn import Turn
+        from flexeval.classes.message import Message
+        from flexeval.data_loader import load_langgraph_sqlite
+
+        db_path = str(self.temp_path / "flexeval.db")
+        db_utils.initialize_database(db_path, clear_tables=True)
+        ds = Dataset.create(
+            name="test_lg",
+            source=str(langgraph_db_path),
+            datasource_type="langgraph_sqlite",
+        )
+        load_langgraph_sqlite(ds, str(langgraph_db_path))
+
+        # 2 threads (one per graph.invoke loop iteration)
+        threads = list(Thread.select().where(Thread.dataset == ds))
+        self.assertEqual(len(threads), 2)
+
+        # Each thread should have messages: the chatbot echoes back,
+        # so 2 invokes per thread = 4 human messages + 4 echo messages
+        for thread in threads:
+            messages = list(
+                Message.select()
+                .where(Message.thread == thread)
+                .order_by(Message.index_in_thread)
+            )
+            self.assertGreater(len(messages), 0)
+            # First message should be from user
+            self.assertEqual(messages[0].role, "user")
+            self.assertEqual(messages[0].content, "factor 190,913,277,151")
+
+        # Turns should have been created
+        turns = list(Turn.select().where(Turn.dataset == ds))
+        self.assertGreater(len(turns), 0)
