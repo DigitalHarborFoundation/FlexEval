@@ -822,7 +822,7 @@ class ConfigFailures(unittest.TestCase):
         run_from_yaml("config_failure_06", clear_tables=True)
 
     def test_config_failure_07(self):
-        # context_only with incompatible function — run completes with 0 metrics
+        # count_tool_calls_by_name at Thread level — valid config, runs normally
         run_from_yaml("config_failure_07", clear_tables=True)
 
 
@@ -1056,63 +1056,6 @@ class TestListStringInputFunctionMetrics(unittest.TestCase):
         _, cls.database_path = run_from_yaml(
             "test_list_string_function_metrics", clear_tables=True
         )
-
-    @unittest.expectedFailure  # context_only column was removed from Metric model
-    def test_reading_ease_levels_by_level(self):
-        message_id_to_reading_ease = {1: 119.19, 2: 119.19, 3: 35.61, 4: 77.91}
-        message_id_to_reading_ease_context_only = {
-            1: 206.84,
-            2: 119.19,
-            3: 119.19,
-            4: 92.8,
-        }
-        turn_id_to_reading_ease = {1: 119.19, 2: 83.32, 3: 77.91}
-        turn_id_to_reading_ease_context_only = {1: 206.84, 2: 119.19, 3: 92.8}
-        with sqlite3.connect(self.database_path) as connection:
-            reading_ease_metrics = connection.execute(
-                """
-                    SELECT
-                        turn_id, message_id, context_only, metric_level, metric_name, metric_value
-                    FROM
-                        metric
-                    WHERE 1=1
-                        AND thread_id = 1
-                        AND evaluation_name = 'flesch_reading_ease'
-                    """
-            ).fetchall()
-            for result in reading_ease_metrics:
-                (
-                    turn_id,
-                    message_id,
-                    context_only,
-                    metric_level,
-                    metric_name,
-                    metric_value,
-                ) = result
-                comparison_dict = None
-                comparison_id = None
-                if metric_level == "Message":
-                    comparison_id = message_id
-                    if context_only:
-                        comparison_dict = message_id_to_reading_ease_context_only
-                    else:
-                        comparison_dict = message_id_to_reading_ease
-                elif metric_level == "Turn":
-                    comparison_id = turn_id
-                    if context_only:
-                        comparison_dict = turn_id_to_reading_ease_context_only
-                    else:
-                        comparison_dict = turn_id_to_reading_ease
-                else:
-                    raise Exception(
-                        f"Expected only Message and Turn levels for reading ease but found {metric_level}"
-                    )
-
-                self.assertAlmostEqual(
-                    comparison_dict[comparison_id],
-                    metric_value,
-                    msg="Metric value for reading ease not equal to expected value",
-                )
 
     def test_count_messages_per_role(self):
         thread_and_turn_id_to_role_entries = {

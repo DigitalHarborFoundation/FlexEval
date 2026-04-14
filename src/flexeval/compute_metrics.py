@@ -483,7 +483,6 @@ class MetricComputer:
         evaluation_type: str,
         metric_level: str,
         kwargs: dict,
-        context_only: bool = None,
         depends_on: list = None,
         id: int = None,
         notes: str = None,  # just a placeholder
@@ -493,7 +492,6 @@ class MetricComputer:
                 function_name=evaluation_name,
                 metric_kwargs=kwargs,
                 metric_level=metric_level,
-                context_only=context_only,
                 input_object=object,
                 depends_on=depends_on,
                 id=id,
@@ -531,10 +529,9 @@ class MetricComputer:
         metric_level: eval_schema.MetricLevel,
         input_object: function_types.AnyFunctionObjectInput,
         metric_kwargs: dict,
-        context_only: bool,
     ):
         function_input = function_types.get_function_input(
-            metric_function, metric_level, input_object, context_only
+            metric_function, metric_level, input_object
         )
         metrics_result = metric_function(function_input, **metric_kwargs)
         return metrics_result
@@ -557,7 +554,6 @@ class MetricComputer:
         metric_kwargs: dict,
         input_object: Union[Thread, Turn, Message, ToolCall],
         metric_level: eval_schema.MetricLevel,
-        context_only: bool,
         depends_on: list,
         id: int,
     ):
@@ -568,7 +564,7 @@ class MetricComputer:
         # Check if the function exists in any of the function namespaces
         metric_function, metric_source = self.find_function(function_name)
         metrics_result = self.invoke_function(
-            metric_function, metric_level, input_object, metric_kwargs, context_only
+            metric_function, metric_level, input_object, metric_kwargs
         )
 
         base_result = {
@@ -578,7 +574,6 @@ class MetricComputer:
             "metric_level": metric_level,
             "kwargs": metric_kwargs,
             "source": metric_source,  # TODO - put this back?
-            "context_only": context_only,
             "depends_on": depends_on,
             "id": id,
         }

@@ -102,7 +102,6 @@ def get_function_input(
     metric_function: Callable,
     metric_level: eval_schema.MetricLevel,
     input_object: AnyFunctionObjectInput,
-    context_only: bool,
 ) -> AnyFunctionObjectInput | str | dict | list:
     """Coerce input_object to a type accepted by metric_function at this metric_level.
 
@@ -110,7 +109,6 @@ def get_function_input(
         metric_function (Callable): Function to invoke with the returned input.
         metric_level (eval_schema.MetricLevel): The metric level at which metric_function is being invoked.
         input_object (AnyFunctionObjectInput): The input_object to be coerced, or passed as-is if accepted by metric_function.
-        context_only (bool): Determines how strings and lists are converted. See schema documentation.
 
     Raises:
         ValueError: If the function accepts at least one declared type, but
@@ -137,22 +135,13 @@ def get_function_input(
     elif dict in accepted_parameter_types and metric_level == "ToolCall":
         return input_object.get_dict_representation()
     elif list in accepted_parameter_types and metric_level in ["Turn", "Thread"]:
-        if context_only:
-            return input_object.get_context()
-        else:
-            # this is on a single turn - pass in the parsed list
-            return input_object.get_content()
+        return input_object.get_content()
     elif str in accepted_parameter_types:
         if metric_level == "ToolCall":
             raise ValueError(
                 "Functions that accept strings can't be used for tool calls. Accept a dict (or a flexeval.classes.tool_call.ToolCall) instead."
             )
-        if context_only:
-            # join together all previous turns
-            return join_all_contents_to_string(input_object.get_context())
-        else:
-            # current turn only
-            return join_all_contents_to_string(input_object.get_content())
+        return join_all_contents_to_string(input_object.get_content())
     else:
         # the function accepts at least one declared type, but either:
         # - it's a type we don't support at all e.g. set

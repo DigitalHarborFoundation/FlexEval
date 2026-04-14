@@ -189,7 +189,6 @@ test_plots_02:
 
     rubric:
       - name: is_request_for_plot
-        context_only: true
         depends_on:
           - name: is_role
             #this is needed to disambiguate
@@ -293,9 +292,8 @@ config_failure_07:
 
   metrics:
     function:
-      - name: count_tool_calls_by_name 
-        metric_level: Thread 
-        context_only: true # function metric does not take a string or list, so context_only must be false
+      - name: count_tool_calls_by_name
+        metric_level: Thread
 
 
 test_default_kwargs_01:
@@ -368,19 +366,9 @@ test_list_string_function_metrics:
       
       - name: flesch_reading_ease
         metric_level: Message
-      
-      - name: flesch_reading_ease
-        metric_level: Turn
-        context_only: false
-
 
       - name: flesch_reading_ease
-        metric_level: Message
-        context_only: true
-      
-      - name: flesch_reading_ease
         metric_level: Turn
-        context_only: true
 
 
 test_list_string_function_metrics_langgraph:
@@ -397,16 +385,7 @@ test_list_string_function_metrics_langgraph:
       
       - name: flesch_reading_ease
         metric_level: Message
-      
-      - name: flesch_reading_ease
-        metric_level: Turn
-        context_only: false
 
       - name: flesch_reading_ease
-        metric_level: Message
-        context_only: true
-      
-      - name: flesch_reading_ease
         metric_level: Turn
-        context_only: true
 

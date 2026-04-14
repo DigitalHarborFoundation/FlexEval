@@ -201,7 +201,7 @@ class TestMetricComputer(unittest.TestCase):
         test_object = unittest.mock.MagicMock(Message)
         test_object.get_content = unittest.mock.MagicMock(return_value="🌋")
         self.assertEqual(
-            mc.invoke_function(metric_function, "Message", test_object, {}, False), 1
+            mc.invoke_function(metric_function, "Message", test_object, {}), 1
         )
 
         # non-existent module
@@ -235,7 +235,7 @@ class TestMetricComputer(unittest.TestCase):
         test_object = unittest.mock.MagicMock(Message)
         test_object.get_content = unittest.mock.MagicMock(return_value="🌋")
         self.assertEqual(
-            mc.invoke_function(metric_function, "Message", test_object, {}, False),
+            mc.invoke_function(metric_function, "Message", test_object, {}),
             "overridden",
         )
 
