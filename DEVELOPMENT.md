@@ -32,7 +32,7 @@ uv build
 
 ### Unit tests
 
-Integration tests live in `tests/unit/` and are run in CI.
+Unit tests live in `tests/unit/` and are run in CI.
 
 Run the unit tests:
 
