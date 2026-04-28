@@ -47,19 +47,60 @@ def build_eval_set_run(runner: EvalRunner) -> EvalSetRun:
     return evalsetrun
 
 
-def find_dataset_by_name(name: str) -> Dataset:
-    eligible_datasets = Dataset.select().where(Dataset.name == name)
-    if len(eligible_datasets) == 0:
-        raise ValueError(f"No dataset with name '{name}'.")
-    elif len(eligible_datasets) > 1:
+def find_dataset_by_name(name: str) -> Dataset | None:
+    """Return the loaded Dataset with this name, or None if no such dataset exists.
+
+    If a Dataset with this name exists but is not marked is_loaded (the remnant
+    of a crashed prior load), it is treated as stale: cleaned up via
+    :func:`_cleanup_stale_dataset` and None is returned, so the caller can
+    proceed as if no dataset existed.
+
+    Raises:
+        ValueError: If more than one Dataset has this name, or if a stale
+            unloaded Dataset has derived rows (metrics or eval-run links) that
+            suggest a genuine integrity problem — see _cleanup_stale_dataset.
+    """
+    # LIMIT 2: we only need to know 0, 1, or >1
+    results = list(Dataset.select().where(Dataset.name == name).limit(2))
+    if len(results) == 0:
+        return None
+    if len(results) > 1:
         raise ValueError(f"Multiple datasets with name '{name}'.")
-    else:
-        dataset = eligible_datasets.first()
-        if not dataset.is_loaded:
-            raise ValueError(
-                f"Found a dataset with name '{name}', but it's not loaded into the database. This may indicate an integrity error."
-            )
-        return dataset
+    dataset = results[0]
+    if not dataset.is_loaded:
+        _cleanup_stale_dataset(dataset)
+        return None
+    return dataset
+
+
+def _cleanup_stale_dataset(dataset: Dataset) -> None:
+    """Delete a partially-loaded Dataset and its child rows.
+
+    A Dataset with ``is_loaded=False`` is the remnant of a prior load that
+    crashed between the Dataset row being committed and the final
+    ``is_loaded=True`` save — its Thread/Turn/Message/ToolCall rows (if any)
+    are partial and unusable.
+
+    Derived rows (Metric, EvalSetRunDatasets) should never exist for an
+    unloaded Dataset — they're only created after a successful load. If they
+    do, something bypassed the normal flow and we refuse to touch it.
+    """
+    if dataset.metrics_list.exists() or dataset.evalsetrun_links.exists():
+        raise ValueError(
+            f"Dataset '{dataset.name}' (ID={dataset.id}) has is_loaded=False but "
+            "has metrics or eval-run links — refusing to clean up (possible integrity error)."
+        )
+    counts = {
+        "threads": dataset.threads.count(),
+        "turns": dataset.turns.count(),
+        "messages": dataset.messages.count(),
+        "toolcalls": dataset.toolcalls.count(),
+    }
+    logger.warning(
+        f"Dropping unloaded dataset '{dataset.name}' (ID={dataset.id}); "
+        f"partial rows from a prior failed load: {counts}. Reloading from scratch."
+    )
+    dataset.delete_instance(recursive=True)
 
 
 def create_dataset(data_source: evalrun_schema.DataSource) -> Dataset:
@@ -97,10 +138,7 @@ def load_datasets(
         # 2. Look up existing dataset by name (if named)
         existing_dataset = None
         if data_source.name:
-            try:
-                existing_dataset = find_dataset_by_name(data_source.name)
-            except ValueError:
-                existing_dataset = None
+            existing_dataset = find_dataset_by_name(data_source.name)
 
         # 3. Dispatch by DataSource type
         if isinstance(data_source, evalrun_schema.NamedDataSource):

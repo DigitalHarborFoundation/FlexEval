@@ -160,7 +160,7 @@ class MetricGraphBuilder:
         metric = self.metric_id_map[metric_id]
         return self.get_or_create_object_metric(dependency_metric_level, object, metric)
 
-    def build_thread_task_graphs(self, dataset: "Dataset") -> Iterable[nx.DiGraph]:
+    def build_thread_task_graphs(self, dataset: Dataset) -> Iterable[nx.DiGraph]:
         threads = dataset.threads
         for thread in threads:
             yield self.build_thread_task_graph(thread)
@@ -210,7 +210,7 @@ class MetricGraphBuilder:
 
 
 def compute_metrics(
-    evalrun: EvalRun, evalsetrun: EvalSetRun, datasets: list
+    evalrun: EvalRun, evalsetrun: EvalSetRun, datasets: list[Dataset]
 ) -> list[dict]:
     n_workers = evalrun.config.max_workers
     raise_on_error = evalrun.config.raise_on_metric_error

@@ -10,6 +10,11 @@ from typing_extensions import TypedDict
 
 from flexeval import run_utils
 from flexeval.classes.eval_runner import EvalRunner
+from flexeval.classes.dataset import Dataset
+from flexeval.classes.thread import Thread
+from flexeval.classes.message import Message
+from flexeval.classes.eval_set_run import EvalSetRun, EvalSetRunDatasets
+
 from flexeval.io.parsers import yaml_parser
 from flexeval.schema import evalrun_schema
 from tests.unit import mixins
@@ -263,6 +268,70 @@ class TestLoadDatasetsControlFlow(mixins.DotenvMixin, unittest.TestCase):
             datasets = run_utils.load_datasets(eval_run2)
         self.assertEqual(len(datasets), 1)
         self.assertTrue(any("datasource type differs" in msg for msg in cm.output))
+
+    def test_stale_unloaded_dataset_is_cleaned_up(self):
+        """An is_loaded=False Dataset (remnant of a crashed load) is dropped with a warning,
+        its partial child rows are deleted, and the caller proceeds to create a fresh one.
+        """
+        self._init_db(clear_tables=True)
+
+        # Simulate a crashed prior load: Dataset row committed but is_loaded still False,
+        # with partial Thread and Message rows underneath it.
+        stale = Dataset.create(
+            datasource_type="FileDataSource", name="stale", is_loaded=False
+        )
+        Thread.create(dataset=stale, jsonl_thread_id=0)
+        Message.create(
+            dataset=stale,
+            thread=stale.threads[0],
+            index_in_thread=0,
+            role="user",
+            content="partial",
+            context="[]",
+            is_flexeval_completion=False,
+        )
+
+        with self.assertLogs("flexeval.run_utils", level="WARNING") as cm:
+            result = run_utils.find_dataset_by_name("stale")
+        self.assertIsNone(result)
+        self.assertTrue(any("Dropping unloaded dataset" in m for m in cm.output))
+        self.assertTrue(any("'threads': 1" in m for m in cm.output))
+        self.assertTrue(any("'messages': 1" in m for m in cm.output))
+
+        # Stale dataset and its children should be gone.
+        self.assertEqual(Dataset.select().where(Dataset.name == "stale").count(), 0)
+        self.assertEqual(Thread.select().count(), 0)
+        self.assertEqual(Message.select().count(), 0)
+
+        # A subsequent load_datasets call with the same name should succeed cleanly.
+        eval_run = self._make_eval_run(
+            [
+                evalrun_schema.FileDataSource(
+                    path="tests/data/simple.jsonl", name="stale"
+                )
+            ]
+        )
+        datasets = run_utils.load_datasets(eval_run)
+        self.assertEqual(len(datasets), 1)
+        self.assertTrue(datasets[0].is_loaded)
+
+    def test_stale_unloaded_dataset_with_evalsetrun_link_raises(self):
+        """If an is_loaded=False Dataset has derived rows (EvalSetRunDatasets or Metric),
+        refuse to clean up — that's a real integrity violation, not a crashed load."""
+
+        self._init_db(clear_tables=True)
+
+        stale = Dataset.create(
+            datasource_type="FileDataSource", name="stale_with_link", is_loaded=False
+        )
+        # Rogue derived row — shouldn't exist for is_loaded=False under the normal flow.
+        esr = EvalSetRun.create(
+            metrics="{}", metrics_graph_ordered_list="[]", do_completion=False
+        )
+        EvalSetRunDatasets.create(evalsetrun=esr, dataset=stale)
+
+        with self.assertRaisesRegex(ValueError, "refusing to clean up"):
+            run_utils.find_dataset_by_name("stale_with_link")
 
 
 class TestIterableDataSourceReuse(mixins.DotenvMixin, unittest.TestCase):

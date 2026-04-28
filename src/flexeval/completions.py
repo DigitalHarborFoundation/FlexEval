@@ -56,7 +56,9 @@ def get_completion(turn: classes.turn.Turn, completion_llm: CompletionLlm):
 
 
 def get_completions(
-    eval_run: EvalRun, evalsetrun: classes.eval_set_run.EvalSetRun, datasets: list
+    eval_run: EvalRun,
+    evalsetrun: classes.eval_set_run.EvalSetRun,
+    datasets: list[classes.dataset.Dataset],
 ):
     n_workers = eval_run.config.max_workers
     threads = [thread for dataset in datasets for thread in dataset.threads]
