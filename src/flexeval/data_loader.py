@@ -19,7 +19,10 @@ logger = logging.getLogger(__name__)
 
 
 def load_thread_to_dataset(
-    thread_id: str | int, thread: dict, dataset: Dataset
+    thread_id: str | int,
+    thread: dict,
+    dataset: Dataset,
+    eval_run_thread_id: str | None = None,
 ) -> Thread:
     if "input" not in thread:
         raise ValueError(
@@ -47,6 +50,7 @@ def load_thread_to_dataset(
     thread_object: Thread = Thread.create(
         dataset=dataset,
         jsonl_thread_id=thread_id,
+        eval_run_thread_id=eval_run_thread_id,
         system_prompt=system_prompt,
         metadata=json.dumps(thread_metadata),
     )
@@ -152,12 +156,15 @@ def load_jsonl(
             nb_evaluations_per_thread = 1
 
         for thread_id, thread in enumerate(all_lines):
-            for thread_eval_run_id in range(
-                max(1, nb_evaluations_per_thread)
-            ):  # duplicate stored threads for averaged evaluation results
-                if thread_id in selected_thread_ids:
-                    thread_json = json.loads(thread)
-                    load_thread_to_dataset(thread_id, thread_json, dataset)
+            if thread_id in selected_thread_ids:
+                thread_json = json.loads(thread)
+                for thread_eval_run_id in range(
+                    max(1, nb_evaluations_per_thread)
+                ):  # duplicate stored threads to enable averaged per-object evaluations
+                    eval_run_thread_id = f"{thread_id}_{thread_eval_run_id}"
+                    load_thread_to_dataset(
+                        thread_id, thread_json, dataset, eval_run_thread_id
+                    )
 
     # TODO - should we add ToolCall here? Is there a standard way to represent them in jsonl?
 
@@ -359,12 +366,10 @@ def add_turns(thread: Thread):
 
 def verify_checkpoints_table_exists(cursor):
     # double check that the 'checkpoints' table exists
-    cursor.execute(
-        """
+    cursor.execute("""
         SELECT name FROM sqlite_master 
         WHERE type='table' AND name='checkpoints'
-        """
-    )
+        """)
     result = cursor.fetchone()
     # Assert that the result is not None, meaning the table exists
     assert result is not None, "Table 'checkpoints' does not exist in the database."
