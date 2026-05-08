@@ -8,6 +8,7 @@ from flexeval.schema import (
     EvalRun,
     FunctionItem,
     IterableDataSource,
+    NamedDataSource,
     Metrics,
 )
 
@@ -38,9 +39,7 @@ conversations = [
 
 # Name the data source so it can be reused across eval runs.
 # The data is loaded into the database on the first run and reused on the second.
-data_sources = [
-    IterableDataSource(name="vignette_conversations", contents=conversations)
-]
+data_sources = [IterableDataSource(name="test_conversations", contents=conversations)]
 
 # --- Config 1: applying the index_in_thread function to ---
 # Computes the position of each turn within a thread.
@@ -60,10 +59,10 @@ for metric in access.get_all_metrics():
 
 # --- Run 2: message_matches_regex ---
 # Counts question marks in each message.
-# The named dataset "demo_conversations" is reused from Run 1.
-# Note that you could use a flexeval.schema.NamedDataSource instead if you wanted.
+# The dataset "test_conversations" is reused from Run 1 by specifying a NamedDataSource with the same name.
+# (You could also reuse the the same IterableDataSource object created early.)
 eval_run_2 = EvalRun(
-    data_sources=data_sources,
+    data_sources=[NamedDataSource(name="test_conversations")],
     database_path="eval_results.db",
     eval=Eval(
         metrics=Metrics(
