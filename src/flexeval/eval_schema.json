@@ -76,10 +76,6 @@
                             "description": "The keyword arguments for the dependency. If provided, used to match which evaluation this dependency is for, so must match the keyword args given for some evaluation.",
                             "additionalProperties": true
                           },
-                          "context_only": {
-                            "type": "boolean",
-                            "description": "The context_only value for the dependency. If provided, used to match which evaluation this dependency is for."
-                          },
                           "last_turn_only": {
                               "type": "boolean",
                               "description": "The last_turn_only value for the dependency. If provided, used to match which evaluation this dependency is for."
@@ -107,11 +103,6 @@
                       "type": "string",
                       "description": "What level of granularity (ToolCall, Message, Turn, or Thread) this rubric should be applied to",
                       "default": "Turn"
-                    },
-                    "context_only": {
-                      "type": "boolean",
-                      "description": "If true, only the context (that is, the previous messages) will be evaluated, not the current object. Cannot be done with only thread",
-                      "default": false
                     },
                     "last_instance_only": {
                       "type": "boolean",
@@ -143,11 +134,6 @@
                         "description": "What level of granularity (ToolCall, Message, Turn, or Thread) this rubric should be applied to",
                         "default": "Turn"
                       },
-                      "context_only": {
-                          "type": "boolean",
-                          "description": "If true, only the context (that is, the previous messages) will be evaluated, not the current object. Cannot be done with only thread",
-                          "default": false
-                      },
                       "last_instance_only": {
                           "type": "boolean",
                           "description": "If true, the object will only be evaluated if it's the last instance (i.e., turn or message depending on metric_level) in an existing conversation, or if it's a new completion.",
@@ -173,10 +159,6 @@
                                     "type": "object",
                                     "description": "The keyword arguments for the dependency. If provided, used to match which evaluation this dependency is for, so must match the keyword args given for some evaluation.",
                                     "additionalProperties": true
-                                  },
-                                  "context_only": {
-                                    "type": "boolean",
-                                    "description": "The context_only value for the dependency. If provided, used to match which evaluation this dependency is for."
                                   },
                                   "last_turn_only": {
                                       "type": "boolean",

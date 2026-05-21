@@ -14,6 +14,7 @@ from typing import Iterable, Union
 import networkx as nx
 
 from flexeval import function_types
+from flexeval.classes.dataset import Dataset
 from flexeval.classes.eval_set_run import EvalSetRun
 from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
@@ -159,8 +160,8 @@ class MetricGraphBuilder:
         metric = self.metric_id_map[metric_id]
         return self.get_or_create_object_metric(dependency_metric_level, object, metric)
 
-    def build_thread_task_graphs(self, evalsetrun: EvalSetRun) -> Iterable[nx.DiGraph]:
-        threads = evalsetrun.threads
+    def build_thread_task_graphs(self, dataset: Dataset) -> Iterable[nx.DiGraph]:
+        threads = dataset.threads
         for thread in threads:
             yield self.build_thread_task_graph(thread)
 
@@ -208,28 +209,35 @@ class MetricGraphBuilder:
         return g
 
 
-def compute_metrics(evalrun: EvalRun, evalsetrun: EvalSetRun) -> list[dict]:
+def compute_metrics(
+    evalrun: EvalRun, evalsetrun: EvalSetRun, datasets: list[Dataset]
+) -> list[dict]:
     n_workers = evalrun.config.max_workers
     raise_on_error = evalrun.config.raise_on_metric_error
     mgb = MetricGraphBuilder()
     mgb.build_metric_structures(evalsetrun)
-    graphs = mgb.build_thread_task_graphs(evalsetrun)
     mc = MetricComputer.from_evalrun(evalrun, evalsetrun)
     metrics = []
-    if n_workers == 1:
-        for graph in graphs:
-            graph_metrics = mc.process_thread_dependency_graph(graph, raise_on_error)
-            metrics.extend(graph_metrics)
-    else:
-        with ThreadPoolExecutor(max_workers=n_workers) as executor:
-            futures = []
+    for dataset in datasets:
+        graphs = mgb.build_thread_task_graphs(dataset)
+        if n_workers == 1:
             for graph in graphs:
-                future = executor.submit(mc.process_thread_dependency_graph, graph)
-                futures.append(future)
-            for i, future in enumerate(futures):
-                metrics.extend(future.result())
-                if i % 100 == 0:
-                    logger.info(f"Metrics futures resulted: {i + 1} / {len(futures)}")
+                graph_metrics = mc.process_thread_dependency_graph(
+                    graph, raise_on_error
+                )
+                metrics.extend(graph_metrics)
+        else:
+            with ThreadPoolExecutor(max_workers=n_workers) as executor:
+                futures = []
+                for graph in graphs:
+                    future = executor.submit(mc.process_thread_dependency_graph, graph)
+                    futures.append(future)
+                for i, future in enumerate(futures):
+                    metrics.extend(future.result())
+                    if i % 100 == 0:
+                        logger.info(
+                            f"Metrics futures resulted: {i + 1} / {len(futures)}"
+                        )
     return metrics
 
 
@@ -296,10 +304,18 @@ class MetricComputer:
         self.rubrics: dict | None = (
             self.load_rubrics(evalsetrun) if evalsetrun is not None else None
         )
+        self.do_completion: bool = (
+            evalsetrun.do_completion if evalsetrun is not None else False
+        )
+        self.grader_llm: str | None = (
+            evalsetrun.grader_llm if evalsetrun is not None else None
+        )
 
-    def load_rubrics(self, evalsetrun: EvalSetRun):
-        """Set the rubrics to be used by this MetricComputer from the given EvalSetRun."""
-        self.rubrics = json.loads(evalsetrun.rubrics)
+    def load_rubrics(self, evalsetrun: EvalSetRun) -> dict:
+        """Load and return rubrics from the given EvalSetRun."""
+        rubrics = json.loads(evalsetrun.rubrics)
+        self.rubrics = rubrics
+        return rubrics
 
     def process_thread_dependency_graphs(
         self, graph_list: Iterable[nx.DiGraph]
@@ -467,7 +483,6 @@ class MetricComputer:
         evaluation_type: str,
         metric_level: str,
         kwargs: dict,
-        context_only: bool = None,
         depends_on: list = None,
         id: int = None,
         notes: str = None,  # just a placeholder
@@ -477,7 +492,6 @@ class MetricComputer:
                 function_name=evaluation_name,
                 metric_kwargs=kwargs,
                 metric_level=metric_level,
-                context_only=context_only,
                 input_object=object,
                 depends_on=depends_on,
                 id=id,
@@ -515,10 +529,9 @@ class MetricComputer:
         metric_level: eval_schema.MetricLevel,
         input_object: function_types.AnyFunctionObjectInput,
         metric_kwargs: dict,
-        context_only: bool,
     ):
         function_input = function_types.get_function_input(
-            metric_function, metric_level, input_object, context_only
+            metric_function, metric_level, input_object
         )
         metrics_result = metric_function(function_input, **metric_kwargs)
         return metrics_result
@@ -541,7 +554,6 @@ class MetricComputer:
         metric_kwargs: dict,
         input_object: Union[Thread, Turn, Message, ToolCall],
         metric_level: eval_schema.MetricLevel,
-        context_only: bool,
         depends_on: list,
         id: int,
     ):
@@ -552,7 +564,7 @@ class MetricComputer:
         # Check if the function exists in any of the function namespaces
         metric_function, metric_source = self.find_function(function_name)
         metrics_result = self.invoke_function(
-            metric_function, metric_level, input_object, metric_kwargs, context_only
+            metric_function, metric_level, input_object, metric_kwargs
         )
 
         base_result = {
@@ -562,7 +574,6 @@ class MetricComputer:
             "metric_level": metric_level,
             "kwargs": metric_kwargs,
             "source": metric_source,  # TODO - put this back?
-            "context_only": context_only,
             "depends_on": depends_on,
             "id": id,
         }
@@ -611,7 +622,9 @@ class MetricComputer:
         if self.rubrics is not None:
             rubrics = self.rubrics
         else:
-            rubrics = json.loads(object.evalsetrun.rubrics)
+            raise ValueError(
+                "No rubrics loaded. Rubrics must be loaded via MetricComputer.from_evalrun() before computing rubric metrics."
+            )
         if rubric_name not in rubrics:
             raise ValueError(
                 f"You requested a rubric called '{rubric_name}', but only these were found: {rubrics.keys()}."
@@ -643,7 +656,7 @@ class MetricComputer:
                 "Your rubric should not have both {content} and {completion}. Please check the README file for more information about how to write FlexEval rubrics."
             )
 
-        if "{completion}" in prompt and not object.evalsetrun.do_completion:
+        if "{completion}" in prompt and not self.do_completion:
             raise Exception(
                 "Your rubric has {completion}, but in your test specification for this rubric evaluation, do_completion is not True. Please check the README file for more information about how to write FlexEval rubrics."
             )
@@ -656,7 +669,7 @@ class MetricComputer:
         )
 
         # with do_completion == True, only the completion is evaluated with or without the context.
-        if object.evalsetrun.do_completion and "{completion}" in prompt:
+        if self.do_completion and "{completion}" in prompt:
             # TODO revisit this logic
             # also included object.is_completion, which only works for Message rubrics
             # but we can in principle check for a message in either a turn or a thread with is_flexeval_completion true
@@ -665,11 +678,11 @@ class MetricComputer:
         choice_scores = rubrics.get(rubric_name).get("choice_scores")
 
         # get rubric grader
-        if object.evalsetrun.grader_llm is None or object.evalsetrun.grader_llm == "":
+        if self.grader_llm is None or self.grader_llm == "":
             raise ValueError(
                 "Attempting to evaluate a rubric metric, but no grader LLM defined."
             )
-        grader_completion_function = json.loads(object.evalsetrun.grader_llm)
+        grader_completion_function = json.loads(self.grader_llm)
         if grader_completion_function is None or len(grader_completion_function) == 0:
             raise ValueError(
                 "Attempting to evaluate a rubric metric, but no grader LLM defined."

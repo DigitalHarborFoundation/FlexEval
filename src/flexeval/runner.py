@@ -86,26 +86,18 @@ def run(eval_run: EvalRun) -> EvalRunner:
         rd.seed(rd_seed)
         runner.logger.info(f"Set random seed to '{rd_seed}'.")
 
-        run_utils.build_datasets(runner, evalsetrun)
-    except Exception:
-        runner.logger.exception(
-            "An error occurred creating dataset metadata.", exc_info=True
-        )
-
-    try:
-        runner.logger.info("Parsing data files")
-        for dataset in evalsetrun.datasets:
-            runner.logger.debug(f"Loading data from '{dataset.filename}'.")
-            dataset.load_data()
+        datasets = run_utils.build_evalsetrun_datasets(runner.evalrun, evalsetrun)
     except Exception:
         runner.logger.exception("An error occurred loading data.", exc_info=True)
+        runner.shutdown_logging()
+        raise
 
     # Do completions, if necessary
     try:
         if evalsetrun.do_completion:
             # We do this by creating new turns
             runner.logger.info("Generating completions")
-            completions.get_completions(eval_run, evalsetrun)
+            completions.get_completions(eval_run, evalsetrun, datasets)
     except Exception:
         runner.logger.exception(
             "An error occurred generating completions.", exc_info=True
@@ -118,9 +110,9 @@ def run(eval_run: EvalRun) -> EvalRunner:
     #################  Compute Metrics  ###################
     #######################################################
     try:
-        metrics = compute_metrics.compute_metrics(eval_run, evalsetrun)
+        metrics = compute_metrics.compute_metrics(eval_run, evalsetrun, datasets)
         runner.logger.info(f"Saving '{len(metrics)}' metrics to database.")
-        flexeval.metrics.save.save_metrics(metrics)
+        flexeval.metrics.save.save_metrics(metrics, evalsetrun, datasets)
     except Exception:
         runner.logger.exception("An error occurred computing metrics.", exc_info=True)
         if eval_run.config.raise_on_metric_error:

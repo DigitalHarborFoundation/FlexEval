@@ -37,14 +37,6 @@ class Metric(BaseModel):
         null=True
     )  # necessary if rubric result is INVALID or e.g. latency doesn't apply to the very first message
     kwargs = pw.TextField()
-    # context_only allows us to create another kind of dependency
-    # where we can quantify something about the previous conversation
-    # and then use that quantity in a downstream analysis
-    # e.g. 'would a plot be pedagogically appropriate here' is really a question about the PAST of the conversation
-    #      NOTE: but we have gotten rid of context_only for rubrics, where only {context} is used so technically here 'context_only' is False
-    # or 'was the conversation ever flagged by the moderation api' would be a question about the previous turns that might
-    #    allow to have better context for the properties of this turn
-    # context_only = pw.BooleanField(default=False)
     source = pw.TextField()  # TODO - make another table for this? But maybe not, because this also contains filled-in rubrics
     depends_on = pw.TextField()
     rubric_prompt = pw.TextField(null=True)

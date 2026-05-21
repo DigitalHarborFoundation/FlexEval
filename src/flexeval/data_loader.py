@@ -6,7 +6,6 @@ import pathlib
 import random as rd
 import sqlite3
 
-from langchain.load.dump import dumps
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 from flexeval.classes.dataset import Dataset
@@ -14,8 +13,115 @@ from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
+from flexeval.schema.evalrun_schema import FileDataSource, FileFormatEnum
 
 logger = logging.getLogger(__name__)
+
+
+def load_thread_to_dataset(
+    thread_id: str | int,
+    thread: dict,
+    dataset: Dataset,
+    eval_run_thread_id: str | None = None,
+) -> Thread:
+    if "input" not in thread:
+        raise ValueError(
+            f"Expected thread format is a dictionary containing at least an 'input' key. Instead, we found: {thread.keys()}"
+        )
+
+    # extract any metadata
+    thread_metadata = thread.copy()
+    del thread_metadata["input"]
+
+    context = []
+    thread_input = thread["input"]
+
+    # Get system prompt used in the thread - assuming only 1
+    for message in thread_input:
+        if message["role"] == "system":
+            system_prompt = message["content"]
+            break
+    else:
+        system_prompt = None
+    if system_prompt is not None:
+        # Add the system prompt as context
+        context.append({"role": "system", "content": system_prompt})
+
+    thread_object: Thread = Thread.create(
+        dataset=dataset,
+        jsonl_thread_id=thread_id,
+        eval_run_thread_id=eval_run_thread_id,
+        system_prompt=system_prompt,
+        metadata=json.dumps(thread_metadata),
+    )
+
+    # Create messages
+    index_in_thread = 0
+    for message in thread_input:
+        if not isinstance(message, dict):
+            raise ValueError(
+                f"Can't load unknown object type; expected dict. Check JSONL format: {message}"
+            )
+        role = message.get("role", None)
+        if role != "system":
+            # System message shouldn't be added as a separate message
+            system_prompt_for_this_message = ""
+            if role != "user":
+                system_prompt_for_this_message = system_prompt
+            message_metadata = message.copy()
+            if "content" in message_metadata:
+                del message_metadata["content"]
+            if "role" in message_metadata:
+                del message_metadata["role"]
+            Message.create(
+                dataset=dataset,
+                thread=thread_object,
+                index_in_thread=index_in_thread,
+                role=role,
+                content=message.get("content", None),
+                context=json.dumps(context),
+                is_flexeval_completion=False,
+                system_prompt=system_prompt_for_this_message,
+                metadata=json.dumps(message_metadata),
+            )
+            # Update context
+            context.append({"role": role, "content": message.get("content", None)})
+            index_in_thread += 1
+
+    add_turns(thread_object)
+    return thread_object
+
+
+def load_file(
+    dataset: Dataset,
+    data_source: FileDataSource,
+    max_n_conversation_threads: int | None = None,
+    nb_evaluations_per_thread: int | None = 1,
+):
+    if data_source.format == FileFormatEnum.jsonl:
+        load_jsonl(
+            dataset=dataset,
+            filename=data_source.path,
+            max_n_conversation_threads=max_n_conversation_threads,
+            nb_evaluations_per_thread=nb_evaluations_per_thread,
+        )
+    elif data_source.format == FileFormatEnum.langgraph_sqlite:
+        load_langgraph_sqlite(
+            dataset=dataset,
+            filename=data_source.path,
+            max_n_conversation_threads=max_n_conversation_threads,
+            nb_evaluations_per_thread=nb_evaluations_per_thread,
+        )
+    else:
+        raise ValueError("Format not yet supported.")
+
+
+def load_iterable(
+    dataset: Dataset,
+    iterable,
+):
+    for thread_id, thread in enumerate(iterable):
+        load_thread_to_dataset(thread_id, thread, dataset)
 
 
 def load_jsonl(
@@ -50,77 +156,15 @@ def load_jsonl(
             nb_evaluations_per_thread = 1
 
         for thread_id, thread in enumerate(all_lines):
-            for thread_eval_run_id in range(
-                max(1, nb_evaluations_per_thread)
-            ):  # duplicate stored threads for averaged evaluation results
-                if thread_id in selected_thread_ids:
-                    thread_json = json.loads(thread)
-                    # extract any metadata
-                    thread_metadata = thread_json.copy()
-                    del thread_metadata["input"]
-
-                    context = []
-                    thread_input = thread_json["input"]
-
-                    # Get system prompt used in the thread - assuming only 1
-                    for message in thread_input:
-                        if message["role"] == "system":
-                            system_prompt = message["content"]
-                            break
-                    else:
-                        system_prompt = None
-                    if system_prompt is not None:
-                        # Add the system prompt as context
-                        context.append({"role": "system", "content": system_prompt})
-
-                    thread_object: Thread = Thread.create(
-                        evalsetrun=dataset.evalsetrun,
-                        dataset=dataset,
-                        jsonl_thread_id=thread_id,
-                        eval_run_thread_id=str(thread_id)
-                        + "_"
-                        + str(thread_eval_run_id),
-                        system_prompt=system_prompt,
-                        metadata=json.dumps(thread_metadata),
+            if thread_id in selected_thread_ids:
+                thread_json = json.loads(thread)
+                for thread_eval_run_id in range(
+                    max(1, nb_evaluations_per_thread)
+                ):  # duplicate stored threads to enable averaged per-object evaluations
+                    eval_run_thread_id = f"{thread_id}_{thread_eval_run_id}"
+                    load_thread_to_dataset(
+                        thread_id, thread_json, dataset, eval_run_thread_id
                     )
-
-                    # Create messages
-                    index_in_thread = 0
-                    for message in thread_input:
-                        if not isinstance(message, dict):
-                            raise ValueError(
-                                f"Can't load unknown object type; expected dict. Check JSONL format: {message}"
-                            )
-                        role = message.get("role", None)
-                        if role != "system":
-                            # System message shouldn't be added as a separate message
-                            system_prompt_for_this_message = ""
-                            if role != "user":
-                                system_prompt_for_this_message = system_prompt
-                            message_metadata = message.copy()
-                            if "content" in message_metadata:
-                                del message_metadata["content"]
-                            if "role" in message_metadata:
-                                del message_metadata["role"]
-                            Message.create(
-                                evalsetrun=dataset.evalsetrun,
-                                dataset=dataset,
-                                thread=thread_object,
-                                index_in_thread=index_in_thread,
-                                role=role,
-                                content=message.get("content", None),
-                                context=json.dumps(context),
-                                is_flexeval_completion=False,
-                                system_prompt=system_prompt_for_this_message,
-                                metadata=json.dumps(message_metadata),
-                            )
-                            # Update context
-                            context.append(
-                                {"role": role, "content": message.get("content", None)}
-                            )
-                            index_in_thread += 1
-
-                    add_turns(thread_object)
 
     # TODO - should we add ToolCall here? Is there a standard way to represent them in jsonl?
 
@@ -131,24 +175,22 @@ def load_langgraph_sqlite(
     max_n_conversation_threads: int | None = None,
     nb_evaluations_per_thread: int | None = 1,
 ):
+    """Load conversations from a LangGraph SQLite checkpoint database.
+
+    Reads the final checkpoint for each thread and extracts the cumulative
+    message list from channel_values.messages. Compatible with langgraph >= 1.0.
+    """
     serializer = JsonPlusSerializer()
 
     with sqlite3.connect(filename) as conn:
-        # Set the row factory to sqlite3.Row
-        # allowing us to reference columns by name instead of index
         conn.row_factory = sqlite3.Row
-
-        # Create a cursor object
         cursor = conn.cursor()
         verify_checkpoints_table_exists(cursor)
 
-        # Sync database
-        query = "PRAGMA wal_checkpoint(FULL);"
-        cursor.execute(query)
+        cursor.execute("PRAGMA wal_checkpoint(FULL);")
 
-        # Make threads (aka conversations)
-        query = "select distinct thread_id from checkpoints"
-        cursor.execute(query)
+        # Get distinct thread IDs
+        cursor.execute("SELECT DISTINCT thread_id FROM checkpoints")
         thread_ids = cursor.fetchall()
 
         nb_threads = len(thread_ids)
@@ -159,260 +201,125 @@ def load_langgraph_sqlite(
             selected_thread_ids = rd.sample(thread_ids, max_n_conversation_threads)
         else:
             logger.debug(
-                f"You requested up to '{max_n_conversation_threads}' conversations but only '{nb_threads}' are present in Sqlite dataset at '{filename}'."
+                f"You requested up to '{max_n_conversation_threads}' conversations "
+                f"but only '{nb_threads}' are present in Sqlite dataset at '{filename}'."
             )
             selected_thread_ids = thread_ids
 
-        logger.debug(" DEBUG DUPLICATE SELECT THREAD IDS\n", selected_thread_ids[0])
+        for thread_eval_run_id in range(max(1, nb_evaluations_per_thread)):
+            for thread_id_row in selected_thread_ids:
+                lg_thread_id = thread_id_row[0]
 
-        for thread_eval_run_id in range(
-            max(1, nb_evaluations_per_thread)
-        ):  # duplicate stored threads for averaged evaluation results
-            for thread_id in selected_thread_ids:
+                # Get the final checkpoint (highest step) for this thread
+                cursor.execute(
+                    """
+                    SELECT *, json_extract(metadata, '$.step') as step
+                    FROM checkpoints
+                    WHERE thread_id = ?
+                    ORDER BY json_extract(metadata, '$.step') DESC
+                    LIMIT 1
+                    """,
+                    (lg_thread_id,),
+                )
+                final_row = cursor.fetchone()
+                if final_row is None:
+                    logger.warning(f"No checkpoints found for thread '{lg_thread_id}'")
+                    continue
+
+                checkpoint = serializer.loads_typed(
+                    (final_row["type"], final_row["checkpoint"])
+                )
+                lg_messages = checkpoint.get("channel_values", {}).get("messages", [])
+
+                if not lg_messages:
+                    logger.warning(
+                        f"No messages in final checkpoint for thread '{lg_thread_id}'"
+                    )
+                    continue
+
                 thread = Thread.create(
-                    evalsetrun=dataset.evalsetrun,
                     dataset=dataset,
-                    langgraph_thread_id=thread_id[0],
-                    eval_run_thread_id=str(thread_id[0])
-                    + "_"
-                    + str(thread_eval_run_id),
+                    langgraph_thread_id=lg_thread_id,
+                    eval_run_thread_id=f"{lg_thread_id}_{thread_eval_run_id}",
                 )
 
-                # Create messages
-                query = f"select * from checkpoints where thread_id = '{thread.langgraph_thread_id}'"
-                cursor.execute(query)
-                completion_list = cursor.fetchall()
-
-                # context has to be reset at the start of every thread
+                # Map message types to FlexEval roles
+                # Tools are counted as assistant per existing convention
                 context = []
-                # tool call variables
+                system_prompt = None
                 tool_calls_dict = {}
                 tool_responses_dict = {}
-                tool_addional_kwargs_dict = {}
-                # system prompt reset for every thread
-                system_prompt = None
+                tool_additional_kwargs_dict = {}
 
-                for completion_row in completion_list:
-                    # checkpoint is full state history
-                    checkpoint = serializer.loads_typed(
-                        (completion_row["type"], completion_row["checkpoint"])
+                for index_in_thread, msg in enumerate(lg_messages):
+                    msg_type = msg.type  # 'human', 'ai', 'tool'
+                    role = "user" if msg_type == "human" else "assistant"
+                    content = msg.content
+
+                    # Extract tool call info
+                    tool_calls = getattr(msg, "tool_calls", []) or []
+                    tool_call_ids = [tc["id"] for tc in tool_calls]
+                    response_meta = getattr(msg, "response_metadata", {}) or {}
+                    token_usage = response_meta.get("token_usage", {})
+                    additional_kwargs = getattr(msg, "additional_kwargs", {}) or {}
+
+                    Message.create(
+                        dataset=dataset,
+                        thread=thread,
+                        index_in_thread=index_in_thread,
+                        role=role,
+                        content=content,
+                        context=json.dumps(context),
+                        is_flexeval_completion=False,
+                        system_prompt=system_prompt,
+                        # language model stats
+                        tool_calls=json.dumps(tool_calls),
+                        tool_call_ids=tool_call_ids,
+                        n_tool_calls=len(tool_calls),
+                        prompt_tokens=token_usage.get("prompt_tokens"),
+                        completion_tokens=token_usage.get("completion_tokens"),
+                        model_name=response_meta.get("model_name"),
+                        # langgraph metadata
+                        langgraph_ts=checkpoint.get("ts"),
+                        langgraph_thread_id=lg_thread_id,
+                        langgraph_checkpoint_id=final_row["checkpoint_id"],
+                        langgraph_parent_checkpoint_id=final_row[
+                            "parent_checkpoint_id"
+                        ],
+                        langgraph_metadata=final_row["metadata"],
+                        langgraph_message_type=msg_type,
+                        langgraph_type=msg_type,
                     )
-                    # metadata is the state update for that row
-                    metadata = json.loads(completion_row["metadata"])
-                    # IDs from langgraph
 
-                    if metadata.get("writes") is None:
-                        continue
+                    # Build context for next message
+                    context.append({"role": role, "content": content})
+
+                    # Track tool calls and responses for ToolCall creation
+                    if msg_type == "tool":
+                        tool_call_id = getattr(msg, "tool_call_id", None)
+                        if tool_call_id:
+                            tool_responses_dict[tool_call_id] = content
                     else:
-                        # Goal here is to create a data structure for EACH write/update
-                        # that can be used to construct a Message object
-                        # LangGraph stores info in 'writes' in the checkpoints.metadata column
-                        # but the format is a bit different between human and machine input
-                        # The resulting data structure should have
-                        # key (str) -- graph 'node' that produced the message (or 'human')
-                        # value (list) -- list of 'message' data structures with id, kwargs, etc
-                        # {
-                        #   'node_name':{
-                        #      "messages":[
-                        #          {
-                        #             'id': "XYZ"
-                        #             'kwargs':{
-                        #                 "content": 'text of the message',
-                        #                 "additional_kwargs": {}
-                        #           },
-                        #        }
-                        #       ]
-                        #
-                        #   }
-                        # }
+                        for tc in tool_calls:
+                            tool_calls_dict[tc["id"]] = tc
+                            tool_additional_kwargs_dict[tc["id"]] = additional_kwargs
 
-                        # user input condition
-                        if metadata.get("source") == "input":
-                            # NOTE: I think with the updated logging of HumanMessage with langgraph, we don't need this case
-                            update_dict = {}
-                            # this will be a dictionary we can add to
-                            # key is 'input', as in human input
-                            update_dict["input"] = {"messages": []}
-                            # print("metadata keys:", metadata["writes"].keys())
-                            # the very first message in input in a thread seems to include
-                            # the system prompt, not a message that was sent by the user.
-                            # the system promptdoesn't seem to be set anywhere else, so
-                            # using that as the system prompt for the thread.
-                            messagecount = 0
-                            for msg in metadata["writes"]["__start__"]["messages"]:
-                                if messagecount == 0 and metadata["step"] == -1:
-                                    system_prompt = msg["kwargs"]["content"]
-                                    messagecount += 1
-                                else:
-                                    message = {}
-                                    message["id"] = [
-                                        "HumanMessage"
-                                    ]  # LangGraph has a list here
-                                    message["kwargs"] = {}
-                                    message["kwargs"]["content"] = msg
-                                    message["kwargs"]["type"] = "human"
-                                    update_dict["input"]["messages"].append(message)
-                            # will be used below
-                            role = "user"
-
-                        # machine input condition
-                        elif metadata.get("source") == "loop":
-                            # This already has a list of messages with kwargs, etc
-                            update_dict = metadata.get("writes")
-                            # I think 'system_prompt' is empty by default and not stored here unless
-                            # it's included in the LangGraph state
-                            checkpoint_system_prompt = checkpoint.get(
-                                "channel_values", {}
-                            ).get("system_prompt")
-                            if checkpoint_system_prompt is not None:
-                                system_prompt = checkpoint_system_prompt
-                            role = "assistant"
-                        else:
-                            raise Exception(
-                                f"Unhandled input condition! Source not 'loop' or 'input'. Metadata: {metadata}"
-                            )
-                        # Add system prompt as first thing in context if not already present
-                        if len(context) == 0:
-                            context.append({"role": "system", "content": system_prompt})
-
-                        # iterate through nodes - there is probably only 1
-                        for node, value in update_dict.items():
-                            # iterate through list of message updates
-                            if "messages" in value:
-                                if isinstance(value["messages"], dict):
-                                    # Make this a list to iterate through - 4 Feb 2025 - used to be a list previously
-                                    messagelist = [value["messages"]]
-                                else:
-                                    messagelist = value["messages"]
-                                index_in_thread = 0
-                                for message in messagelist:
-                                    if role == "user":
-                                        content = (
-                                            message.get("kwargs", {})
-                                            .get("content", {})
-                                            .get("kwargs", {})
-                                            .get("content", None)
-                                        )
-                                    elif role == "assistant":
-                                        content = message.get("kwargs", {}).get(
-                                            "content", None
-                                        )
-                                    else:
-                                        raise Exception(
-                                            "`role` should be either user or assistant."
-                                        )
-                                    Message.create(
-                                        evalsetrun=dataset.evalsetrun,
-                                        dataset=dataset,
-                                        thread=thread,
-                                        index_in_thread=index_in_thread,
-                                        role=role,
-                                        content=content,
-                                        context=json.dumps(context),
-                                        is_flexeval_completion=False,
-                                        system_prompt=system_prompt,
-                                        # language model stats
-                                        tool_calls=json.dumps(
-                                            message.get("kwargs", {}).get(
-                                                "tool_calls", []
-                                            )
-                                        ),
-                                        tool_call_ids=[
-                                            tc["id"]
-                                            for tc in message.get("kwargs", {}).get(
-                                                "tool_calls", []
-                                            )
-                                        ],
-                                        n_tool_calls=len(
-                                            message.get("kwargs", {}).get(
-                                                "tool_calls", []
-                                            )
-                                        ),
-                                        prompt_tokens=message.get("kwargs", {})
-                                        .get("response_metadata", {})
-                                        .get("token_usage", {})
-                                        .get("prompt_tokens"),
-                                        completion_tokens=message.get("kwargs", {})
-                                        .get("response_metadata", {})
-                                        .get("token_usage", {})
-                                        .get("completion_tokens"),
-                                        model_name=message.get("kwargs", {})
-                                        .get("response_metadata", {})
-                                        .get("model_name"),
-                                        # langgraph metadata
-                                        langgraph_ts=checkpoint.get("ts"),
-                                        langgraph_step=metadata.get("step"),
-                                        langgraph_thread_id=completion_row["thread_id"],
-                                        langgraph_checkpoint_id=completion_row[
-                                            "checkpoint_id"
-                                        ],
-                                        langgraph_parent_checkpoint_id=completion_row[
-                                            "parent_checkpoint_id"
-                                        ],
-                                        langgraph_checkpoint=dumps(
-                                            checkpoint
-                                        ),  # Have to re-dump this because of the de-serialization#completion_row["checkpoint"],
-                                        langgraph_metadata=completion_row["metadata"],
-                                        langgraph_node=node,
-                                        langgraph_message_type=message["id"][-1],
-                                        langgraph_type=message.get("kwargs", {}).get(
-                                            "type"
-                                        ),
-                                        # special property of state
-                                        langchain_print=message.get("kwargs", {})
-                                        .get("additional_kwargs", {})
-                                        .get("print", False),
-                                    )
-
-                                    # update the context for the next Message
-                                    context.append(
-                                        {
-                                            "role": role,
-                                            "content": content,
-                                            "langgraph_role": message["id"][-1],
-                                        }
-                                    )
-
-                                    # record tool call info so we can match them up later
-                                    if message.get("kwargs", {}).get("type") == "tool":
-                                        # this should have a mapping between tool_call_id and the RESPONSE to to the tool call
-                                        tool_responses_dict[
-                                            message.get("kwargs", {}).get(
-                                                "tool_call_id"
-                                            )
-                                        ] = message.get("kwargs", {}).get("content", "")
-                                    else:
-                                        for tool_call in message.get("kwargs", {}).get(
-                                            "tool_calls", []
-                                        ):
-                                            # this should have all the info about the tool calls, including additional_kwargs
-                                            # but NOT their responses
-                                            tool_calls_dict[tool_call["id"]] = tool_call
-                                            tool_addional_kwargs_dict[
-                                                tool_call["id"]
-                                            ] = message.get("kwargs", {}).get(
-                                                "additional_kwargs", {}
-                                            )
-                                    index_in_thread += 1
-
-                # Add turns to each message
-                # Need to do this before dealing with tool calls, since we
-                # associated turns with tool calls via messages during the .create() method
+                # Create turns from messages
                 add_turns(thread)
 
-                ## Match up tool calls and make an object for each match
+                # Create ToolCall objects by matching calls to responses
                 for tool_call_id, tool_call_vals in tool_calls_dict.items():
                     if tool_call_id not in tool_responses_dict:
                         raise ValueError(
                             f"Found a tool call without a tool response! id='{tool_call_id}'"
                         )
-                    # get matching message - should now be accessible through thread now?
                     matching_message = [
-                        m for m in thread.messages if tool_call_id in m.tool_call_ids
+                        m
+                        for m in thread.messages
+                        if tool_call_id in (m.tool_call_ids or [])
                     ][0]
 
                     ToolCall.create(
-                        evalsetrun=dataset.evalsetrun,
                         dataset=dataset,
                         thread=thread,
                         turn=matching_message.turn,
@@ -420,13 +327,11 @@ def load_langgraph_sqlite(
                         function_name=tool_call_vals.get("name"),
                         args=json.dumps(tool_call_vals.get("args")),
                         additional_kwargs=json.dumps(
-                            tool_addional_kwargs_dict.get(tool_call_id)
+                            tool_additional_kwargs_dict.get(tool_call_id)
                         ),
                         tool_call_id=tool_call_id,
                         response_content=tool_responses_dict.get(tool_call_id),
                     )
-
-                ## Add system prompt if available?
 
 
 def add_turns(thread: Thread):
@@ -441,7 +346,6 @@ def add_turns(thread: Thread):
     index_in_thread = 0
     for placeholder_turn_id, role in turn_dict.items():  # turns.items():
         t = Turn.create(
-            evalsetrun=thread.evalsetrun,
             dataset=thread.dataset,
             thread=thread,
             index_in_thread=index_in_thread,
@@ -462,12 +366,10 @@ def add_turns(thread: Thread):
 
 def verify_checkpoints_table_exists(cursor):
     # double check that the 'checkpoints' table exists
-    cursor.execute(
-        """
+    cursor.execute("""
         SELECT name FROM sqlite_master 
         WHERE type='table' AND name='checkpoints'
-        """
-    )
+        """)
     result = cursor.fetchone()
     # Assert that the result is not None, meaning the table exists
     assert result is not None, "Table 'checkpoints' does not exist in the database."

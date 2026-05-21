@@ -103,7 +103,7 @@ test_suite_04:
   grader_llm:
     function_name: open_ai_completion
     kwargs:
-      model_name: gpt-4o-mini
+      model_name: gpt-5.4-nano
       api_key_name: OPENAI_API_KEY
 
 
@@ -138,7 +138,7 @@ test_suite_04_langgraph:
   grader_llm:
     function_name: open_ai_completion
     kwargs:
-      model_name: gpt-4o-mini
+      model_name: gpt-5.4-nano
       api_key_name: OPENAI_API_KEY
 
 test_plots_01:
@@ -189,7 +189,6 @@ test_plots_02:
 
     rubric:
       - name: is_request_for_plot
-        context_only: true
         depends_on:
           - name: is_role
             #this is needed to disambiguate
@@ -209,7 +208,7 @@ test_plots_02:
   grader_llm:
     function_name: open_ai_completion
     kwargs:
-      model_name: gpt-4o-mini
+      model_name: gpt-5.4-nano
       api_key_name: OPENAI_API_KEY
 
 config_failure_01:
@@ -287,17 +286,6 @@ config_failure_06:
       - name: count_numeric_tool_call_params_by_name 
         metric_level: Thread # function metric doesn't have a valid input type for this level
 
-config_failure_07:
-  data:
-    - tests/integration/data/plot-convos.jsonl
-
-  metrics:
-    function:
-      - name: count_tool_calls_by_name 
-        metric_level: Thread 
-        context_only: true # function metric does not take a string or list, so context_only must be false
-
-
 test_default_kwargs_01:
   data:
     - tests/integration/data/simple.jsonl 
@@ -368,19 +356,9 @@ test_list_string_function_metrics:
       
       - name: flesch_reading_ease
         metric_level: Message
-      
-      - name: flesch_reading_ease
-        metric_level: Turn
-        context_only: false
-
 
       - name: flesch_reading_ease
-        metric_level: Message
-        context_only: true
-      
-      - name: flesch_reading_ease
         metric_level: Turn
-        context_only: true
 
 
 test_list_string_function_metrics_langgraph:
@@ -397,16 +375,7 @@ test_list_string_function_metrics_langgraph:
       
       - name: flesch_reading_ease
         metric_level: Message
-      
-      - name: flesch_reading_ease
-        metric_level: Turn
-        context_only: false
 
       - name: flesch_reading_ease
-        metric_level: Message
-        context_only: true
-      
-      - name: flesch_reading_ease
         metric_level: Turn
-        context_only: true
 

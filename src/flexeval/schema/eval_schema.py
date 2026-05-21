@@ -60,6 +60,9 @@ class DependsOnItem(BaseModel):
 class MetricItem(BaseModel):
     "Defines a metric."
 
+    class Config:
+        extra = "forbid"
+
     name: str = Field(
         ...,
         description="The function to call or name of rubric to use to compute this metric.",

@@ -28,12 +28,10 @@ def build_evalsetrun(mock_response: str):
     runner = eval_runner.EvalRunner(eval_run)
     evalsetrun = run_utils.build_eval_set_run(runner)
 
-    # build datasets
-    run_utils.build_datasets(runner, evalsetrun)
-    for dataset in evalsetrun.datasets:
-        dataset.load_data()
+    # build and load datasets
+    datasets = run_utils.build_evalsetrun_datasets(eval_run, evalsetrun)
 
-    return evalsetrun, runner
+    return evalsetrun, runner, datasets
 
 
 class TestCompletions(unittest.TestCase):
@@ -52,17 +50,18 @@ class TestCompletions(unittest.TestCase):
     def test_get_completions(self):
         mock_response = "test_get_completions"
         for n_workers in [1, 2]:
-            evalsetrun, runner = build_evalsetrun(mock_response)
+            evalsetrun, runner, datasets = build_evalsetrun(mock_response)
             runner.evalrun.config.max_workers = n_workers
-            for thread in evalsetrun.threads:
+            threads = [t for d in datasets for t in d.threads]
+            for thread in threads:
                 self.assertEqual(
                     len(thread.turns),
                     3,
                     "Expected 3 turns in each conversation before completions.",
                 )
-            completions.get_completions(runner.evalrun, evalsetrun)
+            completions.get_completions(runner.evalrun, evalsetrun, datasets)
 
-            for thread in evalsetrun.threads:
+            for thread in threads:
                 self.assertEqual(
                     len(thread.turns),
                     4,

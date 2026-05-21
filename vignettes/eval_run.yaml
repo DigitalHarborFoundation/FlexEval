@@ -1,5 +1,6 @@
 data_sources:
-  - path: vignettes/conversations.jsonl
+  - type: file
+    path: vignettes/conversations.jsonl
 database_path: eval_results.db
 eval:
   metrics:

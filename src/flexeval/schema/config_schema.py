@@ -44,3 +44,15 @@ class Config(BaseModel):
         False,
         description="If False (default), no exception will be thrown if a metric function raises an exception.",
     )
+    raise_on_duplicate_dataset_name: bool = Field(
+        False,
+        description="If True, throw an exception if two datasets would be created with the same name. Ignored when reuse_dataset_by_name is True.",
+    )
+    raise_on_unnamed_dataset: bool = Field(
+        False,
+        description="If True, throw an exception if any dataset is unnamed.",
+    )
+    reuse_dataset_by_name: bool = Field(
+        True,
+        description="If True (default), reuse a previously loaded dataset with the same name instead of creating a new one. This avoids redundant data loading and prevents iterator-based data sources from being consumed twice.",
+    )
