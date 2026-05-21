@@ -52,12 +52,10 @@ def build_evalsetrun(metrics: eval_schema.Metrics):
     )
     evalsetrun = run_utils.build_eval_set_run(runner)
 
-    # build datasets
-    run_utils.build_datasets(runner, evalsetrun)
-    for dataset in evalsetrun.datasets:
-        dataset.load_data()
+    # build and load datasets
+    datasets = run_utils.build_evalsetrun_datasets(eval_run, evalsetrun)
 
-    return evalsetrun, runner
+    return evalsetrun, runner, datasets
 
 
 def get_constant_function(
@@ -153,7 +151,7 @@ class TestMetricGraphBuilder(unittest.TestCase):
         """Test build_metric_structures() returns reasonable results."""
         for metrics_descriptor, metrics in get_metrics().items():
             with self.subTest(metrics_descriptor=metrics_descriptor):
-                evalsetrun, _ = build_evalsetrun(metrics)
+                evalsetrun, _, datasets = build_evalsetrun(metrics)
 
                 mgb = compute_metrics.MetricGraphBuilder()
                 mgb.build_metric_structures(evalsetrun)
@@ -164,13 +162,16 @@ class TestMetricGraphBuilder(unittest.TestCase):
         all_metrics = get_metrics()
         for metrics_descriptor, metrics in all_metrics.items():
             with self.subTest(metrics_descriptor=metrics_descriptor):
-                evalsetrun, _ = build_evalsetrun(metrics)
+                evalsetrun, _, datasets = build_evalsetrun(metrics)
                 mgb = compute_metrics.MetricGraphBuilder()
                 mgb.build_metric_structures(evalsetrun)
-                graphs = list(mgb.build_thread_task_graphs(evalsetrun))
+                all_threads = [t for d in datasets for t in d.threads]
+                graphs = []
+                for dataset in datasets:
+                    graphs.extend(mgb.build_thread_task_graphs(dataset))
                 self.assertEqual(
                     len(graphs),
-                    len(evalsetrun.threads),
+                    len(all_threads),
                     "Expected one graph per thread.",
                 )
 
@@ -200,7 +201,7 @@ class TestMetricComputer(unittest.TestCase):
         test_object = unittest.mock.MagicMock(Message)
         test_object.get_content = unittest.mock.MagicMock(return_value="🌋")
         self.assertEqual(
-            mc.invoke_function(metric_function, "Message", test_object, {}, False), 1
+            mc.invoke_function(metric_function, "Message", test_object, {}), 1
         )
 
         # non-existent module
@@ -234,7 +235,7 @@ class TestMetricComputer(unittest.TestCase):
         test_object = unittest.mock.MagicMock(Message)
         test_object.get_content = unittest.mock.MagicMock(return_value="🌋")
         self.assertEqual(
-            mc.invoke_function(metric_function, "Message", test_object, {}, False),
+            mc.invoke_function(metric_function, "Message", test_object, {}),
             "overridden",
         )
 
@@ -242,10 +243,12 @@ class TestMetricComputer(unittest.TestCase):
         all_metrics = get_metrics()
         for metrics_descriptor, metrics in all_metrics.items():
             with self.subTest(metrics_descriptor=metrics_descriptor):
-                evalsetrun, runner = build_evalsetrun(metrics)
+                evalsetrun, runner, datasets = build_evalsetrun(metrics)
                 mgb = compute_metrics.MetricGraphBuilder()
                 mgb.build_metric_structures(evalsetrun)
-                graphs = list(mgb.build_thread_task_graphs(evalsetrun))
+                graphs = []
+                for dataset in datasets:
+                    graphs.extend(mgb.build_thread_task_graphs(dataset))
 
                 # build metric computer and process dependency graphs
                 mc = compute_metrics.MetricComputer.from_evalrun(runner.evalrun)
@@ -259,11 +262,12 @@ class TestMetricComputer(unittest.TestCase):
                 self.assertGreater(len(results), 0)
 
                 if metrics_descriptor == "constant chain":
+                    all_threads = [t for d in datasets for t in d.threads]
+                    all_turns = [t for d in datasets for t in d.turns]
+                    all_messages = [m for d in datasets for m in d.messages]
                     self.assertEqual(
                         len(results),
-                        len(evalsetrun.threads)
-                        + len(evalsetrun.turns)
-                        + len(evalsetrun.messages),
+                        len(all_threads) + len(all_turns) + len(all_messages),
                         "Expected one result for each thread, turn, and message.",
                     )
                     for result in results:
@@ -275,8 +279,9 @@ class TestMetricComputer(unittest.TestCase):
                             self.assertEqual(result["metric_value"], 2)
 
                 if metrics_descriptor == "second turn dep":
-                    save_metrics.save_metrics(results)
-                    for turn in evalsetrun.turns:
+                    save_metrics.save_metrics(results, evalsetrun, datasets)
+                    all_turns = [t for d in datasets for t in d.turns]
+                    for turn in all_turns:
                         if turn.index_in_thread != 1:
                             # non-second turns should not have a constant metric
                             self.assertEqual(len(turn.metrics_list), 1)
@@ -293,8 +298,9 @@ class TestMetricComputer(unittest.TestCase):
                             )
 
                 if metrics_descriptor == "kwarg dep":
-                    save_metrics.save_metrics(results)
-                    for turn in evalsetrun.turns:
+                    save_metrics.save_metrics(results, evalsetrun, datasets)
+                    all_turns = [t for d in datasets for t in d.turns]
+                    for turn in all_turns:
                         is_role_assistant = (
                             turn.metrics_list.where(Metric.evaluation_name == "is_role")
                             .first()
@@ -344,13 +350,13 @@ class TestMetricComputer(unittest.TestCase):
         all_metrics = get_metrics()
         for metrics_descriptor, metrics in all_metrics.items():
             with self.subTest(metrics_descriptor=metrics_descriptor):
-                evalsetrun, runner = build_evalsetrun(metrics)
-                compute_metrics.compute_metrics(runner.evalrun, evalsetrun)
+                evalsetrun, runner, datasets = build_evalsetrun(metrics)
+                compute_metrics.compute_metrics(runner.evalrun, evalsetrun, datasets)
 
     def test_compute_metrics_multiprocess(self):
         all_metrics = get_metrics()
         for metrics_descriptor, metrics in all_metrics.items():
             with self.subTest(metrics_descriptor=metrics_descriptor):
-                evalsetrun, runner = build_evalsetrun(metrics)
+                evalsetrun, runner, datasets = build_evalsetrun(metrics)
                 runner.evalrun.config.max_workers = 2
-                compute_metrics.compute_metrics(runner.evalrun, evalsetrun)
+                compute_metrics.compute_metrics(runner.evalrun, evalsetrun, datasets)

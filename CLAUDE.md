@@ -59,7 +59,7 @@ FlexEval is a tool for evaluating LLM-powered systems using custom metrics, comp
 ### Core Abstractions
 
 **EvalRun** (`src/flexeval/schema/evalrun_schema.py`): The top-level execution unit that combines:
-- Data sources (conversations in JSONL format as inputs, an SQLite filepath as output)
+- Data sources (polymorphic via `type` discriminator: `FileDataSource`, `NamedDataSource`, `IterableDataSource`)
 - An Eval specification (metrics to compute)
 - Configuration (workers, database path, etc.)
 - Rubric and function sources
@@ -71,14 +71,17 @@ FlexEval is a tool for evaluating LLM-powered systems using custom metrics, comp
 - Grader LLM (for rubric evaluation)
 - Dependencies between metrics
 
-**Config** (`src/flexeval/schema/config_schema.py`): Defines how to evaluate (e.g. single- vs multi-process, etc.)
+**Config** (`src/flexeval/schema/config_schema.py`): Defines how to evaluate (e.g. single- vs multi-process, dataset reuse/naming constraints, etc.)
 
 ### Data Hierarchy
 The evaluation operates at multiple levels of granularity:
+- **Dataset** (`src/flexeval/classes/dataset.py`): Container for loaded data, linked to EvalSetRuns via many-to-many join table (`EvalSetRunDatasets`). Datasets can be reused across multiple eval runs.
 - **Thread**: Full conversation
-- **Turn**: User-assistant exchange pair  
+- **Turn**: User-assistant exchange pair
 - **Message**: Individual message from user or assistant
 - **ToolCall**: Function/tool invocation within a message
+
+Thread, Turn, Message, and ToolCall belong to a Dataset. Metrics belong to both an EvalSetRun and a Dataset.
 
 ### Key Components
 
@@ -89,7 +92,7 @@ The evaluation operates at multiple levels of granularity:
 
 **Execution Pipeline** (`src/flexeval/runner.py`):
 1. Load configuration and eval specification
-2. Create Dataset from data sources
+2. Create Datasets from data sources and link to EvalSetRun via `EvalSetRunDatasets`
 3. Run EvalRunner to compute metrics
 4. Store results in SQLite database
 

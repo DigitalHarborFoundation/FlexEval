@@ -112,29 +112,21 @@ class TestGetFunctionInput(unittest.TestCase):
 
     def test_get_function_input(self):
         self.assertIsInstance(
-            function_types.get_function_input(f_notype, "Message", self.message, False),
+            function_types.get_function_input(f_notype, "Message", self.message),
             message.Message,
         )
         self.assertIsInstance(
-            function_types.get_function_input(
-                f_message, "Message", self.message, False
-            ),
+            function_types.get_function_input(f_message, "Message", self.message),
             message.Message,
         )
-        for context_only in [True, False]:
-            self.assertIsInstance(
-                function_types.get_function_input(
-                    f_str, "Message", self.message, context_only
-                ),
-                str,
-            )
+        self.assertIsInstance(
+            function_types.get_function_input(f_str, "Message", self.message),
+            str,
+        )
         with self.assertRaises(ValueError):
-            function_types.get_function_input(f_list, "Message", self.message, True)
-        for context_only in [True, False]:
-            for f in [f_list, f_str_or_list]:
-                self.assertIsInstance(
-                    function_types.get_function_input(
-                        f, "Turn", self.turn, context_only
-                    ),
-                    list,
-                )
+            function_types.get_function_input(f_list, "Message", self.message)
+        for f in [f_list, f_str_or_list]:
+            self.assertIsInstance(
+                function_types.get_function_input(f, "Turn", self.turn),
+                list,
+            )

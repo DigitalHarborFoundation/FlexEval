@@ -4,14 +4,23 @@ import peewee as pw
 
 from flexeval.classes import base as classes_base
 from flexeval.classes.dataset import Dataset
-from flexeval.classes.eval_set_run import EvalSetRun
+from flexeval.classes.eval_set_run import EvalSetRun, EvalSetRunDatasets
 from flexeval.classes.message import Message
 from flexeval.classes.metric import Metric
 from flexeval.classes.thread import Thread
 from flexeval.classes.tool_call import ToolCall
 from flexeval.classes.turn import Turn
 
-DATABASE_TABLES = [EvalSetRun, Dataset, Thread, Turn, Message, ToolCall, Metric]
+DATABASE_TABLES = [
+    EvalSetRun,
+    Dataset,
+    EvalSetRunDatasets,
+    Thread,
+    Turn,
+    Message,
+    ToolCall,
+    Metric,
+]
 
 
 def ensure_database(database_path: str):

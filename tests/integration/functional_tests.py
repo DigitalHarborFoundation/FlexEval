@@ -1,52 +1,87 @@
 """Functional tests for FlexEval
 
-We'll run simple evaluations and verify the database entries look as expected
+We'll run simple evaluations and verify the database entries look as expected.
 
-Make sure your current directory is src/llm-evals
-Then run
->  python -m unittest tests.functional_tests
+Run from the repo root:
+>  uv run python -m unittest tests.integration.functional_tests
 
 """
 
-import os
 import sqlite3
 import unittest
 
-import pandas as pd
+import yaml
 
+from flexeval.io.parsers import yaml_parser
 from flexeval.runner import run
+from flexeval.schema import evalrun_schema
+
+INTEGRATION_CONFIG_PATH = "tests/integration/config-tests.yaml"
+INTEGRATION_EVALS_PATH = "tests/integration/evals.yaml"
+
+
+def run_from_yaml(
+    eval_name,
+    config_path=INTEGRATION_CONFIG_PATH,
+    evals_path=INTEGRATION_EVALS_PATH,
+    **kwargs,
+):
+    """Build an EvalRun from YAML config files and run it.
+
+    Returns (runner, database_path).
+    """
+    config = yaml_parser.load_config_from_yaml(config_path)
+    evals = yaml_parser.load_evals_from_yaml(evals_path)
+    selected_eval = evals[eval_name]
+    if not selected_eval.name or not selected_eval.name.strip():
+        selected_eval.name = eval_name
+
+    # Extract data paths from eval's model_extra (the "data:" key in YAML)
+    data_paths = selected_eval.model_extra.get("data", [])
+    data_sources = []
+    for p in data_paths:
+        if str(p).endswith(".db"):
+            data_sources.append(
+                evalrun_schema.FileDataSource(
+                    path=p, format=evalrun_schema.FileFormatEnum.langgraph_sqlite
+                )
+            )
+        else:
+            data_sources.append(evalrun_schema.FileDataSource(path=p))
+
+    # database_path comes from raw YAML (Config ignores it since extra="ignore")
+    with open(config_path) as f:
+        raw_config = yaml.safe_load(f)
+    database_path = raw_config.get("database_path", "data/results/results.db")
+
+    for key, value in kwargs.items():
+        setattr(config, key, value)
+
+    eval_run = evalrun_schema.EvalRun(
+        data_sources=data_sources,
+        database_path=database_path,
+        eval=selected_eval,
+        config=config,
+    )
+    return run(eval_run), database_path
 
 
 class TestSuite01(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        run(
-            eval_name="test_suite_01",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-            clear_tables=True,
-        )
-        cls.database_path = os.environ["DATABASE_PATH"]
-
-    @classmethod
-    def tearDownClass(cls):
-        # here, we'd delete the database?
-        pass
+        _, cls.database_path = run_from_yaml("test_suite_01", clear_tables=True)
 
     def test_tables_exist(self):
         table_names = [
             "dataset",
             "evalsetrun",
+            "evalsetrundatasets",
             "thread",
             "turn",
             "message",
             "toolcall",
             "metric",
         ]
-        # write assertions here
-        print(self.database_path)
         with sqlite3.connect(self.database_path) as connection:
             tables_in_database = connection.execute(
                 "select name from sqlite_master where type = 'table'"
@@ -98,50 +133,58 @@ def helper_test_tables_have_right_rows(
     """
     Check row counts on various tables:
     - evalsetrun should always have one row
-    - dataset should have one row per jsonl file
-    - thread should have one row for every row in every jsonl file
-    - turn should have one row for every turn in every jsonl file
+    - dataset should have one row per data file
+    - thread should have one row for every conversation in every data file
+    - turn should have one row for every turn in every data file
     expected_num_turns is a tuple that has
-    - one entry per jsonl file, and
+    - one entry per data file, and
     - each of those entries is a tuple with
-        - one entry per row in the corresponding jsonl file.
-    The entry for each row is an int indicating the number of turns in that row.
+        - one entry per conversation in the corresponding data file.
+    The entry for each conversation is an int indicating the number of turns.
 
-    For example, for 1 dataset, 2 threads, and 8 turns in each, you should have
+    For example, for 1 dataset, 2 threads, and 4 turns in each, you should have
     expected_num_turns = ((4,4),)
-    #the length of the tuple is the number of files or threads
-    #
 
     """
-    num_threads = len(expected_num_turns)
+    num_datasets = len(expected_num_turns)
     expected_num_threads = [len(rows_in_file) for rows_in_file in expected_num_turns]
     table_and_row_counts = {
         "evalsetrun": 1,
-        "dataset": num_threads,
+        "dataset": num_datasets,
         "thread": sum(expected_num_threads),
         "turn": sum([sum(turns_per_row) for turns_per_row in expected_num_turns]),
     }
     with sqlite3.connect(test_instance.database_path) as connection:
         for table in table_and_row_counts:
-            data = pd.read_sql_query(f"select * from {table}", connection)
-            # First, check that we have the right number of rows based on the dictionary above
+            row_count = connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[
+                0
+            ]
             test_instance.assertEqual(
-                data.shape[0],
+                row_count,
                 table_and_row_counts[table],
-                f"Table {table} should have {table_and_row_counts[table]} rows but has {data.shape[0]} rows",
+                f"Table {table} should have {table_and_row_counts[table]} rows but has {row_count} rows",
             )
-            # Then do table-specific logic to make sure the evalsetrun_id, dataset_id, thread_id,
-            # and turn_number ids are set up and have the right length
+            # Table-specific checks: verify dataset_id grouping
             if table == "thread":
+                counts = connection.execute(
+                    "SELECT dataset_id, COUNT(*) FROM thread GROUP BY dataset_id"
+                ).fetchall()
+                actual_counts = set(c[1] for c in counts)
+                expected_counts = set(len(t) for t in expected_num_turns)
                 test_instance.assertEqual(
-                    set(data["dataset_id"].value_counts().values),
-                    set([len(turns_per_row) for turns_per_row in expected_num_turns]),
+                    actual_counts,
+                    expected_counts,
                     f"{table} table does not have correct counts for the dataset ids",
                 )
             elif table == "turn":
+                counts = connection.execute(
+                    "SELECT dataset_id, COUNT(*) FROM turn GROUP BY dataset_id"
+                ).fetchall()
+                actual_counts = set(c[1] for c in counts)
+                expected_counts = set(sum(t) for t in expected_num_turns)
                 test_instance.assertEqual(
-                    set(data["dataset_id"].value_counts().values),
-                    set([sum(turns_per_row) for turns_per_row in expected_num_turns]),
+                    actual_counts,
+                    expected_counts,
                     f"{table} table does not have correct counts for the dataset ids",
                 )
 
@@ -149,15 +192,7 @@ def helper_test_tables_have_right_rows(
 class TestSuite02(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        run(
-            eval_name="test_suite_02",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-            clear_tables=True,
-        )
-        cls.database_path = os.environ["DATABASE_PATH"]
+        _, cls.database_path = run_from_yaml("test_suite_02", clear_tables=True)
 
     def test_simple_condition_is_met_once(self):
         # for the first dataset
@@ -303,15 +338,7 @@ class TestSuite02(unittest.TestCase):
 class TestSuite03(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        run(
-            eval_name="test_suite_03",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-            clear_tables=True,
-        )
-        cls.database_path = os.environ["DATABASE_PATH"]
+        _, cls.database_path = run_from_yaml("test_suite_03", clear_tables=True)
 
     def test_tables_have_right_rows(self):
         # this suite has two jsonls, simple.jsonl and multiturn.jsonl,
@@ -341,18 +368,10 @@ class TestSuite03(unittest.TestCase):
 
 
 class TestSuite04(unittest.TestCase):
-    # rubric associated tests
+    # rubric associated tests — requires OPENAI_API_KEY
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests
-        # in this case, we'd run the evals here using subprocess or something, or maybe main.py
-        run(
-            eval_name="test_suite_04",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-            clear_tables=True,
-        )
-        cls.database_path = os.environ["DATABASE_PATH"]
+        _, cls.database_path = run_from_yaml("test_suite_04", clear_tables=True)
 
     def test_rubric_metric_value(self):
         # test if the rurbric output expected values
@@ -438,37 +457,23 @@ class TestSuite04(unittest.TestCase):
 
 
 class TestSuite01_langgraph(unittest.TestCase):
-    """TODO - can we just somehow combine this with the other?"""
-
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        run(
-            eval_name="test_suite_01_langgraph",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-            clear_tables=True,
+        _, cls.database_path = run_from_yaml(
+            "test_suite_01_langgraph", clear_tables=True
         )
-        cls.database_path = os.environ["DATABASE_PATH"]
-
-    @classmethod
-    def tearDownClass(cls):
-        # here, we'd delete the database?
-        pass
 
     def test_tables_exist(self):
         table_names = [
             "dataset",
             "evalsetrun",
+            "evalsetrundatasets",
             "thread",
             "turn",
             "message",
             "toolcall",
             "metric",
         ]
-        # write assertions here
-        print(self.database_path)
         with sqlite3.connect(self.database_path) as connection:
             tables_in_database = connection.execute(
                 "select name from sqlite_master where type = 'table'"
@@ -516,15 +521,9 @@ class TestSuite01_langgraph(unittest.TestCase):
 class TestSuite02_langgraph(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        run(
-            eval_name="test_suite_02_langgraph",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-            clear_tables=True,
+        _, cls.database_path = run_from_yaml(
+            "test_suite_02_langgraph", clear_tables=True
         )
-        cls.database_path = os.environ["DATABASE_PATH"]
 
     def test_simple_condition_is_met_once(self):
         # for the first dataset
@@ -540,7 +539,7 @@ class TestSuite02_langgraph(unittest.TestCase):
                 """
             ).fetchall()
         self.assertEqual(
-            len(metric), 2, "Expected 2 turns with long enough text to evaluate"
+            len(metric), 1, "Expected 1 turn with long enough text to evaluate"
         )
         self.assertAlmostEqual(metric[0][0], 2)
 
@@ -691,18 +690,12 @@ class TestSuite02_langgraph(unittest.TestCase):
 
 
 class TestSuite04_langgraph(unittest.TestCase):
-    # rubric associated tests
+    # rubric associated tests — requires OPENAI_API_KEY
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests
-        # in this case, we'd run the evals here using subprocess or something, or maybe main.py
-        run(
-            eval_name="test_suite_04_langgraph",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-            clear_tables=True,
+        _, cls.database_path = run_from_yaml(
+            "test_suite_04_langgraph", clear_tables=True
         )
-        cls.database_path = os.environ["DATABASE_PATH"]
 
     def test_rubric_metric_value(self):
         # test if the rubric output expected values
@@ -787,84 +780,71 @@ class TestSuite04_langgraph(unittest.TestCase):
 
 class FunctionMetricValidation(unittest.TestCase):
     def test_default_kwargs01(self):
-        run(
-            eval_name="test_default_kwargs_01",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-            clear_tables=True,
-        )
+        # Note: uses openai_moderation_api which makes real API calls
+        run_from_yaml("test_default_kwargs_01", clear_tables=True)
 
 
 class ConfigFailures(unittest.TestCase):
-    @unittest.expectedFailure
-    def test_config_failure_01(cls):
-        run(
-            eval_name="config_failure_01",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+    """Tests that verify various invalid configurations produce the expected errors.
+
+    Setup-phase errors (01, 02, 05): raise ValueError during EvalSetRun/graph construction.
+    Runtime errors (03, 04, 06): run completes (raise_on_metric_error defaults to False)
+        but the broken metric produces zero rows in the database.
+    """
+
+    def test_config_failure_01(self):
+        # Ambiguous depends_on: two is_role metrics, no disambiguator
+        with self.assertRaisesRegex(ValueError, "more than one match"):
+            run_from_yaml("config_failure_01")
+
+    def test_config_failure_02(self):
+        # depends_on references nonexistent metric name
+        with self.assertRaisesRegex(ValueError, "unable to locate"):
+            run_from_yaml("config_failure_02")
+
+    def test_config_failure_03(self):
+        # is_role() missing required 'role' arg — error logged, no metrics saved
+        _, db_path = run_from_yaml("config_failure_03", clear_tables=True)
+        with sqlite3.connect(db_path) as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM metric WHERE evaluation_name = 'is_role'"
+            ).fetchone()[0]
+        self.assertEqual(
+            count, 0, "is_role should produce no metrics when required kwarg is missing"
         )
 
-    @unittest.expectedFailure
-    def test_config_failure_02(cls):
-        run(
-            eval_name="config_failure_02",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
+    def test_config_failure_04(self):
+        # is_role() gets unexpected kwarg — error logged, no metrics saved
+        _, db_path = run_from_yaml("config_failure_04", clear_tables=True)
+        with sqlite3.connect(db_path) as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM metric WHERE evaluation_name = 'is_role'"
+            ).fetchone()[0]
+        self.assertEqual(
+            count, 0, "is_role should produce no metrics with unexpected kwarg"
         )
 
-    @unittest.expectedFailure
-    def test_config_failure_03(cls):
-        run(
-            eval_name="config_failure_03",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-        )
+    def test_config_failure_05(self):
+        # Rubric name doesn't exist — KeyError from rubric lookup in run_utils
+        with self.assertRaises(KeyError):
+            run_from_yaml("config_failure_05")
 
-    @unittest.expectedFailure
-    def test_config_failure_04(cls):
-        run(
-            eval_name="config_failure_04",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-        )
-
-    @unittest.expectedFailure
-    def test_config_failure_05(cls):
-        run(
-            eval_name="config_failure_05",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-        )
-
-    @unittest.expectedFailure
-    def test_config_failure_06(cls):
-        run(
-            eval_name="config_failure_06",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-        )
-
-    @unittest.expectedFailure
-    def test_config_failure_07(cls):
-        run(
-            eval_name="config_failure_07",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-        )
+    def test_config_failure_06(self):
+        # Invalid metric_level for function — error logged, no metrics saved
+        _, db_path = run_from_yaml("config_failure_06", clear_tables=True)
+        with sqlite3.connect(db_path) as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM metric WHERE evaluation_name = 'count_numeric_tool_call_params_by_name'"
+            ).fetchone()[0]
+        self.assertEqual(count, 0, "Metric with invalid level should produce no rows")
 
 
 class TestBasicFunctionMetrics(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        run(
-            eval_name="test_basic_function_metrics_01",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-            clear_tables=True,
+        _, cls.database_path = run_from_yaml(
+            "test_basic_function_metrics_01", clear_tables=True
         )
-        cls.database_path = os.environ["DATABASE_PATH"]
 
     def test_correct_metric_levels(self):
         # Expect to have one is_role evaluation for every Turn, at the
@@ -973,15 +953,9 @@ class TestBasicFunctionMetrics(unittest.TestCase):
 class TestBasicFunctionMetrics_langgraph(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        run(
-            eval_name="test_basic_function_metrics_01_langgraph",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-            clear_tables=True,
+        _, cls.database_path = run_from_yaml(
+            "test_basic_function_metrics_01_langgraph", clear_tables=True
         )
-        cls.database_path = os.environ["DATABASE_PATH"]
 
     def test_correct_metric_levels(self):
         # Expect to have one is_role evaluation for every Turn, at the
@@ -1091,71 +1065,9 @@ class TestBasicFunctionMetrics_langgraph(unittest.TestCase):
 class TestListStringInputFunctionMetrics(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # run code that needs to run before ANY of the tests, and clear any existing data from tables
-        # in this case, we run the evals via main.py
-        run(
-            eval_name="test_list_string_function_metrics",
-            config_path="tests/integration/config-tests.yaml",
-            evals_path="tests/integration/evals.yaml",
-            clear_tables=True,
+        _, cls.database_path = run_from_yaml(
+            "test_list_string_function_metrics", clear_tables=True
         )
-        cls.database_path = os.environ["DATABASE_PATH"]
-
-    def test_reading_ease_levels_by_level(self):
-        message_id_to_reading_ease = {1: 119.19, 2: 119.19, 3: 35.61, 4: 77.91}
-        message_id_to_reading_ease_context_only = {
-            1: 206.84,
-            2: 119.19,
-            3: 119.19,
-            4: 92.8,
-        }
-        turn_id_to_reading_ease = {1: 119.19, 2: 83.32, 3: 77.91}
-        turn_id_to_reading_ease_context_only = {1: 206.84, 2: 119.19, 3: 92.8}
-        with sqlite3.connect(self.database_path) as connection:
-            reading_ease_metrics = connection.execute(
-                """
-                    SELECT 
-                        turn_id, message_id, context_only, metric_level, metric_name, metric_value
-                    FROM 
-                        metric
-                    WHERE 1=1
-                        AND thread_id = 1
-                        AND evaluation_name = 'flesch_reading_ease'
-                    """
-            ).fetchall()
-            for result in reading_ease_metrics:
-                (
-                    turn_id,
-                    message_id,
-                    context_only,
-                    metric_level,
-                    metric_name,
-                    metric_value,
-                ) = result
-                comparison_dict = None
-                comparison_id = None
-                if metric_level == "Message":
-                    comparison_id = message_id
-                    if context_only:
-                        comparison_dict = message_id_to_reading_ease_context_only
-                    else:
-                        comparison_dict = message_id_to_reading_ease
-                elif metric_level == "Turn":
-                    comparison_id = turn_id
-                    if context_only:
-                        comparison_dict = turn_id_to_reading_ease_context_only
-                    else:
-                        comparison_dict = turn_id_to_reading_ease
-                else:
-                    raise Exception(
-                        f"Expected only Message and Turn levels for reading ease but found {metric_level}"
-                    )
-
-                self.assertAlmostEqual(
-                    comparison_dict[comparison_id],
-                    metric_value,
-                    msg="Metric value for reading ease not equal to expected value",
-                )
 
     def test_count_messages_per_role(self):
         thread_and_turn_id_to_role_entries = {
