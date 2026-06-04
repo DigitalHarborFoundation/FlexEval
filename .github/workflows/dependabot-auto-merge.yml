@@ -1,0 +1,28 @@
+name: Dependabot auto-merge
+
+# Automatically enable auto-merge on Dependabot PRs. GitHub holds the merge
+# until the "Run validation" required status check (see the "Merging to main"
+# ruleset) passes, so tests still gate every merge. Major version bumps are
+# skipped so a human reviews them.
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+
+      - name: Enable auto-merge (skip majors)
+        if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
