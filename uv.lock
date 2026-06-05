@@ -3871,6 +3871,9 @@ langgraph = [
 litellm = [
     { name = "litellm" },
 ]
+viz = [
+    { name = "matplotlib" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -3908,6 +3911,7 @@ requires-dist = [
     { name = "jsonschema", specifier = ">=4.23.0" },
     { name = "langgraph-checkpoint", marker = "extra == 'langgraph'", specifier = ">=4.0.0" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.74.3" },
+    { name = "matplotlib", marker = "extra == 'viz'", specifier = ">=3.10.3" },
     { name = "msgpack", specifier = ">=1.1.0" },
     { name = "networkx", specifier = ">=3.4.2" },
     { name = "openai", specifier = ">=1.66.0" },
@@ -3920,7 +3924,7 @@ requires-dist = [
     { name = "textstat", specifier = ">=0.7.5" },
     { name = "typer", specifier = ">=0.16.0" },
 ]
-provides-extras = ["langgraph", "litellm"]
+provides-extras = ["langgraph", "litellm", "viz"]
 
 [package.metadata.requires-dev]
 dev = [

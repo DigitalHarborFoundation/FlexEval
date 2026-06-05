@@ -49,6 +49,8 @@ litellm = ["litellm>=1.74.3"]
 # runtime -- it provides JsonPlusSerializer; the DB itself is read with stdlib
 # sqlite3. Users who don't load langgraph checkpoints do not need this.
 langgraph = ["langgraph-checkpoint>=4.0.0"]
+# viz enables the optional visualize_graph helper (flexeval.helpers).
+viz = ["matplotlib>=3.10.3"]
 
 [project.urls]
 Homepage = "https://digitalharborfoundation.github.io/FlexEval/"
@@ -69,6 +71,8 @@ dev = [
     # it is also pulled into the dev group so `uv sync` gives contributors the full
     # feature set and the test suite can exercise litellm_completion.
     "litellm>=1.74.3",
+    # matplotlib is also the `viz` optional extra; kept here so it is present
+    # on a plain `uv sync` for local development.
     "matplotlib>=3.10.3",
     "pre-commit>=4.2.0",
     "ruff>=0.12.2",

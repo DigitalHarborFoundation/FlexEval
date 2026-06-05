@@ -48,6 +48,14 @@ SQLite databases (the ``langgraph_sqlite`` data source), install the
 
     pip install 'python-flexeval[langgraph]'
 
+To use the :func:`~flexeval.helpers.visualize_graph` helper (which draws metric
+dependency graphs with `matplotlib <https://matplotlib.org/>`__), install the
+``viz`` extra:
+
+.. code-block:: bash
+
+    pip install 'python-flexeval[viz]'
+
 .. _getting-started-usage:
 
 Usage
