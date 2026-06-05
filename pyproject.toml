@@ -30,7 +30,6 @@ dependencies = [
     "langchain-openai>=0.3.8",
     "langgraph>=1.0.0",
     "langgraph-checkpoint-sqlite>=3.0.0",
-    "litellm>=1.74.3",
     "msgpack>=1.1.0",
     "networkx>=3.4.2",
     "openai>=1.66.0",
@@ -45,6 +44,12 @@ dependencies = [
     "typer>=0.16.0",
 ]
 
+[project.optional-dependencies]
+# Optional, user-facing extras. Install with e.g. `pip install 'python-flexeval[litellm]'`.
+# litellm enables `litellm_completion`, giving access to many non-OpenAI providers;
+# most users relying on OpenAI-compatible completions do not need it.
+litellm = ["litellm>=1.74.3"]
+
 [project.urls]
 Homepage = "https://digitalharborfoundation.github.io/FlexEval/"
 GitHub = "https://github.com/DigitalHarborFoundation/FlexEval"
@@ -54,6 +59,10 @@ Issues = "https://github.com/DigitalHarborFoundation/FlexEval/issues"
 dev = [
     "hatch>=1.14.1",
     "jupyter>=1.1.1",
+    # litellm is a user-facing optional extra (see [project.optional-dependencies]);
+    # it is also pulled into the dev group so `uv sync` gives contributors the full
+    # feature set and the test suite can exercise litellm_completion.
+    "litellm>=1.74.3",
     "matplotlib>=3.10.3",
     "pre-commit>=4.2.0",
     "ruff>=0.12.2",

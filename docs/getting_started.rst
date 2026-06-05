@@ -28,6 +28,18 @@ Install using `uv <https://docs.astral.sh/uv/>`__:
 
     uv add python-flexeval
 
+Optional extras
+~~~~~~~~~~~~~~~
+
+Some functionality depends on optional packages that most users do not need.
+To use :func:`~flexeval.configuration.completion_functions.litellm_completion`
+(which routes completions through `LiteLLM <https://docs.litellm.ai/>`__ to many
+non-OpenAI providers), install the ``litellm`` extra:
+
+.. code-block:: bash
+
+    pip install 'python-flexeval[litellm]'
+
 .. _getting-started-usage:
 
 Usage

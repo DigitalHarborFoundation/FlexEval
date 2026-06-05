@@ -3868,7 +3868,6 @@ dependencies = [
     { name = "langchain-openai" },
     { name = "langgraph" },
     { name = "langgraph-checkpoint-sqlite" },
-    { name = "litellm" },
     { name = "msgpack" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -3884,10 +3883,16 @@ dependencies = [
     { name = "typer" },
 ]
 
+[package.optional-dependencies]
+litellm = [
+    { name = "litellm" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "hatch" },
     { name = "jupyter" },
+    { name = "litellm" },
     { name = "matplotlib" },
     { name = "pre-commit" },
     { name = "ruff" },
@@ -3917,7 +3922,7 @@ requires-dist = [
     { name = "langchain-openai", specifier = ">=0.3.8" },
     { name = "langgraph", specifier = ">=1.0.0" },
     { name = "langgraph-checkpoint-sqlite", specifier = ">=3.0.0" },
-    { name = "litellm", specifier = ">=1.74.3" },
+    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.74.3" },
     { name = "msgpack", specifier = ">=1.1.0" },
     { name = "networkx", specifier = ">=3.4.2" },
     { name = "openai", specifier = ">=1.66.0" },
@@ -3931,11 +3936,13 @@ requires-dist = [
     { name = "textstat", specifier = ">=0.7.5" },
     { name = "typer", specifier = ">=0.16.0" },
 ]
+provides-extras = ["litellm"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "hatch", specifier = ">=1.14.1" },
     { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "litellm", specifier = ">=1.74.3" },
     { name = "matplotlib", specifier = ">=3.10.3" },
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "ruff", specifier = ">=0.12.2" },
