@@ -40,6 +40,14 @@ non-OpenAI providers), install the ``litellm`` extra:
 
     pip install 'python-flexeval[litellm]'
 
+To load `LangGraph <https://langchain-ai.github.io/langgraph/>`__ checkpoint
+SQLite databases (the ``langgraph_sqlite`` data source), install the
+``langgraph`` extra:
+
+.. code-block:: bash
+
+    pip install 'python-flexeval[langgraph]'
+
 .. _getting-started-usage:
 
 Usage

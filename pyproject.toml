@@ -26,10 +26,6 @@ requires-python = ">=3.10"
 dependencies = [
     "flatten-json>=0.1.14",
     "jsonschema>=4.23.0",
-    "langchain>=0.3.20",
-    "langchain-openai>=0.3.8",
-    "langgraph>=1.0.0",
-    "langgraph-checkpoint-sqlite>=3.0.0",
     "msgpack>=1.1.0",
     "networkx>=3.4.2",
     "openai>=1.66.0",
@@ -39,7 +35,6 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "pyyaml>=6.0.2",
     "requests>=2.32.3",
-    "sympy>=1.13.3",
     "textstat>=0.7.5",
     "typer>=0.16.0",
 ]
@@ -49,6 +44,11 @@ dependencies = [
 # litellm enables `litellm_completion`, giving access to many non-OpenAI providers;
 # most users relying on OpenAI-compatible completions do not need it.
 litellm = ["litellm>=1.74.3"]
+# langgraph enables loading langgraph checkpoint SQLite databases (the
+# `langgraph_sqlite` data source). Only langgraph-checkpoint is needed at
+# runtime -- it provides JsonPlusSerializer; the DB itself is read with stdlib
+# sqlite3. Users who don't load langgraph checkpoints do not need this.
+langgraph = ["langgraph-checkpoint>=4.0.0"]
 
 [project.urls]
 Homepage = "https://digitalharborfoundation.github.io/FlexEval/"
@@ -59,6 +59,12 @@ Issues = "https://github.com/DigitalHarborFoundation/FlexEval/issues"
 dev = [
     "hatch>=1.14.1",
     "jupyter>=1.1.1",
+    # langgraph packages are needed to build/read checkpoint DBs in the tests.
+    # langgraph-checkpoint (the langgraph extra) comes in transitively via langgraph.
+    # langchain-openai is used only to generate integration-test fixtures.
+    "langchain-openai>=0.3.8",
+    "langgraph>=1.0.0",
+    "langgraph-checkpoint-sqlite>=3.0.0",
     # litellm is a user-facing optional extra (see [project.optional-dependencies]);
     # it is also pulled into the dev group so `uv sync` gives contributors the full
     # feature set and the test suite can exercise litellm_completion.
@@ -66,6 +72,8 @@ dev = [
     "matplotlib>=3.10.3",
     "pre-commit>=4.2.0",
     "ruff>=0.12.2",
+    # sympy is only used by the integration test fixtures (langgraph_data.py).
+    "sympy>=1.13.3",
 ]
 docs = [
     "autodoc-pydantic>=2.2.0",
