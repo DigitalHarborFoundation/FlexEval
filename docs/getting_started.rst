@@ -32,13 +32,6 @@ Optional extras
 ~~~~~~~~~~~~~~~
 
 Some functionality depends on optional packages that most users do not need.
-To use :func:`~flexeval.configuration.completion_functions.litellm_completion`
-(which routes completions through `LiteLLM <https://docs.litellm.ai/>`__ to many
-non-OpenAI providers), install the ``litellm`` extra:
-
-.. code-block:: bash
-
-    pip install 'python-flexeval[litellm]'
 
 To load `LangGraph <https://langchain-ai.github.io/langgraph/>`__ checkpoint
 SQLite databases (the ``langgraph_sqlite`` data source), install the
@@ -48,13 +41,11 @@ SQLite databases (the ``langgraph_sqlite`` data source), install the
 
     pip install 'python-flexeval[langgraph]'
 
-To use the :func:`~flexeval.helpers.visualize_graph` helper (which draws metric
-dependency graphs with `matplotlib <https://matplotlib.org/>`__), install the
-``viz`` extra:
+To use `LiteLLM <https://docs.litellm.ai/>`__ completions via :func:`~flexeval.configuration.completion_functions.litellm_completion`, install the ``litellm`` extra:
 
 .. code-block:: bash
 
-    pip install 'python-flexeval[viz]'
+    pip install 'python-flexeval[litellm]'
 
 .. _getting-started-usage:
 

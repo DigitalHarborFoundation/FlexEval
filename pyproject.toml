@@ -41,15 +41,12 @@ dependencies = [
 
 [project.optional-dependencies]
 # Optional, user-facing extras. Install with e.g. `pip install 'python-flexeval[litellm]'`.
-# litellm enables `litellm_completion`, giving access to many non-OpenAI providers;
-# most users relying on OpenAI-compatible completions do not need it.
+# litellm enables `litellm_completion`, giving access to many non-OpenAI providers.
 litellm = ["litellm>=1.74.3"]
-# langgraph enables loading langgraph checkpoint SQLite databases (the
-# `langgraph_sqlite` data source). Only langgraph-checkpoint is needed at
-# runtime -- it provides JsonPlusSerializer; the DB itself is read with stdlib
-# sqlite3. Users who don't load langgraph checkpoints do not need this.
+# langgraph enables loading langgraph checkpoint SQLite databases (the `langgraph_sqlite` data source). 
+# Users who don't load langgraph checkpoints do not need this.
 langgraph = ["langgraph-checkpoint>=4.0.0"]
-# viz enables the optional visualize_graph helper (flexeval.helpers).
+# viz enables the optional visualization helpers in flexeval.helpers.
 viz = ["matplotlib>=3.10.3"]
 
 [project.urls]
