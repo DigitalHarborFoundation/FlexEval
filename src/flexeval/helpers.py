@@ -35,8 +35,6 @@ def _graph_node_label(om) -> str:
 def visualize_graph(graph: nx.DiGraph, ax=None, output_path: str | None = None):
     """Visualize graphs produced by :class:`~flexeval.compute_metrics.MetricGraphBuilder`.
 
-    Requires the optional ``viz`` extra (``pip install 'python-flexeval[viz]'``).
-
     Args:
         graph (nx.DiGraph): The graph.
         ax (matplotlib.axes.Axes | None, optional): An existing Axes to draw into.
@@ -45,8 +43,7 @@ def visualize_graph(graph: nx.DiGraph, ax=None, output_path: str | None = None):
             :meth:`matplotlib.pyplot.Figure.savefig`.
 
     Returns:
-        tuple: The ``(fig, ax)`` the graph was drawn into, so callers can compose
-        or further customize the plot.
+        tuple: The ``(fig, ax)`` the graph was drawn into.
 
     Raises:
         ImportError: If matplotlib is not installed.

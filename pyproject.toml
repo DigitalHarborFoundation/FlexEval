@@ -64,12 +64,9 @@ dev = [
     "langchain-openai>=0.3.8",
     "langgraph>=1.0.0",
     "langgraph-checkpoint-sqlite>=3.0.0",
-    # litellm is a user-facing optional extra (see [project.optional-dependencies]);
-    # it is also pulled into the dev group so `uv sync` gives contributors the full
-    # feature set and the test suite can exercise litellm_completion.
+    # litellm is needed for the litellm optional dependency.
     "litellm>=1.74.3",
-    # matplotlib is also the `viz` optional extra; kept here so it is present
-    # on a plain `uv sync` for local development.
+    # matplotlib is needed for the viz optional dependency.
     "matplotlib>=3.10.3",
     "pre-commit>=4.2.0",
     "ruff>=0.12.2",
