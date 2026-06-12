@@ -4460,6 +4460,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
     { name = "textstat" },
+    { name = "tiktoken" },
     { name = "typer" },
 ]
 
@@ -4526,6 +4527,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "textstat", specifier = ">=0.7.5" },
+    { name = "tiktoken", specifier = ">=0.7.0" },
     { name = "typer", specifier = ">=0.16.0" },
 ]
 provides-extras = ["langgraph", "litellm", "viz"]

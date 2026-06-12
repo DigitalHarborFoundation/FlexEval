@@ -33,6 +33,37 @@ jobs:
         name: python-package-distributions
         path: dist/
 
+  detect-version-change:
+    name: Detect package version change
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.detect.outputs.version }}
+      changed: ${{ steps.detect.outputs.changed }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        # Need the parent commit so we can diff the version against it.
+        fetch-depth: 2
+        persist-credentials: false
+    - name: Detect whether the version bumped vs. the parent commit
+      id: detect
+      run: |
+        current=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' src/flexeval/__about__.py | head -n1)
+        echo "version=$current" >> "$GITHUB_OUTPUT"
+        if git show HEAD~1:src/flexeval/__about__.py > /tmp/prev_about.py 2>/dev/null; then
+          previous=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' /tmp/prev_about.py | head -n1)
+        else
+          previous=""
+        fi
+        if [ "$current" != "$previous" ]; then
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "Version changed: '${previous}' -> '${current}'"
+        else
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+          echo "Version unchanged at '${current}'"
+        fi
+
   publish-to-pypi:
     name: >-
       Publish Python distribution to PyPI
@@ -55,10 +86,74 @@ jobs:
     - name: Publish distribution to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
 
+  smoke-test-pypi:
+    name: Smoke-test the PyPI release
+    # Runs only on tags, inherited transitively from publish-to-pypi.
+    needs:
+    - publish-to-pypi
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: ".python-version"
+    - name: Read package version
+      id: version
+      run: |
+        version=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' src/flexeval/__about__.py | head -n1)
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "Smoke-testing python-flexeval==$version"
+    - name: Install just-published build from PyPI into a clean venv
+      # Install into a fresh venv (NOT the repo's env) so we exercise the
+      # published wheel, not the source tree. The PyPI index can lag a few
+      # seconds behind publish, so retry the install.
+      run: |
+        uv venv /tmp/smoke-env
+        version="${{ steps.version.outputs.version }}"
+        for attempt in 1 2 3 4 5 6; do
+          if uv pip install --python /tmp/smoke-env \
+              "python-flexeval==${version}"; then
+            break
+          fi
+          if [ "$attempt" -eq 6 ]; then
+            echo "::error::python-flexeval==${version} still not installable from PyPI after $attempt attempts"
+            exit 1
+          fi
+          echo "Install attempt $attempt failed (PyPI index may not have propagated yet); retrying in 15s..."
+          sleep 15
+        done
+    - name: Run smoke test
+      # Run from the repo root so --run-vignettes can find vignettes/*.py and
+      # the data files they reference. The vignettes import the *installed*
+      # flexeval (there is no flexeval package at the repo root, only src/).
+      run: |
+        /tmp/smoke-env/bin/python scripts/smoke_test.py \
+          --expect-version "${{ steps.version.outputs.version }}" \
+          --run-vignettes
+
   publish-to-testpypi:
     name: Publish Python distribution to TestPyPI
+    # Publish to TestPyPI only when the version actually bumped on a main push,
+    # or on manual dispatch. TestPyPI (like PyPI) rejects re-uploading an
+    # existing version, so publishing on every commit fails on the duplicate.
+    # We deliberately do NOT publish on tags: the version was already validated
+    # on TestPyPI when the bump landed on main, and re-uploading it would 400.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.detect-version-change.outputs.changed == 'true')
     needs:
     - build
+    - detect-version-change
     runs-on: ubuntu-latest
 
     environment:
@@ -78,3 +173,62 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         repository-url: https://test.pypi.org/legacy/
+        # Belt-and-suspenders: don't hard-fail if this exact version was already
+        # uploaded (e.g. a re-run of the same commit).
+        skip-existing: true
+
+  smoke-test-testpypi:
+    name: Smoke-test the TestPyPI release
+    needs:
+    - publish-to-testpypi
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: ".python-version"
+    - name: Read package version
+      id: version
+      run: |
+        version=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' src/flexeval/__about__.py | head -n1)
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "Smoke-testing python-flexeval==$version"
+    - name: Install just-published build from TestPyPI into a clean venv
+      # Install into a fresh venv (NOT the repo's env) so we exercise the
+      # published wheel, not the source tree. Deps come from real PyPI; only
+      # python-flexeval itself comes from TestPyPI. The TestPyPI simple index
+      # can lag a few seconds behind publish, so retry the install.
+      run: |
+        uv venv /tmp/smoke-env
+        version="${{ steps.version.outputs.version }}"
+        for attempt in 1 2 3 4 5 6; do
+          if uv pip install --python /tmp/smoke-env \
+              --index-url https://test.pypi.org/simple/ \
+              --extra-index-url https://pypi.org/simple/ \
+              --index-strategy unsafe-best-match \
+              "python-flexeval==${version}"; then
+            break
+          fi
+          if [ "$attempt" -eq 6 ]; then
+            echo "::error::python-flexeval==${version} still not installable from TestPyPI after $attempt attempts"
+            exit 1
+          fi
+          echo "Install attempt $attempt failed (TestPyPI index may not have propagated yet); retrying in 15s..."
+          sleep 15
+        done
+    - name: Run smoke test
+      # Run from the repo root so --run-vignettes can find vignettes/*.py and
+      # the data files they reference. The vignettes import the *installed*
+      # flexeval (there is no flexeval package at the repo root, only src/).
+      run: |
+        /tmp/smoke-env/bin/python scripts/smoke_test.py \
+          --expect-version "${{ steps.version.outputs.version }}" \
+          --run-vignettes

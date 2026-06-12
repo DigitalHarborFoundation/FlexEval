@@ -166,16 +166,54 @@ make html
 
 ## Releasing a new version
 
- 1. Create and merge a PR from `dev` to `main`.
- 2. Check that the GitHub Actions jobs complete successfully (particularly the push to TestPyPI).
+The package version lives in `src/flexeval/__about__.py` (`pyproject.toml` reads it
+dynamically). The [`deploy-to-pypi`](.github/workflows/deploy-to-pypi.yml) workflow
+behaves differently depending on what triggered it:
+
+ - **Every push to `main`** builds the distribution (so build breakage is caught early).
+ - **A push to `main` that bumps the version** additionally publishes to TestPyPI and
+   runs the smoke test against it (see [Post-publish smoke test](#post-publish-smoke-test)).
+   TestPyPI rejects re-uploading an existing version, so the publish/smoke-test steps are
+   gated on the version actually changing — non-bump commits (e.g. dependabot merges) only build.
+ - **A tag push (`v*`)** publishes to the real PyPI and runs the smoke test against that release.
+
+To cut a release:
+
+ 1. Bump the version in `src/flexeval/__about__.py` and merge a PR to `main`.
+ 2. Check that the GitHub Actions jobs complete successfully — in particular that the
+    `publish-to-testpypi` and `smoke-test-testpypi` jobs ran and passed (they only run
+    when the version changed).
  3. Create a new release: <https://github.com/DigitalHarborFoundation/FlexEval/releases/new>
-     1. Set release title to "vX.X.X", with the appropriate version from the `pyproject.toml` file.
-     2. Create a new tag "vX.X.X", with the appropriate version from the `pyproject.toml` file.
+     1. Set release title to "vX.X.X", with the version from `src/flexeval/__about__.py`.
+     2. Create a new tag "vX.X.X", with the version from `src/flexeval/__about__.py`.
      3. Click "Generate release notes" (and make any additional edits if necessary).
      4. Click "Publish release".
- 4. Verify that the GitHub Actions completes successfully and that the new release is available on PyPI.
+ 4. Verify that the GitHub Actions complete successfully — including `smoke-test-pypi` —
+    and that the new release is available on PyPI.
 
 A few notes:
- - This process is overly manual at the moment. Plausibly, we should update the GitHub Action to push to TestPyPI for every commit on any PR that targets `main` (but not any tags). Then, only push to PyPI on tags.
- - We could in the future automatically make a release using the GitHub API when a PR is merged to `main`. For now, this manual process requires us to validate before each release.
- - We should potentially add a new step to the PyPI release that installs `python-flexeval` from PyPI and runs the *.py vignettes, to ensure the new release is actually installable via `pip`.
+ - This process is more manual than it could be. We could in the future automatically make
+   a release using the GitHub API when a version bump is merged to `main`. For now, this
+   manual process requires us to validate before each release.
+
+### Post-publish smoke test
+
+`scripts/smoke_test.py` verifies that a *published* build actually installs and runs in a
+clean environment — catching problems that local, source-tree testing misses (data files
+dropped from the wheel, missing runtime deps, a broken `flexeval` entry point). It runs
+automatically after both the TestPyPI and PyPI publishes, but you can also run it manually
+against any published build, e.g. to sanity-check a release:
+
+```bash
+# Against the latest release on PyPI, in a throwaway environment:
+uvx --from python-flexeval python scripts/smoke_test.py --run-vignettes
+
+# Or explicitly, into a fresh venv (pin the version to be sure which build you test):
+uv venv /tmp/smoke-env
+uv pip install --python /tmp/smoke-env python-flexeval==X.Y.Z
+/tmp/smoke-env/bin/python scripts/smoke_test.py --expect-version X.Y.Z --run-vignettes
+```
+
+`--run-vignettes` runs every `vignettes/*.py` end-to-end against the installed package, so
+the docs' primary usage examples are exercised against the real build. It must be run from
+the repo root (the vignettes reference repo-relative paths).
