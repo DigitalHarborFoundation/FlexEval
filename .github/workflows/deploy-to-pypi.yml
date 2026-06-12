@@ -114,12 +114,16 @@ jobs:
     - name: Install just-published build from PyPI into a clean venv
       # Install into a fresh venv (NOT the repo's env) so we exercise the
       # published wheel, not the source tree. The PyPI index can lag a few
-      # seconds behind publish, so retry the install.
+      # seconds behind publish, so retry the install. --refresh-package forces
+      # uv to re-fetch python-flexeval's index metadata on each attempt;
+      # otherwise uv caches the pre-publish listing and every retry sees the
+      # same stale "no such version" result.
       run: |
         uv venv /tmp/smoke-env
         version="${{ steps.version.outputs.version }}"
         for attempt in 1 2 3 4 5 6; do
           if uv pip install --python /tmp/smoke-env \
+              --refresh-package python-flexeval \
               "python-flexeval==${version}"; then
             break
           fi
@@ -206,11 +210,15 @@ jobs:
       # published wheel, not the source tree. Deps come from real PyPI; only
       # python-flexeval itself comes from TestPyPI. The TestPyPI simple index
       # can lag a few seconds behind publish, so retry the install.
+      # --refresh-package forces uv to re-fetch python-flexeval's index metadata
+      # on each attempt; otherwise uv caches the pre-publish listing and every
+      # retry sees the same stale "no such version" result.
       run: |
         uv venv /tmp/smoke-env
         version="${{ steps.version.outputs.version }}"
         for attempt in 1 2 3 4 5 6; do
           if uv pip install --python /tmp/smoke-env \
+              --refresh-package python-flexeval \
               --index-url https://test.pypi.org/simple/ \
               --extra-index-url https://pypi.org/simple/ \
               --index-strategy unsafe-best-match \
