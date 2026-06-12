@@ -78,3 +78,59 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         repository-url: https://test.pypi.org/legacy/
+
+  smoke-test-testpypi:
+    name: Smoke-test the TestPyPI release
+    needs:
+    - publish-to-testpypi
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: ".python-version"
+    - name: Read package version
+      id: version
+      run: |
+        version=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' src/flexeval/__about__.py | head -n1)
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "Smoke-testing python-flexeval==$version"
+    - name: Install just-published build from TestPyPI into a clean venv
+      # Install into a fresh venv (NOT the repo's env) so we exercise the
+      # published wheel, not the source tree. Deps come from real PyPI; only
+      # python-flexeval itself comes from TestPyPI. The TestPyPI simple index
+      # can lag a few seconds behind publish, so retry the install.
+      run: |
+        uv venv /tmp/smoke-env
+        version="${{ steps.version.outputs.version }}"
+        for attempt in 1 2 3 4 5 6; do
+          if uv pip install --python /tmp/smoke-env \
+              --index-url https://test.pypi.org/simple/ \
+              --extra-index-url https://pypi.org/simple/ \
+              --index-strategy unsafe-best-match \
+              "python-flexeval==${version}"; then
+            break
+          fi
+          if [ "$attempt" -eq 6 ]; then
+            echo "::error::python-flexeval==${version} still not installable from TestPyPI after $attempt attempts"
+            exit 1
+          fi
+          echo "Install attempt $attempt failed (TestPyPI index may not have propagated yet); retrying in 15s..."
+          sleep 15
+        done
+    - name: Run smoke test
+      # Run from the repo root so --run-vignettes can find vignettes/*.py and
+      # the data files they reference. The vignettes import the *installed*
+      # flexeval (there is no flexeval package at the repo root, only src/).
+      run: |
+        /tmp/smoke-env/bin/python scripts/smoke_test.py \
+          --expect-version "${{ steps.version.outputs.version }}" \
+          --run-vignettes
