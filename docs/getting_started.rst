@@ -28,6 +28,25 @@ Install using `uv <https://docs.astral.sh/uv/>`__:
 
     uv add python-flexeval
 
+Optional extras
+~~~~~~~~~~~~~~~
+
+Some functionality depends on optional packages that most users do not need.
+
+To load `LangGraph <https://langchain-ai.github.io/langgraph/>`__ checkpoint
+SQLite databases (the ``langgraph_sqlite`` data source), install the
+``langgraph`` extra:
+
+.. code-block:: bash
+
+    pip install 'python-flexeval[langgraph]'
+
+To use `LiteLLM <https://docs.litellm.ai/>`__ completions via :func:`~flexeval.configuration.completion_functions.litellm_completion`, install the ``litellm`` extra:
+
+.. code-block:: bash
+
+    pip install 'python-flexeval[litellm]'
+
 .. _getting-started-usage:
 
 Usage

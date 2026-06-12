@@ -6,8 +6,6 @@ import pathlib
 import random as rd
 import sqlite3
 
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
-
 from flexeval.classes.dataset import Dataset
 from flexeval.classes.message import Message
 from flexeval.classes.thread import Thread
@@ -180,6 +178,14 @@ def load_langgraph_sqlite(
     Reads the final checkpoint for each thread and extracts the cumulative
     message list from channel_values.messages. Compatible with langgraph >= 1.0.
     """
+    try:
+        from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+    except ImportError as e:
+        raise ImportError(
+            "langgraph-checkpoint is required to load langgraph SQLite checkpoint "
+            "databases but is not installed. "
+            "Install it with: pip install 'python-flexeval[langgraph]'"
+        ) from e
     serializer = JsonPlusSerializer()
 
     with sqlite3.connect(filename) as conn:

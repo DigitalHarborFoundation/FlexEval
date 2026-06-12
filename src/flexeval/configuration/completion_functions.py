@@ -28,7 +28,6 @@ import logging
 import os
 from typing import Any, Dict, List
 
-import litellm
 import requests
 import tiktoken
 from openai import OpenAI
@@ -85,6 +84,13 @@ def litellm_completion(
     Returns:
         Dict[str, Any]: The response.
     """
+    try:
+        import litellm
+    except ImportError as e:
+        raise ImportError(
+            "litellm is required for litellm_completion but is not installed. "
+            "Install it with: pip install 'python-flexeval[litellm]'"
+        ) from e
     response = litellm.completion(
         messages=conversation_history,
         model=model,

@@ -23,7 +23,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          uv sync
+          uv sync --all-extras
 
       - name: Run automated validation checks
         run: |
