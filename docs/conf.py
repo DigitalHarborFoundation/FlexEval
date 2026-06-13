@@ -8,6 +8,8 @@ import inspect
 from pathlib import Path
 from packaging.version import parse as parse_version
 
+import peewee as pw
+
 import flexeval
 
 sys.path.append(os.path.abspath("."))
@@ -168,6 +170,12 @@ nb_execution_mode = "off"  # Don't re-execute, use existing outputs
 nb_merge_streams = True
 
 autosummary_generate = True
+# Don't let numpydoc inject its own per-class "Methods"/"Attributes" summary
+# tables. They duplicate the member documentation autodoc already renders below,
+# and for our peewee models they list every inherited peewee.Model method
+# (save, select, bulk_create, ...) as noise. Disabling this also avoids the
+# "stub file not found" warnings those tables' :toctree: would otherwise emit.
+numpydoc_show_class_members = False
 autodoc_typehints = "signature"
 autodoc_default_options = {
     "members": True,
@@ -178,18 +186,29 @@ autodoc_default_options = {
 }
 
 
-def skip_inherited_members(app, what, name, obj, skip, options):
-    # Skip members if they are inherited (not defined on the class itself)
-    if what == "class":
-        # The object is the class being documented
-        cls = obj
-        if hasattr(cls, "__dict__"):
-            # If the member name is NOT in the class dict, it's inherited
-            if name not in cls.__dict__:
-                return True  # skip inherited member
-    return skip  # otherwise use default behavior
+def skip_peewee_internals(app, what, name, obj, skip, options):
+    """Hide peewee-generated noise from the API docs.
+
+    peewee's model metaclass adds two kinds of members to every model class
+    that aren't useful in the generated reference:
+
+    - a per-model ``DoesNotExist`` exception (e.g. ``MetricDoesNotExist``), and
+    - a ``<fk>_id`` alias for every foreign key (e.g. ``dataset_id`` alongside
+      ``dataset``). The alias shares the same ``Field`` object as the FK, whose
+      ``.name`` is the FK field name, so we can detect it by name mismatch.
+
+    Genuine fields and methods are left untouched. (Inherited members are
+    excluded separately via ``inherited-members: False`` below — note that
+    peewee's per-model ``DoesNotExist`` and ``_id`` accessors are defined on the
+    model class itself, not inherited, which is why they need explicit skipping.)
+    """
+    if name == "DoesNotExist":
+        return True
+    if isinstance(obj, pw.ForeignKeyField) and name != obj.name:
+        return True
+    return skip
 
 
 def setup(app):
-    app.connect("autodoc-skip-member", skip_inherited_members)
+    app.connect("autodoc-skip-member", skip_peewee_internals)
     app.connect("builder-inited", vignettes.generate_custom_stubs)

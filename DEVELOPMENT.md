@@ -149,20 +149,68 @@ uv run python -m flexeval --eval_name {eval_suite_name}
 
 ## Documentation
 
-We use Sphinx to generate the documentation website.
+We use [Sphinx](https://www.sphinx-doc.org/) to generate the [documentation
+website](https://digitalharborfoundation.github.io/FlexEval). The source lives in
+`docs/`, the configuration is `docs/conf.py`, and the relevant build targets are in
+the `Makefile`. The site is rebuilt and deployed to GitHub Pages on every push to
+`main` by the [`github-pages`](.github/workflows/github-pages.yml) workflow.
 
-All of the relevant directives are in the `Makefile`.
+The API reference is generated automatically by `autodoc`/`autosummary` from the
+source code (see the `:recursive:` `autosummary` directive in `docs/api.rst`), so
+new modules and classes show up without any manual wiring.
 
-Develop the documentation website locally:
+### Building the docs locally
+
+First make sure the docs dependencies are installed (they live in the `docs`
+dependency group; `uv sync --all-groups` installs them too):
 
 ```bash
-make docclean docautobuild
+uv sync --group docs
 ```
 
-You can also just build the site directly:
+Build the site once:
+
 ```bash
 make html
 ```
+
+The output is written to `build/html/`; open `build/html/index.html` in a browser to
+view it.
+
+For an interactive workflow, use `sphinx-autobuild`, which rebuilds on save and serves
+the site at <http://127.0.0.1:8000>:
+
+```bash
+make docautobuild
+```
+
+### Debugging the build
+
+The generated API stubs (`docs/generated/`) and the rendered output (`build/`) are
+**cached** between builds. `autosummary` will not regenerate a stub that already
+exists, so when you change `docs/conf.py` (especially `autodoc`/`autosummary`
+options) or restructure modules, an incremental build can show stale results. Force a
+clean rebuild:
+
+```bash
+make docclean   # removes build/ and docs/generated/
+make html
+# or chain them, e.g. for autobuild:
+make docclean docautobuild
+```
+
+Sphinx prints `WARNING:` lines during the build and ends with a summary
+(e.g. `build succeeded, N warnings.`). Warnings are worth scanning — they flag broken
+cross-references, malformed docstrings, and members that failed to render.
+
+A note on the API reference: FlexEval's database models (`src/flexeval/classes/`) are
+[peewee](https://docs.peewee-orm.com/) models, and peewee's metaclass rewrites
+field definitions into descriptors and adds generated members (a per-model
+`DoesNotExist` exception and a `<fk>_id` alias for every foreign key). The
+`skip_peewee_internals` hook in `docs/conf.py` hides that generated noise while
+keeping the real fields, and `inherited-members: False` keeps inherited peewee/pydantic
+machinery out of the reference. If model attributes stop appearing on a generated page,
+that hook (and the `autodoc_default_options`) is the place to look.
 
 ## Releasing a new version
 
