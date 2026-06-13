@@ -39,18 +39,17 @@ conversation_example = [
 def process_single_message(
     message: str,
 ) -> Union[int, float, dict[str, Union[int, float]]]:
-    """
-        Process a single conversational message and return the desired output
-        
-        Args: 
-        message (str): a single conversational message as a string
-                NOTE: Metrics that take a string as input are valid at the Turn
-                      and Message levels.
-        
-        Returns:
-        an integer (e.g., 2), \
-        or a floating point number (e.g., 2.8), \
-        or a dictionary of metric/value pairs (e.g. {'metric1':value1, 'metric2':value2})
+    """Process a single conversational message and return the desired output.
+
+    Args:
+        message (str): a single conversational message as a string.
+            NOTE: Metrics that take a string as input are valid at the Turn
+            and Message levels.
+
+    Returns:
+        An integer (e.g., ``2``), a floating point number (e.g., ``2.8``), or a
+        dictionary of metric/value pairs
+        (e.g., ``{'metric1': value1, 'metric2': value2}``).
     """
     pass
 
@@ -61,19 +60,19 @@ def process_conversation(
 ) -> Union[
     int, float, dict[str, Union[int, float]], list[dict[str, Union[int, float]]]
 ]:
-    """
-        Process an entire conversation and return the desired output
-        
-        Args: 
-        conversation (list): an entire conversation as a list
-                NOTE: Metrics that take a list as input are valid at the Thread
-                      and Turn levels.
-        Returns: 
-        an integer, e.g., 2 \
-        or a floating point number, e.g., 2.8 \
-        or a dictionary of metric/value pairs, e.g. {'metric1':value1, 'metric2':value2}\
-        or a list of dictionaries. The key can be either 'role' or 'metric'. \
-            e.g., [{"role":role1, "value":value1}, {"role":role2, "value":value2}, ...]
+    """Process an entire conversation and return the desired output.
+
+    Args:
+        conversation (list): an entire conversation as a list.
+            NOTE: Metrics that take a list as input are valid at the Thread
+            and Turn levels.
+
+    Returns:
+        An integer (e.g., ``2``), a floating point number (e.g., ``2.8``),
+        a dictionary of metric/value pairs
+        (e.g., ``{'metric1': value1, 'metric2': value2}``), or a list of
+        dictionaries where the key can be either 'role' or 'metric'
+        (e.g., ``[{"role": role1, "value": value1}, ...]``).
     """
     pass
 
@@ -511,13 +510,14 @@ def count_errors(object: Union[Thread, Turn, Message, ToolCall]) -> dict:
     If a Turn, Message, or ToolCall, ditto.
 
     It does this by iterating through ToolCalls and identifying whether there are
-    entries like "*_errors" in tool_call.additional_kwargs
+    entries like ``*_errors`` in tool_call.additional_kwargs
 
-    If a ToolCall, returns 1 if there is an error of each type
-    {
-        "python_errors": 3,
-        "javascript_errors": 1
-    }
+    If a ToolCall, returns 1 if there is an error of each type::
+
+        {
+            "python_errors": 3,
+            "javascript_errors": 1
+        }
     """
     if isinstance(object, ToolCall):
         return {

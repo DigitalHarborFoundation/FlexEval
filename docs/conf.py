@@ -177,6 +177,11 @@ autosummary_generate = True
 # "stub file not found" warnings those tables' :toctree: would otherwise emit.
 numpydoc_show_class_members = False
 autodoc_typehints = "signature"
+# Some models hold fields that have no JSON-schema representation (e.g.
+# FunctionsCollection.functions is a list[Callable]). Coerce rather than warn so
+# autodoc-pydantic renders a schema for the serializable fields instead of
+# emitting a build warning for the model.
+autodoc_pydantic_model_show_json_error_strategy = "coerce"
 autodoc_default_options = {
     "members": True,
     "undoc-members": True,
@@ -189,22 +194,27 @@ autodoc_default_options = {
 def skip_peewee_internals(app, what, name, obj, skip, options):
     """Hide peewee-generated noise from the API docs.
 
-    peewee's model metaclass adds two kinds of members to every model class
+    peewee's model metaclass adds several kinds of members to every model class
     that aren't useful in the generated reference:
 
-    - a per-model ``DoesNotExist`` exception (e.g. ``MetricDoesNotExist``), and
+    - a per-model ``DoesNotExist`` exception (e.g. ``MetricDoesNotExist``),
     - a ``<fk>_id`` alias for every foreign key (e.g. ``dataset_id`` alongside
       ``dataset``). The alias shares the same ``Field`` object as the FK, whose
-      ``.name`` is the FK field name, so we can detect it by name mismatch.
+      ``.name`` is the FK field name, so we can detect it by name mismatch, and
+    - a back-reference accessor for every relation pointing at the model (e.g.
+      ``Dataset.messages`` from ``Message.dataset``). These render as bare names
+      with no docstring or type, and they trip docutils warnings, so we drop them.
 
     Genuine fields and methods are left untouched. (Inherited members are
-    excluded separately via ``inherited-members: False`` below — note that
-    peewee's per-model ``DoesNotExist`` and ``_id`` accessors are defined on the
-    model class itself, not inherited, which is why they need explicit skipping.)
+    excluded separately via ``inherited-members: False`` below — note that these
+    generated members are defined on the model class itself, not inherited, which
+    is why they need explicit skipping.)
     """
     if name == "DoesNotExist":
         return True
     if isinstance(obj, pw.ForeignKeyField) and name != obj.name:
+        return True
+    if isinstance(obj, pw.BackrefAccessor):
         return True
     return skip
 

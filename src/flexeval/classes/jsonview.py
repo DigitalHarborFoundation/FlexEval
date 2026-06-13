@@ -70,10 +70,11 @@ class JsonViewDict(UserDict):
 class JsonView:
     """Descriptor that provides dict-like access to a JSON text field.
 
-    Example:
-    class SomeModel(pw.Model):
-        some_field = pw.TextField(default="{}")
-        some_field_dict = JsonView(text_field_attr_name="some_field")
+    Example::
+
+        class SomeModel(pw.Model):
+            some_field = pw.TextField(default="{}")
+            some_field_dict = JsonView(text_field_attr_name="some_field")
     """
 
     def __init__(self, text_field_attr_name):
