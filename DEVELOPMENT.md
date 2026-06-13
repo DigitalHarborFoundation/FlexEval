@@ -168,6 +168,15 @@ dependency group; `uv sync --all-groups` installs them too):
 uv sync --group docs
 ```
 
+The class diagrams on the API page are rendered by
+[`sphinx.ext.inheritance_diagram`](https://www.sphinx-doc.org/en/master/usage/extensions/inheritance.html),
+which needs [Graphviz](https://graphviz.org/) (the `dot` binary) on your `PATH`:
+
+```bash
+brew install graphviz        # macOS
+sudo apt-get install graphviz # Debian/Ubuntu
+```
+
 Build the site once:
 
 ```bash
@@ -200,17 +209,32 @@ make docclean docautobuild
 ```
 
 Sphinx prints `WARNING:` lines during the build and ends with a summary
-(e.g. `build succeeded, N warnings.`). Warnings are worth scanning — they flag broken
-cross-references, malformed docstrings, and members that failed to render.
+(e.g. `build succeeded, N warnings.`). The CI docs build runs with
+`SPHINXOPTS="-W --keep-going"`, which turns warnings into errors (and reports all of
+them before failing), so the build must be warning-free to pass. Reproduce that
+locally with:
+
+```bash
+make docclean
+make html SPHINXOPTS="-W --keep-going"
+```
+
+You can also check for broken links and cross-references (this makes network requests,
+so it's not part of CI):
+
+```bash
+make linkcheck
+```
 
 A note on the API reference: FlexEval's database models (`src/flexeval/classes/`) are
 [peewee](https://docs.peewee-orm.com/) models, and peewee's metaclass rewrites
 field definitions into descriptors and adds generated members (a per-model
-`DoesNotExist` exception and a `<fk>_id` alias for every foreign key). The
-`skip_peewee_internals` hook in `docs/conf.py` hides that generated noise while
-keeping the real fields, and `inherited-members: False` keeps inherited peewee/pydantic
-machinery out of the reference. If model attributes stop appearing on a generated page,
-that hook (and the `autodoc_default_options`) is the place to look.
+`DoesNotExist` exception, a `<fk>_id` alias for every foreign key, and a
+back-reference accessor for every incoming relation). The `skip_peewee_internals` hook
+in `docs/conf.py` hides that generated noise while keeping the real fields, and
+`inherited-members: False` keeps inherited peewee/pydantic machinery out of the
+reference. If model attributes stop appearing on a generated page, that hook (and the
+`autodoc_default_options`) is the place to look.
 
 ## Releasing a new version
 

@@ -4,13 +4,8 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 import sys
 import os
-import inspect
-from pathlib import Path
-from packaging.version import parse as parse_version
 
 import peewee as pw
-
-import flexeval
 
 sys.path.append(os.path.abspath("."))
 sys.path.append(".")
@@ -30,24 +25,15 @@ author = "S. Thomas Christie, Baptiste Moreau-Pernet, Zachary Levonian, Anna Raf
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
-    "sphinx.ext.inheritance_diagram",
+    "sphinx.ext.inheritance_diagram",  # class diagrams on the API page (needs Graphviz)
     "sphinx.ext.intersphinx",
-    # "IPython.sphinxext.ipython_console_highlighting",
-    # "IPython.sphinxext.ipython_directive",
-    "numpydoc",  # Needs to be loaded *after* autodoc.
-    "sphinx.ext.napoleon",
-    "matplotlib.sphinxext.plot_directive",
-    "matplotlib.sphinxext.roles",
-    "matplotlib.sphinxext.figmpl_directive",
+    "sphinx.ext.napoleon",  # Google-style docstrings
     "sphinxext.github",
     "sphinx_copybutton",
-    "sphinx_design",
-    "sphinx_tags",
-    "sphinx.ext.linkcode",
     # "myst_parser",  # don't use myst_parser with myst_nb; it is automatically loaded by myst_parser
     "myst_nb",
     "sphinxcontrib.autodoc_pydantic",  # because sphinx plays badly with pydantic
-    "sphinx.ext.viewcode",  # should add a view code link
+    "sphinx.ext.viewcode",  # adds a "[source]" link next to documented objects
     "sphinxcontrib.programoutput",  # for inline bash execution
 ]
 source_suffix = {
@@ -91,67 +77,6 @@ intersphinx_mapping = {
     "pydantic": ("https://docs.pydantic.dev/latest", None),
 }
 
-docutils_conf = {
-    "line-length-limit": None,  # Disable docutils line-length limit
-}
-
-
-def linkcode_resolve(domain, info):
-    """
-    Determine the URL corresponding to Python object
-    """
-    if domain != "py":
-        return None
-
-    modname = info["module"]
-    fullname = info["fullname"]
-
-    submod = sys.modules.get(modname)
-    if submod is None:
-        return None
-
-    obj = submod
-    for part in fullname.split("."):
-        try:
-            obj = getattr(obj, part)
-        except AttributeError:
-            return None
-
-    if inspect.isfunction(obj):
-        obj = inspect.unwrap(obj)
-    try:
-        fn = inspect.getsourcefile(obj)
-    except TypeError:
-        fn = None
-    if not fn or fn.endswith("__init__.py"):
-        try:
-            fn = inspect.getsourcefile(sys.modules[obj.__module__])
-        except (TypeError, AttributeError, KeyError):
-            fn = None
-    if not fn:
-        return None
-
-    try:
-        source, lineno = inspect.getsourcelines(obj)
-    except (OSError, TypeError):
-        lineno = None
-
-    linespec = f"#L{lineno:d}-L{lineno + len(source) - 1:d}" if lineno else ""
-
-    startdir = Path(flexeval.__file__).parent.parent
-    try:
-        fn = os.path.relpath(fn, start=startdir).replace(os.path.sep, "/")
-    except ValueError:
-        return None
-
-    if not fn.startswith(("matplotlib/", "mpl_toolkits/")):
-        return None
-
-    version = parse_version(flexeval.__version__)
-    tag = "main" if version.is_devrelease else f"v{version.public}"
-    return f"https://github.com/matplotlib/matplotlib/blob/{tag}/lib/{fn}{linespec}"
-
-
 # myst-parser
 # https://myst-parser.readthedocs.io/en/latest/configuration.html
 myst_gfm_only = False
@@ -170,12 +95,6 @@ nb_execution_mode = "off"  # Don't re-execute, use existing outputs
 nb_merge_streams = True
 
 autosummary_generate = True
-# Don't let numpydoc inject its own per-class "Methods"/"Attributes" summary
-# tables. They duplicate the member documentation autodoc already renders below,
-# and for our peewee models they list every inherited peewee.Model method
-# (save, select, bulk_create, ...) as noise. Disabling this also avoids the
-# "stub file not found" warnings those tables' :toctree: would otherwise emit.
-numpydoc_show_class_members = False
 autodoc_typehints = "signature"
 # Some models hold fields that have no JSON-schema representation (e.g.
 # FunctionsCollection.functions is a list[Callable]). Coerce rather than warn so
