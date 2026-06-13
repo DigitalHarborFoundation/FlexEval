@@ -51,6 +51,11 @@ jobs:
         with:
           python-version-file: ".python-version"
 
+      # Graphviz (`dot`) is required by sphinx.ext.inheritance_diagram for the
+      # class diagrams on the API page.
+      - name: Install Graphviz
+        run: sudo apt-get update && sudo apt-get install -y graphviz
+
       - name: Install docs dependencies
         run: |
           uv sync --group docs
