@@ -407,15 +407,16 @@ class MetricComputer:
         return evaluated_metrics
 
     def compute_metrics(self, object: Union[Thread, Turn, Message, ToolCall]):
-        """we've defined a variable called metrics_to_evaluate
-        it's a list we need to loop through
-        each entry looks like this
-        {
-            'name': 'string_length',
-            'type': 'function',
-            'kwargs': {},
-            'depends_on': []
-        }
+        """Loop through ``metrics_to_evaluate``.
+
+        Each entry looks like this::
+
+            {
+                'name': 'string_length',
+                'type': 'function',
+                'kwargs': {},
+                'depends_on': []
+            }
         """
         # we'll keep the results in a list
         # for each new metric, if it has dependencies, we'll need to make sure they're met - otherwise we won't run it
