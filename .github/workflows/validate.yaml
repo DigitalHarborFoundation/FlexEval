@@ -55,9 +55,10 @@ jobs:
         run: |
           uv sync --group docs
 
-      # Builds the same way github-pages.yml deploys, so doc-build breakage
-      # (and, with -W, doc warnings) is caught on PRs instead of only on the
-      # deploy-to-main step. This job does not deploy.
+      # Builds the same way github-pages.yml deploys, so doc-build breakage is
+      # caught on PRs instead of only on the deploy-to-main step. -W turns doc
+      # warnings into errors (--keep-going reports them all before failing) so
+      # they can't silently accumulate. This job does not deploy.
       - name: Build docs
         run: |
-          make html
+          make html SPHINXOPTS="-W --keep-going"

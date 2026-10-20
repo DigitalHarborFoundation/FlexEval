@@ -2,25 +2,27 @@
 and produce conversational turns (aka completions) as output.
 
 When writing a new function, the arguments must include, at minimum:
-* conversation_history - list of dictionaries with keys ("role","content"), whose values are strings
-* kwargs - dictionary of optional values that can probably be ignored
+
+* ``conversation_history`` - list of dictionaries with keys ("role", "content"), whose values are strings
+* ``kwargs`` - dictionary of optional values that can probably be ignored
+
 Other arguments can be added, but then must also be specified
 in the "completion_llm" section of the evals.yaml config.
 
-The outputs must conform to the structure described here:
-https://platform.openai.com/docs/guides/text-generation/chat-completions-api
-with the following format:
+The outputs must conform to the `structure described here
+<https://platform.openai.com/docs/guides/text-generation/chat-completions-api>`_,
+with the following format::
+
     completion = {
         "choices": [
             {
-                "message":{
+                "message": {
                     "content": MY_CONTENT_HERE,
-                    "role":"assistant"
+                    "role": "assistant"
                 }
             }
         ]
     }
-
 """
 
 import json
